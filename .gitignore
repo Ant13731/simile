@@ -333,3 +333,4 @@ notes/.obsidian/workspace.json
 node_modules/
 generated/
 packages/simile_compiler/build/
+*.coverage*

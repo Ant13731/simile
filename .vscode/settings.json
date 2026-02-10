@@ -31,7 +31,9 @@
     "python.testing.unittestEnabled": false,
     "python.testing.pytestArgs": [
         "packages",
-        "-vvl"
+        "-vvl",
+        "-n",
+        "auto"
     ],
     "python.testing.autoTestDiscoverOnSaveEnabled": true,
     "workbench.colorCustomizations": {
