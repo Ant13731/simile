@@ -3,6 +3,10 @@ from src.mod import ast_
 from src.mod import analysis
 from src.mod import collection_optimizer, REWRITE_COLLECTION
 from src.mod import RustCodeGenerator, CPPCodeGenerator
+from src.mod import scan
+
+
+scan("")
 
 
 # TEST = ast_.Start(
@@ -126,70 +130,70 @@ from src.mod import RustCodeGenerator, CPPCodeGenerator
 
 # ast = collection_optimizer(ast, SET_REWRITE_COLLECTION)
 # from src.mod.optimizer.rewrite_collections import SetComprehensionConstructionCollection as S1
-from src.mod.optimizer.rewrite_collections import (
-    SyntacticSugarForBags,
-    SyntacticSugarForSequences,
-    BuiltinFunctions,
-    ComprehensionConstructionCollection,
-    DisjunctiveNormalFormCollection,
-    OrWrappingCollection,
-    GeneratorSelectionCollection,
-    GSPToLoopsCollection,
-    RelationalSubtypingLoopSimplification,
-    LoopsCodeGenerationCollection,
-    ReplaceAndSimplifyCollection,
-)
+# from src.mod.optimizer.rewrite_collections import (
+#     SyntacticSugarForBags,
+#     SyntacticSugarForSequences,
+#     BuiltinFunctions,
+#     ComprehensionConstructionCollection,
+#     DisjunctiveNormalFormCollection,
+#     OrWrappingCollection,
+#     GeneratorSelectionCollection,
+#     GSPToLoopsCollection,
+#     RelationalSubtypingLoopSimplification,
+#     LoopsCodeGenerationCollection,
+#     ReplaceAndSimplifyCollection,
+# )
 
-# ast = S1().normalize(ast)
-# print("PARSED TEST_STR:", ast.pretty_print(print_env=True))
-# print("PARSED TEST_STR:", ast.pretty_print_algorithmic())
-# print("PARSED TEST_STR:", ast.body.items[0])
-# print("PARSED TEST_STR:", ast.body.items[0].predicate.items[1].items[0].right._bound_identifiers)
+# # ast = S1().normalize(ast)
+# # print("PARSED TEST_STR:", ast.pretty_print(print_env=True))
+# # print("PARSED TEST_STR:", ast.pretty_print_algorithmic())
+# # print("PARSED TEST_STR:", ast.body.items[0])
+# # print("PARSED TEST_STR:", ast.body.items[0].predicate.items[1].items[0].right._bound_identifiers)
 
-TEST_STR = """
-location: str >-> int := {"SYNT" |-> 100, "ABC" |-> 200, "CDP" |-> 300}
-attends: str +-> str := {"Alice" |-> "SYNT", "Bob" |-> "ABC", "Charlie" |-> "SYNT"}
-
-room := 100
-
-num_meals := card((location~ circ attends~)[{room}])
-print(num_meals)
-"""
-
-# Optimizer doesnt work - type system not strong enough for generics...
 # TEST_STR = """
-# catalogue: str --> float := {"2by4Plank" |-> 3.50, "HexBolt" |-> 0.25, "Nails" |-> 0.10}
-# inventory: bag[str] := {"2by4Plank" |-> 50, "HexBolt" |-> 200, "Nails" |-> 1000}
-# recipes: str --> bag[str] := {
-#     "Cabinet" |-> {"2by4Plank" |-> 7, "HexBolt" |-> 10, "Nails" |-> 10},
-#     "Bookshelf" |-> {"2by4Plank" |-> 1, "HexBolt" |-> 0, "Nails" |-> 4},
-#     "Desk" |-> {"2by4Plank" |-> 10, "HexBolt" |-> 40, "Nails" |-> 100}
-# }
+# location: str >-> int := {"SYNT" |-> 100, "ABC" |-> 200, "CDP" |-> 300}
+# attends: str +-> str := {"Alice" |-> "SYNT", "Bob" |-> "ABC", "Charlie" |-> "SYNT"}
 
-# target_inventory: bag[str] := {"2by4Plank" |-> 100, "HexBolt" |-> 500, "Nails" |-> 5000}
+# room := 100
 
-# restocking_price := sum({p |-> n · p |-> n in catalogue~ circ (inventory \\ target_inventory) | p * n})
+# num_meals := card((location~ circ attends~)[{room}])
+# print(num_meals)
 # """
 
-ast: ast_.ASTNode = parse(TEST_STR)
-ast = analysis.semantic_analysis(ast)
+# # Optimizer doesnt work - type system not strong enough for generics...
+# # TEST_STR = """
+# # catalogue: str --> float := {"2by4Plank" |-> 3.50, "HexBolt" |-> 0.25, "Nails" |-> 0.10}
+# # inventory: bag[str] := {"2by4Plank" |-> 50, "HexBolt" |-> 200, "Nails" |-> 1000}
+# # recipes: str --> bag[str] := {
+# #     "Cabinet" |-> {"2by4Plank" |-> 7, "HexBolt" |-> 10, "Nails" |-> 10},
+# #     "Bookshelf" |-> {"2by4Plank" |-> 1, "HexBolt" |-> 0, "Nails" |-> 4},
+# #     "Desk" |-> {"2by4Plank" |-> 10, "HexBolt" |-> 40, "Nails" |-> 100}
+# # }
 
-print("PARSED TEST_STR:", ast.pretty_print(print_env=True))
-print("PARSED TEST_STR:", ast.pretty_print_algorithmic())
+# # target_inventory: bag[str] := {"2by4Plank" |-> 100, "HexBolt" |-> 500, "Nails" |-> 5000}
 
-ast = SyntacticSugarForBags().normalize(ast)
-ast = SyntacticSugarForSequences().normalize(ast)
-ast = ComprehensionConstructionCollection().normalize(ast)
-ast = BuiltinFunctions().normalize(ast)
-ast = ComprehensionConstructionCollection().normalize(ast)
-ast = DisjunctiveNormalFormCollection().normalize(ast)
-ast = OrWrappingCollection().normalize(ast)
-ast = GeneratorSelectionCollection().normalize(ast)
-ast = GSPToLoopsCollection().normalize(ast)
-ast = RelationalSubtypingLoopSimplification().normalize(ast)
-ast = LoopsCodeGenerationCollection().normalize(ast)
-ast = ReplaceAndSimplifyCollection().normalize(ast)
-print("OPTIMIZED TEST_STR:", ast.pretty_print(print_env=False))
-print("OPTIMIZED TEST_STR:", ast.pretty_print_algorithmic())
+# # restocking_price := sum({p |-> n · p |-> n in catalogue~ circ (inventory \\ target_inventory) | p * n})
+# # """
 
-RustCodeGenerator(ast).build()
+# ast: ast_.ASTNode = parse(TEST_STR)
+# ast = analysis.semantic_analysis(ast)
+
+# print("PARSED TEST_STR:", ast.pretty_print(print_env=True))
+# print("PARSED TEST_STR:", ast.pretty_print_algorithmic())
+
+# ast = SyntacticSugarForBags().normalize(ast)
+# ast = SyntacticSugarForSequences().normalize(ast)
+# ast = ComprehensionConstructionCollection().normalize(ast)
+# ast = BuiltinFunctions().normalize(ast)
+# ast = ComprehensionConstructionCollection().normalize(ast)
+# ast = DisjunctiveNormalFormCollection().normalize(ast)
+# ast = OrWrappingCollection().normalize(ast)
+# ast = GeneratorSelectionCollection().normalize(ast)
+# ast = GSPToLoopsCollection().normalize(ast)
+# ast = RelationalSubtypingLoopSimplification().normalize(ast)
+# ast = LoopsCodeGenerationCollection().normalize(ast)
+# ast = ReplaceAndSimplifyCollection().normalize(ast)
+# print("OPTIMIZED TEST_STR:", ast.pretty_print(print_env=False))
+# print("OPTIMIZED TEST_STR:", ast.pretty_print_algorithmic())
+
+# RustCodeGenerator(ast).build()

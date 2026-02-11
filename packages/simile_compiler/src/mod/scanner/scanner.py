@@ -114,7 +114,7 @@ class Scanner:
         self.advance()
         return True
 
-    def match_phrase(self, expected: str) -> bool:
+    def match_phrase(self, expected: str, expect_whitespace_or_eof_after_phrase: bool = False) -> bool:
         """Repeatedly call :meth:`~self.match` until the expected string is completely matched.
 
         Upon matching failure, this will backtrack character indices to the beginning of the phrase."""
@@ -126,12 +126,16 @@ class Scanner:
             expected_index += 1
 
         if expected_index == len(expected):
-            return True
-        else:
-            # Backtrack to the start of the phrase
-            self.current_location = start_location
-            self.current_index = start_current
-            return False
+            if not expect_whitespace_or_eof_after_phrase:
+                return True
+            next_char = self.peek()
+            if next_char is None or next_char.isspace():
+                return True
+
+        # Backtrack to the start of the phrase
+        self.current_location = start_location
+        self.current_index = start_current
+        return False
 
     def add_token(self, type_: TokenType, value: str = "") -> None:
         """Adds a token to the scanner's output.
@@ -352,11 +356,12 @@ class Scanner:
                     self.advance()
                 value = self.text[self.current_index_lexeme_start : self.current_index]
                 token_type = KEYWORD_TABLE.get(value, TokenType.IDENTIFIER)
+
                 if token_type == TokenType.IS:
-                    if self.match_phrase(" not"):
+                    if self.match_phrase(" not", True):
                         token_type = TokenType.IS_NOT
                 elif token_type == TokenType.NOT:
-                    if self.match_phrase(" in"):
+                    if self.match_phrase(" in", True):
                         token_type = TokenType.NOT_IN
                 self.add_token(token_type, value)
             case _:
