@@ -347,6 +347,23 @@ def test_expression(input_: str, expected: list[TokenType]):
     "input_, expected",
     [
         (
+            "# this is a comment 123 \\/",
+            [
+                TokenType.COMMENT,
+            ],
+        ),
+    ],
+)
+def test_comment(input_: str, expected: list[TokenType]):
+    actual_tokens = get_token_types(input_)
+    assert_language_invariants(actual_tokens)
+    assert_token_types_equal(actual_tokens, expected + [TokenType.EOF])
+
+
+@pytest.mark.parametrize(
+    "input_, expected",
+    [
+        (
             " test",
             [
                 Token(TokenType.INDENT, "", Location(0, 0), Location(0, 1)),
