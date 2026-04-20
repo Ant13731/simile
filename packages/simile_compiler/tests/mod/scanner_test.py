@@ -8,6 +8,8 @@ from src.mod.scanner import (
     TokenType,
     Token,
     Location,
+    ScanningException,
+    ScannerException,
 )
 
 
@@ -380,4 +382,63 @@ def test_tokens_manual(input_: str, expected: list[Token]):
     assert_tokens_equal(res, expected)
 
 
+@pytest.mark.parametrize(
+    "input_, expected",
+    [
+        ('"hello world"', [TokenType.STRING, TokenType.NEWLINE, TokenType.EOF]),
+        ('"hello \\ world"', [TokenType.STRING, TokenType.NEWLINE, TokenType.EOF]),
+        ('"hello \n world"', [TokenType.STRING, TokenType.NEWLINE, TokenType.EOF]),
+        ("123", [TokenType.INTEGER, TokenType.NEWLINE, TokenType.EOF]),
+        ("123.456", [TokenType.FLOAT, TokenType.NEWLINE, TokenType.EOF]),
+    ],
+)
+def test_literal(input_: str, expected: list[TokenType]):
+    actual = get_token_types(input_)
+    assert_language_invariants(actual)
+    assert_token_types_equal(actual, expected)
+
+
 # MARK: Negative path
+@pytest.mark.parametrize(
+    "input_",
+    [
+        '"unterminated string',
+        "'unterminated string\n100",
+        "'unterminated string\\",
+    ],
+)
+def test_unterminated_string(input_: str):
+    with pytest.raises(ScannerException):
+        scan(input_)
+
+
+@pytest.mark.parametrize(
+    "input_",
+    [
+        "  1\n 2",
+        " 1\n\t2",
+    ],
+)
+def test_malformed_indentation(input_: str):
+    with pytest.raises(ScannerException):
+        scan(input_)
+
+
+def test_operator_prefix_without_exact_match_raises(monkeypatch):
+    import src.mod.scanner.scanner as scanner_module
+    from src.mod.scanner import TokenType, scan, ScannerException
+
+    # Make "=<" a valid prefix (because "=<x" exists) but not a full token.
+    monkeypatch.setattr(
+        scanner_module,
+        "OPERATOR_TOKEN_TABLE",
+        {
+            "=": TokenType.EQUALS,
+            "=<x": TokenType.IMPLIES,
+        },
+    )
+
+    with pytest.raises(ScannerException) as exc:
+        scan("=<")
+
+    assert "Cannot find symbol =< in operator token table" in str(exc.value)

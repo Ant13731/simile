@@ -3,4 +3,11 @@ from src.mod.scanner.tokens import (
     OPERATOR_TOKEN_TABLE,
     KEYWORD_TABLE,
 )
-from src.mod.scanner.scanner import scan, Scanner, Token, Location, ScanException
+from src.mod.scanner.scanner import (
+    scan,
+    Scanner,
+    Token,
+    Location,
+    ScanningException,
+    ScannerException,
+)

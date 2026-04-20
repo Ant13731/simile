@@ -8,10 +8,6 @@ from src.mod.scanner.tokens import (
 )
 
 
-class ScanException(Exception):
-    pass
-
-
 @dataclass
 class Location:
     """Represents the location of a token in the source code."""
@@ -44,6 +40,30 @@ class Token:
     def multiline(self) -> bool:
         """Checks if the token spans multiple lines."""
         return self.start_location.line != self.end_location.line
+
+
+class ScanningException(Exception):
+    def __init__(self, location: Location | str, next_token: str | None, message: str):
+        message = f"Scan error at {location}: {message}"
+        if next_token:
+            message += f". Next token: {next_token}"
+        super().__init__(message)
+
+        self.location = location
+        self.next_token = next_token
+        self.message = message
+
+
+class ScannerException(Exception):
+    def __init__(self, scanning_errors: list[ScanningException], scanned_tokens: list[Token]):
+        message = f"Encountered {len(scanning_errors)} scanning error(s) during scanning:"
+        for error in scanning_errors:
+            message += f"\nScan error: {error}"
+        message += f"\n\nScanned tokens up to this point: {scanned_tokens}"
+        super().__init__(message)
+
+        self.scanning_errors = scanning_errors
+        self.scanned_tokens = scanned_tokens
 
 
 @dataclass
@@ -172,7 +192,7 @@ class Scanner:
         if indentation_difference < 0:
             if self.peek() == " " or self.peek() == "\t":
                 # There is more "indentation" left to consume, but the leftover does not match what we expect so far.
-                raise ScanException(
+                raise ScanningException(
                     self.current_location,
                     self.peek(),
                     f"Indentation does not match. Expected {self.indentation_stack[indentation_difference:]} but got {self.move_until_no_whitespace()}",
@@ -286,7 +306,7 @@ class Scanner:
                     self.advance()
 
                 if self.at_end_of_text:
-                    raise ScanException(self.current_location, self.peek(), f'Unterminated string literal (expected ", found {self.peek()})')
+                    raise ScanningException(self.current_location, self.peek(), f'Unterminated string literal (expected ", found {self.peek()})')
                 self.advance()  # will match \"
                 value = self.text[self.current_index_lexeme_start + 1 : self.current_index - 1]
                 self.add_token(TokenType.STRING, value)
@@ -338,7 +358,7 @@ class Scanner:
                 #         f"Symbol {consumed_characters} has multiple possible matches in the table {possible_tokens}, but none were valid with the next character {self.peek()}",
                 #     )
                 if possible_tokens.get(consumed_characters) is None:
-                    raise ScanException(
+                    raise ScanningException(
                         self.current_location,
                         self.peek(),
                         f"Cannot find symbol {consumed_characters} in operator token table. Possible matches are {possible_tokens}, but none were valid with the next character {self.peek()}",
@@ -365,7 +385,7 @@ class Scanner:
                         token_type = TokenType.NOT_IN
                 self.add_token(token_type, value)
             case _:
-                raise ScanException(self.current_location, self.peek(), "Unexpected character")
+                raise ScanningException(self.current_location, self.peek(), "Unexpected character")
 
     def move_to_next_whitespace(self) -> None:
         """Advances the scanner past the next whitespace character in the text."""
@@ -399,6 +419,7 @@ def scan(text: str) -> list[Token]:
         text += "\n"
 
     scanner = Scanner(text)
+    scanning_errors = []
 
     while not scanner.at_end_of_text:
         try:
@@ -406,8 +427,8 @@ def scan(text: str) -> list[Token]:
             scanner.current_location_lexeme_start.line = scanner.current_location.line
             scanner.current_location_lexeme_start.column = scanner.current_location.column
             scanner.scan_next()
-        except ScanException as e:
-            print(f"Error at {scanner.current_location}: {e}")
+        except ScanningException as e:
+            scanning_errors.append(e)
             scanner.move_to_next_whitespace()
 
     # Cleanup indentation, eof
@@ -416,4 +437,8 @@ def scan(text: str) -> list[Token]:
             scanner.add_token(TokenType.DEDENT)
         scanner.indentation_stack.clear()
     scanner.add_token(TokenType.EOF)
-    return scanner.scanned_tokens
+
+    if not scanning_errors:
+        return scanner.scanned_tokens
+
+    raise ScannerException(scanning_errors, scanner.scanned_tokens)
