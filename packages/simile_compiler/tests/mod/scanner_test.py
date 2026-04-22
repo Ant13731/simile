@@ -9,7 +9,7 @@ from src.mod.scanner import (
     Token,
     Location,
     ScanningException,
-    ScannerException,
+    ScannerError,
 )
 
 
@@ -408,7 +408,7 @@ def test_literal(input_: str, expected: list[TokenType]):
     ],
 )
 def test_unterminated_string(input_: str):
-    with pytest.raises(ScannerException):
+    with pytest.raises(ScannerError):
         scan(input_)
 
 
@@ -420,13 +420,13 @@ def test_unterminated_string(input_: str):
     ],
 )
 def test_malformed_indentation(input_: str):
-    with pytest.raises(ScannerException):
+    with pytest.raises(ScannerError):
         scan(input_)
 
 
 def test_operator_prefix_without_exact_match_raises(monkeypatch):
     import src.mod.scanner.scanner as scanner_module
-    from src.mod.scanner import TokenType, scan, ScannerException
+    from src.mod.scanner import TokenType, scan, ScannerError
 
     # Make "=<" a valid prefix (because "=<x" exists) but not a full token.
     monkeypatch.setattr(
@@ -438,7 +438,7 @@ def test_operator_prefix_without_exact_match_raises(monkeypatch):
         },
     )
 
-    with pytest.raises(ScannerException) as exc:
+    with pytest.raises(ScannerError) as exc:
         scan("=<")
 
     assert "Cannot find symbol =< in operator token table" in str(exc.value)

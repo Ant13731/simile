@@ -54,7 +54,7 @@ class ScanningException(Exception):
         self.message = message
 
 
-class ScannerException(Exception):
+class ScannerError(Exception):
     def __init__(self, scanning_errors: list[ScanningException], scanned_tokens: list[Token]):
         message = f"Encountered {len(scanning_errors)} scanning error(s) during scanning:"
         for error in scanning_errors:
@@ -441,4 +441,4 @@ def scan(text: str) -> list[Token]:
     if not scanning_errors:
         return scanner.scanned_tokens
 
-    raise ScannerException(scanning_errors, scanner.scanned_tokens)
+    raise ScannerError(scanning_errors, scanner.scanned_tokens)

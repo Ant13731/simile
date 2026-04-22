@@ -9,5 +9,5 @@ from src.mod.scanner.scanner import (
     Token,
     Location,
     ScanningException,
-    ScannerException,
+    ScannerError,
 )

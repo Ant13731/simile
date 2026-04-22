@@ -180,6 +180,8 @@ class Parser:
         "import_stmt": {TokenType.IMPORT, TokenType.FROM},
         "import_name": {TokenType.DOT, TokenType.IDENTIFIER},
         "import_list": {TokenType.MULT, TokenType.IDENTIFIER, TokenType.L_PAREN},
+        "flat_tuple_identifier": {TokenType.IDENTIFIER, TokenType.L_PAREN},
+        "ident_list_item_non_maplet": {TokenType.IDENTIFIER, TokenType.L_PAREN},
     }
 
     @classmethod
@@ -327,8 +329,8 @@ class Parser:
             with_clauses = []
             if self.peek().type_ == TokenType.INDENT:
                 self.advance()
-                self.consume(TokenType.WITH, "Indentation after assignment expects a 'with' clause")
                 while not self.match(TokenType.DEDENT):
+                    self.consume(TokenType.WITH, "Each refinement line in an assignment block must start with 'with'")
                     with_clauses.append(self.expr())
                     self.consume(TokenType.NEWLINE, "Expected newline after with clause expression")
 
@@ -345,7 +347,8 @@ class Parser:
 
     @store_derivation
     def predicate(self) -> ast_.Predicate | ast_.ASTNode:
-        match t := self.peek():
+        t = self.peek()
+        match t.type_:
             case TokenType.FORALL:
                 self.advance()
                 ident_list = self.ident_list()
