@@ -1,7 +1,7 @@
 import pytest
 import hypothesis
 
-from src.mod.scanner import (
+from src.mod.pipeline.scanner import (
     scan,
     OPERATOR_TOKEN_TABLE,
     KEYWORD_TABLE,
@@ -425,8 +425,8 @@ def test_malformed_indentation(input_: str):
 
 
 def test_operator_prefix_without_exact_match_raises(monkeypatch):
-    import src.mod.scanner.scanner as scanner_module
-    from src.mod.scanner import TokenType, scan, ScannerError
+    import src.mod.pipeline.scanner.scanner as scanner_module
+    from src.mod.pipeline.scanner import TokenType, scan, ScannerError
 
     # Make "=<" a valid prefix (because "=<x" exists) but not a full token.
     monkeypatch.setattr(

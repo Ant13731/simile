@@ -4,8 +4,8 @@ import textwrap
 
 import pytest
 
-from src.mod.ast_ import *
-from src.mod.parser import parse, ParseError
+from src.mod.data.ast_ import *
+from src.mod.pipeline.parser import parse, ParseError
 
 
 def normalize_source(source: str) -> str:
