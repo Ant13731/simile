@@ -1,9 +1,3 @@
-from src.mod.pipeline.optimizer.intermediate_ast import (
-    GeneratorSelection,
-    CombinedGeneratorSelection,
-    SingleGeneratorSelection,
-    Loop,
-)
 from src.mod.pipeline.optimizer.optimizer import (
     collection_optimizer,
 )

@@ -1,16 +1,22 @@
+from src.mod.data.ast_.helpers.dataclass import (
+    dataclass_traverse,
+    dataclass_children,
+    is_dataclass_leaf,
+    dataclass_find_and_replace,
+    flatten,
+)
+from src.mod.data.ast_.helpers.printers import (
+    ast_to_source,
+    ast_to_debug_string,
+)
+
+
 from src.mod.data.ast_.ast_node_base import (
     ASTNode,
     Identifier,
     MapletIdentifier,
     TupleIdentifier,
     IdentifierListTypes,
-)
-from src.mod.data.ast_.dataclass_helpers import (
-    dataclass_traverse,
-    dataclass_children,
-    is_dataclass_leaf,
-    dataclass_find_and_replace,
-    flatten,
 )
 from src.mod.data.ast_.ast_node_operators import (
     Operators,
@@ -163,6 +169,12 @@ from src.mod.data.ast_.ast_nodes_generated import (
     SetComprehension,
     RelationComprehension,
     BagComprehension,
+)
+from src.mod.data.ast_.intermediate_ast import (
+    GeneratorSelection,
+    CombinedGeneratorSelection,
+    SingleGeneratorSelection,
+    Loop,
 )
 from src.mod.data.ast_.symbol_table_types import (
     SimileType,

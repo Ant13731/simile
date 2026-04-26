@@ -24,7 +24,10 @@ dependencies = []
 # Homepage = "https://github.com/jupyter/echo_kernel"
 
 [tool.hatch.version]
-path = "simile_compiler/__init__.py"
+path = "src/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 # Used to call hatch_build.py
 # [tool.hatch.build.hooks.custom]

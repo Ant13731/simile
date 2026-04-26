@@ -29,10 +29,6 @@ class GeneratorSelection(ast_.ASTNode):
     def _get_type(self) -> ast_.SimileType:
         return self.flatten()._get_type()
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        # return f"(\033[1m{ast_.And(self.generators).pretty_print_algorithmic(indent)}\033[0m ∧ {self.predicates.pretty_print_algorithmic(indent)})"
-        return self.flatten()._pretty_print_algorithmic(indent)
-
 
 @dataclass
 class CombinedGeneratorSelection(ast_.ASTNode):
@@ -54,10 +50,6 @@ class CombinedGeneratorSelection(ast_.ASTNode):
     def _get_type(self) -> ast_.SimileType:
         return self.flatten()._get_type()
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        # return f"(\033[1m{self.generator.pretty_print_algorithmic(indent)}\033[0m ∧ ({self.gsp_predicates.pretty_print_algorithmic(indent)}) ∧ {self.predicates.pretty_print_algorithmic(indent)})"
-        return self.flatten()._pretty_print_algorithmic(indent)
-
 
 @dataclass
 class SingleGeneratorSelection(ast_.ASTNode):
@@ -76,9 +68,6 @@ class SingleGeneratorSelection(ast_.ASTNode):
     def _get_type(self) -> ast_.SimileType:
         return self.flatten()._get_type()
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return self.flatten()._pretty_print_algorithmic(indent)
-
 
 @dataclass
 class Loop(ast_.ASTNode):
@@ -87,8 +76,3 @@ class Loop(ast_.ASTNode):
 
     def _get_type(self) -> ast_.SimileType:
         return ast_.BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        predicate = self.predicate._pretty_print_algorithmic(indent)
-        body = self.body._pretty_print_algorithmic(indent + 1)
-        return f"loop {predicate}:\n{'\t' * (indent + 1)}{body}\n"

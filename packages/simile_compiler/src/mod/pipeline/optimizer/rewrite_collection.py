@@ -54,10 +54,10 @@ class RewriteCollection:
             if new_ast is not None:
                 # TODO see if this addition of environments is always true...
                 ast = analysis.populate_ast_environments(new_ast, ast._env)
-                logger.success(f"SUCCESS: matched {rewrite_rule.__name__}. New ast: {ast}\nPretty print: {ast.pretty_print_algorithmic()}")
+                logger.success(f"SUCCESS: matched {rewrite_rule.__name__}. New ast: {ast}\nPretty print: {ast_.ast_to_source(ast)}")
                 continue
 
-            logger.trace(f"FAILED: to match {rewrite_rule.__name__} with AST: {ast}\nPretty print: {ast.pretty_print_algorithmic()}")
+            logger.trace(f"FAILED: to match {rewrite_rule.__name__} with AST: {ast}\nPretty print: {ast_.ast_to_source(ast)}")
 
         return ast
 
@@ -106,7 +106,7 @@ class RewriteCollection:
             if hasattr(ast, field_name) and hasattr(new_ast, field_name):
                 setattr(new_ast, field_name, getattr(ast, field_name))
 
-        logger.info(f"Normalizing AST: {new_ast}\nPretty print: {new_ast.pretty_print_algorithmic()}")
+        logger.info(f"Normalizing AST: {new_ast}\nPretty print: {ast_.ast_to_source(new_ast)}")
         return self.apply_all_rules_once(new_ast)
 
     def normalize(self, ast: ast_.ASTNode) -> ast_.ASTNode:

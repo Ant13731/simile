@@ -9,7 +9,8 @@ from loguru import logger
 from src.mod.data import ast_
 from src.mod.pipeline import analysis
 from src.mod.pipeline.optimizer.rewrite_collection import RewriteCollection
-from src.mod.pipeline.optimizer.intermediate_ast import (
+from src.mod.data.ast_ import ast_to_source
+from src.mod.data.ast_.intermediate_ast import (
     GeneratorSelection,
     CombinedGeneratorSelection,
     SingleGeneratorSelection,
@@ -1632,10 +1633,10 @@ class RelationalSubtypingLoopSimplification(RewriteCollection):
                 for predicate_item in predicate.items:
                     match predicate_item:
                         # Enumerations with one element will only have one element. Ideally we would use the type to look at the size of the relation/set
-                        case ast_.Equal(l, val) if l == left and not val.contains_item(left):
+                        case ast_.Equal(l, val) if l == left and not val.contains(left):
                             substitution = (l, val)
                             break
-                        case ast_.Equal(val, l) if l == left and not val.contains_item(left):
+                        case ast_.Equal(val, l) if l == left and not val.contains(left):
                             substitution = (l, val)
                             break
 
@@ -1793,7 +1794,7 @@ class LoopsCodeGenerationCollection(RewriteCollection):
 
                     for identifier in identifiers_within_predicate:
                         # If the identifier is not bound outside of the quantifier or if it is used within the generator
-                        if ast._env.get(identifier.name) is None or generator.contains_item(identifier):
+                        if ast._env.get(identifier.name) is None or generator.contains(identifier):
                             bound_predicates.append(predicate)
                             break
                     else:
@@ -1842,7 +1843,7 @@ class ReplaceAndSimplifyCollection(RewriteCollection):
             self.bound_generator_variables |= ast.iterable_names.flatten()
 
         ast = super().apply_all_rules_one_traversal(ast)
-        logger.debug(f"AST after applying all rules: {ast.pretty_print_algorithmic()}")
+        logger.debug(f"AST after applying all rules: {ast_to_source(ast)}")
 
         # Restore bound variable record since we have exited the possibly nested quantifier
         self.bound_generator_variables = bound_generator_variables_before

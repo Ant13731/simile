@@ -56,7 +56,7 @@ class BinaryOperator(Enum):
     RANGE_RESTRICTION = auto()
     CONCAT = auto()
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         pretty_print_lookup = {
             BinaryOperator.IMPLIES: "⇒",
             BinaryOperator.EQUIVALENT: "≡",
@@ -126,7 +126,7 @@ class RelationOperator(Enum):
     TOTAL_SURJECTION = auto()
     BIJECTION = auto()
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         pretty_print_lookup = {
             RelationOperator.RELATION: "↔",
             RelationOperator.TOTAL_RELATION: "<<->",
@@ -152,7 +152,7 @@ class UnaryOperator(Enum):
     NONEMPTY_POWERSET = auto()
     INVERSE = auto()
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         pretty_print_lookup = {
             UnaryOperator.NOT: "¬",
             UnaryOperator.NEGATIVE: "-",
@@ -169,7 +169,7 @@ class ListOperator(Enum):
     AND = auto()
     OR = auto()
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         pretty_print_lookup = {
             ListOperator.AND: "∧",
             ListOperator.OR: "∨",
@@ -230,7 +230,7 @@ class QuantifierOperator(Enum):
             case _:
                 return None
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         pretty_print_lookup = {
             QuantifierOperator.FORALL: "∀",
             QuantifierOperator.EXISTS: "∃",
@@ -253,7 +253,7 @@ class ControlFlowOperator(Enum):
     CONTINUE = auto()
     SKIP = auto()
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         pretty_print_lookup = {
             ControlFlowOperator.BREAK: "break",
             ControlFlowOperator.CONTINUE: "continue",
@@ -271,9 +271,9 @@ class CollectionOperator(Enum):
     BAG = auto()
     TUPLE = auto()
 
-    def pretty_print(self) -> str:
+    def to_source(self) -> str:
         quantifier_op_version = QuantifierOperator.from_collection_operator(self)
-        return quantifier_op_version.pretty_print() if quantifier_op_version else self.name
+        return quantifier_op_version.to_source() if quantifier_op_version else self.name
 
 
 Operators = BinaryOperator | RelationOperator | UnaryOperator | ListOperator | QuantifierOperator | ControlFlowOperator

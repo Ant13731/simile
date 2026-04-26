@@ -46,9 +46,6 @@ class Int(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.Int
 
-    def _pretty_print_algorithmic(self, indent) -> str:
-        return self.value
-
 
 @dataclass
 class Float(ASTNode):
@@ -56,9 +53,6 @@ class Float(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.Float
-
-    def _pretty_print_algorithmic(self, indent) -> str:
-        return self.value
 
 
 @dataclass
@@ -68,17 +62,11 @@ class String(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.String
 
-    def _pretty_print_algorithmic(self, indent) -> str:
-        return self.value
-
 
 @dataclass
 class True_(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.Bool
-
-    def _pretty_print_algorithmic(self, indent) -> str:
-        return "True"
 
 
 @dataclass
@@ -86,62 +74,11 @@ class False_(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.Bool
 
-    def _pretty_print_algorithmic(self, indent) -> str:
-        return "False"
-
 
 @dataclass
 class None_(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent) -> str:
-        return "None"
-
-
-# @dataclass
-# class IdentList(ASTNode):
-#     items: list[Identifier | IdentList | MapletIdentifier]  # This binaryop can only be a maplet
-
-#     @property
-#     def free(self) -> set[Identifier]:
-#         return self.flatten()
-
-#     def well_formed(self) -> bool:
-#         identifiers = self.find_all_instances(Identifier)
-#         for i in range(len(identifiers)):
-#             for j in range(i + 1, len(identifiers)):
-#                 if identifiers[i] == identifiers[j]:
-#                     return False
-#         return True
-
-#     def _get_type(self) -> SimileType:
-#         return SetType(
-#             element_type=PairType(
-#                 left=BaseSimileType.Int,
-#                 right=type_union(*map(lambda x: x.get_type, self.items)),
-#             ),
-#         )
-
-#     def _pretty_print_algorithmic(self, indent: int) -> str:
-#         return ", ".join(item._pretty_print_algorithmic(indent) for item in self.items)
-
-#     def flatten(self) -> set[Identifier]:
-#         ret: set[Identifier] = set()
-#         for item in self.items:
-#             ret |= item.flatten()
-#         return ret
-
-#     def flatten_until_leaf_node(self) -> list[Identifier | MapletIdentifier]:
-#         ret: list[Identifier | MapletIdentifier] = []
-#         for item in self.items:
-#             if isinstance(item, MapletIdentifier):
-#                 ret.append(item)
-#             elif isinstance(item, IdentList):
-#                 ret.extend(item.flatten_until_leaf_node())
-#             else:
-#                 ret.append(item)
-#         return ret
 
 
 class InheritedEqMixin:
@@ -429,11 +366,6 @@ class BinaryOp(InheritedEqMixin, ASTNode):
                 )
         raise SimileTypeError(f"Unknown type for binary operator: {self.op_type.name}, {l_type}, {r_type}", self)
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        left_str = self.left._pretty_print_algorithmic(indent)
-        right_str = self.right._pretty_print_algorithmic(indent)
-        return f"{left_str} {self.op_type.pretty_print()} {right_str}"
-
     def try_cast_maplet_to_maplet_identifier(self) -> MapletIdentifier | None:
         if self.op_type != BinaryOperator.MAPLET:
             return None
@@ -495,11 +427,6 @@ class RelationOp(InheritedEqMixin, ASTNode):
             relation_subtype=relation_subtype,
         )
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        left_str = self.left._pretty_print_algorithmic(indent)
-        right_str = self.right._pretty_print_algorithmic(indent)
-        return f"{left_str} {self.op_type.pretty_print()} {right_str}"
-
 
 @dataclass(eq=False)
 class UnaryOp(InheritedEqMixin, ASTNode):
@@ -547,11 +474,6 @@ class UnaryOp(InheritedEqMixin, ASTNode):
                 if not isinstance(self.value.get_type, SetType):
                     raise SimileTypeError(f"Invalid type for powerset operation: {self.value.get_type}", self)
                 return SetType(element_type=self.value.get_type)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        if self.op_type == UnaryOperator.INVERSE:
-            return f"{self.value._pretty_print_algorithmic(indent)}{self.op_type.pretty_print()}"
-        return f"{self.op_type.pretty_print()}{self.value._pretty_print_algorithmic(indent)}"
 
 
 @dataclass(eq=False)
@@ -621,13 +543,6 @@ class ListOp(InheritedEqMixin, ASTNode):
                 case _:
                     predicates.append(item)
         return candidate_generators, predicates
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        if len(self.items) == 0:
-            return ""
-        if len(self.items) == 1:
-            return self.items[0]._pretty_print_algorithmic(indent)
-        return "(" + f" {self.op_type.pretty_print()} ".join(item._pretty_print_algorithmic(indent) for item in self.items) + ")"
 
 
 @dataclass(eq=False)
@@ -724,7 +639,7 @@ class Quantifier(ASTNode):
                     if identifier == identifier_:
                         continue
 
-                    if identifier.contains_item(identifier_) or identifier_.contains_item(identifier):
+                    if identifier.contains(identifier_) or identifier_.contains(identifier):
                         raise SimileTypeError(
                             f"Invalid bound identifier setup - all identifiers can be bound at most once, found reused variable between {identifier} and {identifier_}", self
                         )
@@ -744,23 +659,6 @@ class Quantifier(ASTNode):
             return self.expression.get_type
 
         raise SimileTypeError(f"Invalid quantifier operator type. Expected one of {list(QuantifierOperator)} but got {self.op_type}", self)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        quantifier = ""
-        predicate = self.all_predicates._pretty_print_algorithmic(indent)
-        expression = self.expression._pretty_print_algorithmic(indent)
-
-        if self._bound_identifiers:
-            quantifier += ", ".join(x._pretty_print_algorithmic(indent) for x in list(self._bound_identifiers))
-            quantifier += f" · {predicate} | {expression}"
-        else:
-            quantifier += f"{expression} | {predicate}"
-
-        if len(self.op_type.pretty_print()) == 2:
-            quantifier = f"{self.op_type.pretty_print()[0]}{quantifier}{self.op_type.pretty_print()[1]}"
-        else:
-            quantifier = f"{self.op_type.pretty_print()} {quantifier}"
-        return quantifier
 
     def flatten_bound_identifiers(self) -> set[Identifier]:
         identifiers = set()
@@ -801,9 +699,6 @@ class Enumeration(InheritedEqMixin, ASTNode):
         element_type = type_union(*(item.get_type for item in self.items))
         return SetType(element_type=element_type)
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"{self.op_type.pretty_print()[0]}{', '.join(item._pretty_print_algorithmic(indent) for item in self.items)}{self.op_type.pretty_print()[1]}"
-
 
 @dataclass
 class Type_(ASTNode):
@@ -825,9 +720,6 @@ class Type_(ASTNode):
         if self.generics:
             return self.type_.get_type.replace_generic_types([generic.get_type for generic in self.generics])
         return self.type_.get_type
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return self.type_._pretty_print_algorithmic(indent)
 
 
 @dataclass
@@ -869,12 +761,6 @@ class LambdaDef(ASTNode):
             return_type=self.expression.get_type,
         )
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        args_str = self.params._pretty_print_algorithmic(indent)
-        predicate_str = self.predicate._pretty_print_algorithmic(indent)
-        expression_str = self.expression._pretty_print_algorithmic(indent)
-        return f"λ {args_str} · {predicate_str} | {expression_str}"
-
 
 @dataclass
 class StructAccess(ASTNode):
@@ -888,9 +774,6 @@ class StructAccess(ASTNode):
             raise SimileTypeError(f"Field '{self.field_name.name}' not found in struct type", self)
 
         return self.struct.get_type.fields.get(self.field_name.name, BaseSimileType.None_)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"{self.struct._pretty_print_algorithmic(indent)}.{self.field_name._pretty_print_algorithmic(indent)}"
 
 
 @dataclass
@@ -934,10 +817,6 @@ class Call(ASTNode):
 
         raise SimileTypeError(f"Invalid call target type: {self.target.get_type} (must be a procedure, struct, or relation type)", self)
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        args_str = ", ".join(arg._pretty_print_algorithmic(indent) for arg in self.args)
-        return f"{self.target._pretty_print_algorithmic(indent)}({args_str})"
-
 
 @dataclass
 class Image(ASTNode):
@@ -952,9 +831,6 @@ class Image(ASTNode):
             raise SimileTypeError(f"Image target must be a relation type (not set), got {self.target.get_type}", self)
 
         return SetType(element_type=self.target.get_type.element_type.right)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"{self.target._pretty_print_algorithmic(indent)}[{self.index._pretty_print_algorithmic(indent)}]"
 
 
 @dataclass
@@ -990,9 +866,6 @@ class TypedName(ASTNode):
         #     lambda expected_type: expected_type if expected_type else BaseSimileType.None_,
         # )
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"{self.name._pretty_print_algorithmic(indent)}: {self.type_._pretty_print_algorithmic(indent)}"
-
 
 @dataclass
 class Assignment(ASTNode):
@@ -1004,15 +877,6 @@ class Assignment(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent):
-        with_clause_str = ""
-        if self.with_clauses:
-            with_clause_str = "\n    with" + "\n    with".join(clause._pretty_print_algorithmic(indent) for clause in self.with_clauses)
-
-        if self.choice_assignment:
-            return f"{self.target._pretty_print_algorithmic(indent)} :∈ {self.value._pretty_print_algorithmic(indent)}{with_clause_str}"
-        return f"{self.target._pretty_print_algorithmic(indent)} := {self.value._pretty_print_algorithmic(indent)}{with_clause_str}"
-
 
 @dataclass
 class Return(ASTNode):
@@ -1020,11 +884,6 @@ class Return(ASTNode):
 
     def _get_type(self) -> SimileType:
         return self.value.get_type
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        if isinstance(self.value, None_):
-            return "return"
-        return f"return {self.value._pretty_print_algorithmic(indent)}"
 
 
 @dataclass(eq=False)
@@ -1034,9 +893,6 @@ class ControlFlowStmt(InheritedEqMixin, ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return self.op_type.pretty_print()
-
 
 @dataclass
 class Statements(ASTNode):
@@ -1045,9 +901,6 @@ class Statements(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"\n{'\t'*indent}".join(item._pretty_print_algorithmic(indent) for item in self.items)
-
 
 @dataclass
 class Else(ASTNode):
@@ -1055,9 +908,6 @@ class Else(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"else:\n\t{'\t'*indent}{self.body._pretty_print_algorithmic(indent+1)}\n"
 
 
 @dataclass
@@ -1074,15 +924,6 @@ class If(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent):
-        ret = f"if {self.condition._pretty_print_algorithmic(indent)}:\n"
-        ret += f"{'\t' * (indent + 1)}{self.body._pretty_print_algorithmic(indent + 1)}"
-        ret += "\n"
-        if isinstance(self.else_body, None_):
-            return ret
-        ret += self.else_body._pretty_print_algorithmic(indent)
-        return ret
-
 
 @dataclass
 class ElseIf(ASTNode):
@@ -1092,15 +933,6 @@ class ElseIf(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        ret = f"else if {self.condition._pretty_print_algorithmic(indent)}:\n"
-        ret += f"{'\t' * (indent + 1)}{self.body._pretty_print_algorithmic(indent + 1)}"
-        ret += "\n"
-        if isinstance(self.else_body, None_):
-            return ret
-        ret += self.else_body._pretty_print_algorithmic(indent)
-        return ret
 
 
 @dataclass
@@ -1116,12 +948,6 @@ class For(ASTNode):
     def bound(self) -> set[Identifier]:
         return self.iterable_names.free
 
-    def _pretty_print_algorithmic(self, indent):
-        iterable_str = self.iterable._pretty_print_algorithmic(indent)
-        names_str = ", ".join(name._pretty_print_algorithmic(indent) for name in self.iterable_names.items)
-        body_str = self.body._pretty_print_algorithmic(indent + 1)
-        return f"for {names_str} in {iterable_str}:\n{'\t' * (indent + 1)}{body_str}\n"
-
 
 @dataclass
 class While(ASTNode):
@@ -1131,11 +957,6 @@ class While(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        condition_str = self.condition._pretty_print_algorithmic(indent)
-        body_str = self.body._pretty_print_algorithmic(indent + 1)
-        return f"while {condition_str}:\n{'\t' * (indent + 1)}{body_str}\n"
-
 
 @dataclass
 class RecordDef(ASTNode):
@@ -1144,10 +965,6 @@ class RecordDef(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        items_str = f"\n{'\t'*(indent + 1)}".join(item._pretty_print_algorithmic(indent + 1) for item in self.items)
-        return f"struct {self.name._pretty_print_algorithmic(indent)}({items_str})"
 
 
 # @dataclass
@@ -1170,12 +987,6 @@ class ProcedureDef(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        args_str = f",\n{'\t'*(indent + 1)}".join(arg._pretty_print_algorithmic(indent + 1) for arg in self.args)
-        body_str = self.body._pretty_print_algorithmic(indent + 1)
-        return_type_str = self.return_type._pretty_print_algorithmic(indent)
-        return f"def {self.name._pretty_print_algorithmic(indent)}(\n{args_str}\n) -> {return_type_str}:\n{'\t' * (indent + 1)}{body_str}\n"
-
 
 @dataclass
 class ImportAll(ASTNode):
@@ -1183,9 +994,6 @@ class ImportAll(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"*"
 
 
 @dataclass
@@ -1196,12 +1004,6 @@ class Import(ASTNode):
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
 
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        if isinstance(self.import_objects, None_):
-            return f"import {self.module_file_path}"
-        else:
-            return f"from {self.module_file_path} import {self.import_objects._pretty_print_algorithmic(indent)}"
-
 
 @dataclass
 class Start(ASTNode):
@@ -1210,9 +1012,6 @@ class Start(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return self.body._pretty_print_algorithmic(indent) if self.body else ""
 
 
 Literal = Int | Float | String | True_ | False_ | None_

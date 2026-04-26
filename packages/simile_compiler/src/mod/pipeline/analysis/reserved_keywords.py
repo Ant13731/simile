@@ -42,9 +42,9 @@ class ReservedKeywordErr:
 
 def check_clash(node: ast_.ASTNode, name: str) -> ReservedKeywordErr | None:
     if name in PRIMITIVE_TYPES:
-        return ReservedKeywordErr(node, name, "STARTING_ENVIRONMENT")
+        return ReservedKeywordErr(node, name, "PRIMITIVE_TYPES")
     if name in BUILTIN_FUNCTIONS:
-        return ReservedKeywordErr(node, name, "STARTING_ENVIRONMENT")
+        return ReservedKeywordErr(node, name, "BUILTIN_FUNCTIONS")
     if name in RESERVED_KEYWORDS:
         return ReservedKeywordErr(node, name, "RESERVED_KEYWORDS")
     return None

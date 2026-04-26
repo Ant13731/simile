@@ -17,7 +17,7 @@ from src.mod.data.ast_.symbol_table_types import (
     GenericType,
     RelationSubTypeMask,
 )
-from src.mod.data.ast_.dataclass_helpers import dataclass_find_and_replace
+from src.mod.data.ast_.helpers.dataclass import dataclass_find_and_replace
 
 T = TypeVar("T")
 

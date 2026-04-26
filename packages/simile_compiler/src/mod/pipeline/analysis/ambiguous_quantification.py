@@ -41,11 +41,11 @@ def populate_bound_identifiers(ast: ast_.ASTNode) -> None:
         for possible_bound_identifier in possible_bound_identifier_names:
             assert ast._env is not None
             if ast._env.get(possible_bound_identifier.name) is not None:
-                possible_bound_identifiers = list(filter(lambda x: not x.contains_item(possible_bound_identifier), possible_bound_identifiers))
+                possible_bound_identifiers = list(filter(lambda x: not x.contains(possible_bound_identifier), possible_bound_identifiers))
 
         if not possible_bound_identifiers:
             raise SimileTypeError(
-                f"Failed to infer bound variables for quantifier {ast.pretty_print_algorithmic()}. "
+                f"Failed to infer bound variables for quantifier {ast_.ast_to_source(ast)}. "
                 "Either the expression is ambiguously overwriting a predefined variable in scope, "
                 "or no valid generators are present in the quantification expression. Please explicitly state bound variables",
                 ast,

@@ -2,10 +2,11 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, field
 from typing import Generator, Any, Generic, TypeVar, Callable
 from functools import wraps
+from warnings import deprecated
 
 from src.mod.pipeline.scanner import Location
 from src.mod.data.ast_.ast_node_operators import Operators
-from src.mod.data.ast_.dataclass_helpers import dataclass_traverse, dataclass_find_and_replace
+from src.mod.data.ast_.helpers.dataclass import dataclass_traverse, dataclass_find_and_replace
 from src.mod.data.ast_.symbol_table_types import SimileType, DeferToSymbolTable, SimileTypeError, PairType, TupleType
 from src.mod.data.ast_.symbol_table_env import SymbolTableEnvironment
 
@@ -22,20 +23,24 @@ class ASTNode:
         self._end_location: Location | None = None
         self._file_location: str | None = None
 
+    @deprecated("Well-formedness checks are being moved to a separate analysis pass")
     def well_formed(self) -> bool:
         """Check if the variables in expressions are well-formed (i.e., no clashes between :attr:`bound` and :attr:`free` variables)."""
         return True
 
+    @deprecated("Well-formedness checks are being moved to a separate analysis pass")
     @property
     def bound(self) -> set[Identifier]:
         """Returns the set of bound variables in the AST node."""
         return set()
 
+    @deprecated("Well-formedness checks are being moved to a separate analysis pass")
     @property
     def free(self) -> set[Identifier]:
         """Returns the set of free variables in the AST node."""
         return set()
 
+    @deprecated("Moving to trait-based external type system")
     @property
     def get_type(self) -> SimileType:
         """Returns the type of the AST node.
@@ -47,26 +52,29 @@ class ASTNode:
             raise SimileTypeError("Type analysis must be run before calling the `get_type` function (self._env is None)", self)
         return self._get_type()
 
+    @deprecated("Moving to trait-based external type system")
     def _get_type(self) -> SimileType:
         """"""
         raise NotImplementedError
 
-    def contains(self, node: type[ASTNode], with_op_type: Operators | None = None) -> bool:
-        """Check if the AST node contains a specific type of node."""
+    def contains_by_type(self, node_type: type[ASTNode], also_has_op_type: Operators | None = None) -> bool:
+        """Check if the AST node contains a specific type of node.
+
+        If also_has_op_type is provided, only counts nodes of the specified type that also have an op_type field matching also_has_op_type."""
 
         def is_matching_node(n: Any) -> bool:
-            if not isinstance(n, node):
+            if not isinstance(n, node_type):
                 return False
-            if with_op_type is None:
+            if also_has_op_type is None:
                 return True
             if not hasattr(n, "op_type"):
                 return False
             assert hasattr(n, "op_type")
-            return n.op_type == with_op_type  # type: ignore
+            return n.op_type == also_has_op_type  # type: ignore
 
         return any(dataclass_traverse(self, is_matching_node))
 
-    def contains_item(self, item: ASTNode | Any) -> bool:
+    def contains(self, item: ASTNode | Any) -> bool:
         """Check if the AST node contains a specific item."""
         return any(dataclass_traverse(self, lambda n: n == item))
 
@@ -130,68 +138,6 @@ class ASTNode:
                 return False
         return True
 
-    def pretty_print(
-        self,
-        ignore_fields: list[str] | None = None,
-        indent=2,
-        print_env: bool = False,
-    ) -> str:
-        """Pretty print the AST node with JSON-like indentation."""
-        if ignore_fields is not None and self.__class__.__name__ in ignore_fields:
-            indent_ = ""
-            indent -= 2
-            ret = ""
-        else:
-            # if isinstance(self, PrimitiveLiteral | Identifier):  # type: ignore # noqa
-            #     if isinstance(self, None_):  # type: ignore # noqa
-            #         ret = f"{self.__class__.__name__}\n"
-            #         return ret
-            #     ret = f"{self.__class__.__name__}: {self.value}\n"
-            #     return ret
-
-            ret = f"{self.__class__.__name__}:\n"
-            indent_ = indent * " "
-
-        if print_env:
-
-            if self._env is None:
-                ret += f"{indent_}_env=None\n"
-            else:
-                ret += f"{indent_}_env={{\n"
-                for k, v in self._env.table.items():
-                    ret += f"{indent_ + "  "}{k}: {v},\n"
-                ret += f"{indent_}}}\n"
-
-        for f in fields(self):
-            field_value = getattr(self, f.name)
-
-            if isinstance(field_value, ASTNode):
-                if len(fields(self)) == 1:
-                    ret += f"{indent_}{field_value.pretty_print(ignore_fields, indent+2,print_env)}"
-                else:
-                    ret += f"{indent_}{f.name}={field_value.pretty_print(ignore_fields,indent + 2,print_env)}"
-
-                continue
-
-            if isinstance(field_value, list):
-                ret += f"{indent_}[\n"
-                for item in field_value:
-                    if isinstance(item, ASTNode):
-                        ret += f"{indent_}{item.pretty_print(ignore_fields,indent + 2,print_env)}"
-                    else:
-                        ret += f"{indent_}    {item}\n"
-                ret += f"{indent_}]\n"
-                continue
-
-            ret += f"{indent_}{f.name}**: {field_value}\n"
-        return ret
-
-    def pretty_print_algorithmic(self, indent: int = 0) -> str:
-        return self._pretty_print_algorithmic(indent)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        raise NotImplementedError
-
     def add_location(self, start: Location, end: Location, file: str) -> None:
         self._start_location = start
         self._end_location = end
@@ -201,6 +147,7 @@ class ASTNode:
         return f"({self._file_location}:{self._start_location}:{self._end_location})"
 
 
+# TODO move these to a different spot
 @dataclass
 class Identifier(ASTNode):
     """Identifier for variables, functions, etc. in the AST."""
@@ -225,11 +172,6 @@ class Identifier(ASTNode):
             if ret is not None:
                 return ret
         return DeferToSymbolTable(lookup_type=self.name)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        if self.name.startswith("*"):
-            return f"x{''.join(filter(str.isnumeric, self.name))}"
-        return self.name
 
     def flatten(self) -> set[Identifier]:
         """Used to simplify the flatten operation of :cls:`MapletIdentifier`"""
@@ -264,9 +206,6 @@ class TupleIdentifier(ASTNode):
 
     def _get_type(self) -> SimileType:
         return TupleType(tuple(map(lambda x: x.get_type, self.items)))
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"({', '.join(item._pretty_print_algorithmic(indent) for item in self.items)})"
 
     def flatten(self) -> set[Identifier]:
         flat_set = set()
@@ -337,9 +276,6 @@ class MapletIdentifier(TupleIdentifier, Generic[L, R]):
 
     def _get_type(self) -> SimileType:
         return PairType(self.left.get_type, self.right.get_type)
-
-    def _pretty_print_algorithmic(self, indent: int) -> str:
-        return f"{self.left._pretty_print_algorithmic(indent)} ↦ {self.right._pretty_print_algorithmic(indent)}"
 
     def flatten(self) -> set[Identifier]:
         return self.left.flatten() | self.right.flatten()

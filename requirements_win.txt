@@ -135,9 +135,9 @@ rpds-py==0.25.1
 ruff==0.11.13
 Send2Trash==1.8.3
 setuptools==80.9.0
--e git+https://github.com/Ant13731/my-compiler-journey.git@b8c0e36e132b7a34e9c16a9d78fee2748deb9ad0#egg=simile_compiler&subdirectory=packages\simile_compiler
--e git+https://github.com/Ant13731/my-compiler-journey.git@b8c0e36e132b7a34e9c16a9d78fee2748deb9ad0#egg=simile_jupyter_kernel&subdirectory=packages\simile_jupyter_kernel
--e git+https://github.com/Ant13731/my-compiler-journey.git@b8c0e36e132b7a34e9c16a9d78fee2748deb9ad0#egg=simile_lexer&subdirectory=packages\simile_jupyter_extension
+-e packages/simile_compiler
+-e packages/simile_jupyter_kernel
+# -e packages/simile_jupyter_extension
 six==1.17.0
 sniffio==1.3.1
 soupsieve==2.7

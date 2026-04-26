@@ -169,7 +169,7 @@ class RustCodeGenerator(CodeGenerator):
                 #     left_arg = f"{left_arg} as Int"
                 #     right_arg = f"{right_arg} as Int"
 
-                return wrap_parens(f"({wrap_parens(left_arg)} {ast.op_type.pretty_print()} {wrap_parens(right_arg)})")
+                return wrap_parens(f"({wrap_parens(left_arg)} {ast.op_type.to_source()} {wrap_parens(right_arg)})")
             case ast_.BinaryOperator.ADD if ast.get_type == ast_.BaseSimileType.String:
                 return wrap_parens(f"{self._generate_code(ast.left)}.clone() + {self._generate_code(ast.right)}.clone()")
 
