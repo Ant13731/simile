@@ -1,8 +1,9 @@
 from typing import Any
 from loguru import logger
 
-from src.mod.data.ast_.ast_node_base import ASTNode, Identifier
-from src.mod.data.ast_.ast_nodes import (
+from src.mod.data.ast_.base import ASTNode
+from src.mod.data.ast_.parser_only import Identifier
+from src.mod.data.ast_.common import (
     ListOp,
     Statements,
     For,

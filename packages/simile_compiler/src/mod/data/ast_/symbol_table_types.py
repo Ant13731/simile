@@ -3,8 +3,9 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 import copy
 from typing import Any, Callable, TypeVar, Generic, TypeGuard, Literal, ClassVar, ParamSpec, cast
+from warnings import deprecated
 
-from src.mod.data.ast_.ast_node_operators import (
+from src.mod.data.ast_.operators import (
     CollectionOperator,
     RelationOperator,
     BinaryOperator,
@@ -14,9 +15,10 @@ from src.mod.data.ast_.ast_node_operators import (
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.mod.data.ast_.ast_node_base import ASTNode
+    from src.mod.data.ast_.base import ASTNode
 
 
+@deprecated("Moving to trait-based external type system")
 class SimileTypeError(Exception):
     """Custom exception for Simile type errors."""
 
@@ -29,6 +31,7 @@ class SimileTypeError(Exception):
         self.node = node
 
 
+@deprecated("Moving to trait-based external type system")
 class SubstituteSimileTypeAddon:
 
     def substitute_eq(self, other: SimileType, mapping: dict[str, SimileType] | None = None) -> bool:
@@ -53,6 +56,7 @@ class SubstituteSimileTypeAddon:
         return self  # type: ignore
 
 
+@deprecated("Moving to trait-based external type system")
 class BaseSimileType(Enum):
     """Primitive/Atomic Simile types.
 
@@ -98,6 +102,7 @@ R = TypeVar("R", bound="SimileType")
 T = TypeVar("T", bound="SimileType")
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class GenericType(SubstituteSimileTypeAddon):
     """Generic types are used primarily for resolving generic procedures/functions into a specific type based on context.
@@ -119,6 +124,7 @@ class GenericType(SubstituteSimileTypeAddon):
             raise SimileTypeError("Failed to replace generic type value: not enough types provided") from None
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class TupleType(SubstituteSimileTypeAddon):
     items: tuple[SimileType, ...]
@@ -143,6 +149,7 @@ class TupleType(SubstituteSimileTypeAddon):
         return TupleType(tuple(item._replace_generic_types(lst) for item in self.items))
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class PairType(Generic[L, R], TupleType):
     """Maplet type"""
@@ -168,6 +175,7 @@ class PairType(Generic[L, R], TupleType):
         return PairType(self.left._replace_generic_types(lst), self.right._replace_generic_types(lst))
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class RelationSubTypeMask:
     total: bool
@@ -260,6 +268,7 @@ class RelationSubTypeMask:
                 )
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class SetType(Generic[T], SubstituteSimileTypeAddon):
     """Type to represent sets and set-dependent types: bags, relations, sequences, etc."""
@@ -328,6 +337,7 @@ class SetType(Generic[T], SubstituteSimileTypeAddon):
 # or SET S = {a,b,c} for set assignment
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class StructTypeDef(SubstituteSimileTypeAddon):
     # Internally a (many-to-one) (total on defined fields) function
@@ -342,6 +352,7 @@ class StructTypeDef(SubstituteSimileTypeAddon):
         return StructTypeDef({name: field._replace_generic_types(lst) for name, field in self.fields.items()})
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class EnumTypeDef(SetType[Literal[BaseSimileType.String]]):
     # Internally a set of identifiers
@@ -349,6 +360,7 @@ class EnumTypeDef(SetType[Literal[BaseSimileType.String]]):
     members: set[str] = field(default_factory=set)
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class ProcedureTypeDef(SubstituteSimileTypeAddon):
     arg_types: dict[str, SimileType]
@@ -378,6 +390,7 @@ class ProcedureTypeDef(SubstituteSimileTypeAddon):
 #         return instance_type
 
 
+@deprecated("Moving to trait-based external type system")
 def type_union(*types: SimileType) -> SimileType:
     """Create a single type or TypeUnion from multiple SimileTypes."""
     types_set: set[SimileType] = set()
@@ -397,6 +410,7 @@ def type_union(*types: SimileType) -> SimileType:
     return TypeUnion(types=types_set)
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class TypeUnion(SubstituteSimileTypeAddon):
     """OR-selection of types. This type should only be exposed internally, for narrowing purposes"""
@@ -409,12 +423,14 @@ class TypeUnion(SubstituteSimileTypeAddon):
         return all(f.substitute_eq(o, mapping) for f, o in zip(self.types, other.types))
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class ModuleImports(SubstituteSimileTypeAddon):
     # import these objects into the module namespace
     import_objects: dict[str, SimileType]
 
 
+@deprecated("Moving to trait-based external type system")
 @dataclass(frozen=True)
 class DeferToSymbolTable(SubstituteSimileTypeAddon):
     """Types dependent on this will not be resolved until the analysis phase"""

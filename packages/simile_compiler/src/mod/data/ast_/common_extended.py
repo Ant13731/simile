@@ -1,7 +1,7 @@
 # This file is auto-generated through packages\simile_compiler\src\mod\ast_\ast_nodes_generated.py. Do not edit manually.
 from dataclasses import dataclass, field
 
-from src.mod.data.ast_.ast_node_operators import (
+from src.mod.data.ast_.operators import (
     BinaryOperator,
     RelationOperator,
     UnaryOperator,
@@ -11,7 +11,7 @@ from src.mod.data.ast_.ast_node_operators import (
     CollectionOperator,
     Operators,
 )
-from src.mod.data.ast_.ast_nodes import (
+from src.mod.data.ast_.common import (
     True_,
     BinaryOp,
     RelationOp,
@@ -21,7 +21,7 @@ from src.mod.data.ast_.ast_nodes import (
     ControlFlowStmt,
     Enumeration,
 )
-from src.mod.data.ast_.ast_node_base import ASTNode
+from src.mod.data.ast_.base import ASTNode
 
 
 @dataclass

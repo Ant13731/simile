@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from copy import deepcopy
 from typing import Callable, TypeVar, Type, ClassVar
 
-from src.mod.data.ast_.ast_node_operators import (
+from src.mod.data.ast_.operators import (
     CollectionOperator,
     RelationOperator,
     BinaryOperator,

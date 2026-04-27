@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.mod.data.ast_.ast_node_operators import (
+from src.mod.data.ast_.operators import (
     BinaryOperator,
     RelationOperator,
     UnaryOperator,

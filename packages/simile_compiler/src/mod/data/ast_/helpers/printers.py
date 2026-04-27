@@ -2,14 +2,14 @@ from dataclasses import dataclass, fields, field
 from functools import singledispatch
 
 
-from src.mod.data.ast_.ast_node_operators import UnaryOperator
-from src.mod.data.ast_.ast_node_base import (
-    ASTNode,
+from src.mod.data.ast_.operators import UnaryOperator
+from src.mod.data.ast_.base import ASTNode
+from src.mod.data.ast_.parser_only import (
     Identifier,
     MapletIdentifier,
     TupleIdentifier,
 )
-from src.mod.data.ast_.ast_nodes import (
+from src.mod.data.ast_.common import (
     Int,
     Float,
     String,
@@ -43,7 +43,7 @@ from src.mod.data.ast_.ast_nodes import (
     Import,
     Start,
 )
-from src.mod.data.ast_.intermediate_ast import (
+from src.mod.data.ast_.optimizer_only import (
     GeneratorSelection,
     CombinedGeneratorSelection,
     SingleGeneratorSelection,

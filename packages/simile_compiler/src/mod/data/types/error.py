@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from src.mod.data.ast_.ast_node_base import ASTNode
+    from src.mod.data.ast_.base import ASTNode
 
 
 class SimileTypeError(Exception):

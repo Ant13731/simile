@@ -10,7 +10,7 @@ from src.mod.data import ast_
 from src.mod.pipeline import analysis
 from src.mod.pipeline.optimizer.rewrite_collection import RewriteCollection
 from src.mod.data.ast_ import ast_to_source
-from src.mod.data.ast_.intermediate_ast import (
+from src.mod.data.ast_.optimizer_only import (
     GeneratorSelection,
     CombinedGeneratorSelection,
     SingleGeneratorSelection,

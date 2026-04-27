@@ -3,14 +3,13 @@ from dataclasses import dataclass, field, Field, fields, is_dataclass
 from typing import Callable, ClassVar, Any, Self, Container
 
 
-from src.mod.data.ast_.ast_node_base import (
-    ASTNode,
+from src.mod.data.ast_.base import ASTNode
+from src.mod.data.ast_.parser_only import (
     Identifier,
     MapletIdentifier,
     TupleIdentifier,
-    IdentifierListTypes,
 )
-from src.mod.data.ast_.ast_node_operators import (
+from src.mod.data.ast_.operators import (
     BinaryOperator,
     RelationOperator,
     UnaryOperator,

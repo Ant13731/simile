@@ -9,7 +9,7 @@ from src.mod.data.types.error import SimileTypeError
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.mod.data.ast_.ast_node_base import ASTNode
+    from src.mod.data.ast_.base import ASTNode
     from src.mod.data.types.base import BaseType
 
 

@@ -9,16 +9,16 @@ from src.mod.data.ast_.helpers.printers import (
     ast_to_source,
     ast_to_debug_string,
 )
+from src.mod.data.ast_.helpers.equals import structurally_equal
 
 
-from src.mod.data.ast_.ast_node_base import (
-    ASTNode,
+from src.mod.data.ast_.base import ASTNode
+from src.mod.data.ast_.parser_only import (
     Identifier,
     MapletIdentifier,
     TupleIdentifier,
-    IdentifierListTypes,
 )
-from src.mod.data.ast_.ast_node_operators import (
+from src.mod.data.ast_.operators import (
     Operators,
     BinaryOperator,
     RelationOperator,
@@ -28,7 +28,7 @@ from src.mod.data.ast_.ast_node_operators import (
     CollectionOperator,
     QuantifierOperator,
 )
-from src.mod.data.ast_.ast_nodes import (
+from src.mod.data.ast_.common import (
     Int,
     Float,
     String,
@@ -69,7 +69,7 @@ from src.mod.data.ast_.ast_nodes import (
     SimpleStmt,
     CompoundStmt,
 )
-from src.mod.data.ast_.ast_nodes_generated import (
+from src.mod.data.ast_.common_extended import (
     Implies,
     Equivalent,
     NotEquivalent,
@@ -170,7 +170,7 @@ from src.mod.data.ast_.ast_nodes_generated import (
     RelationComprehension,
     BagComprehension,
 )
-from src.mod.data.ast_.intermediate_ast import (
+from src.mod.data.ast_.optimizer_only import (
     GeneratorSelection,
     CombinedGeneratorSelection,
     SingleGeneratorSelection,
@@ -199,7 +199,4 @@ from src.mod.data.ast_.symbol_table_env import (
     STARTING_ENVIRONMENT,
     PRIMITIVE_TYPES,
     BUILTIN_FUNCTIONS,
-)
-from src.mod.data.ast_.ast_node_helpers import (
-    structurally_equal,
 )

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, is_dataclass
 import pathlib
 from typing import TypeVar, Generic
+from warnings import deprecated
 
 from src.mod.data.ast_.symbol_table_types import (
     SimileType,
@@ -22,10 +23,12 @@ from src.mod.data.ast_.helpers.dataclass import dataclass_find_and_replace
 T = TypeVar("T")
 
 
+@deprecated("SymbolTable moving to a new schema and design")
 class SymbolTableError(Exception):
     pass
 
 
+@deprecated("SymbolTable moving to a new schema and design")
 @dataclass
 class Environment(Generic[T]):
 
@@ -59,6 +62,7 @@ class Environment(Generic[T]):
         return names
 
 
+@deprecated("SymbolTable moving to a new schema and design")
 @dataclass
 class SymbolTableEnvironment(Environment[SimileType]):
 
