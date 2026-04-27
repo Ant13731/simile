@@ -2,53 +2,13 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 
 from src.mod.data.types.base import BaseType
-
-
-class SymbolTableError(Exception):
-    pass
-
-
-class IdentifierContext(Enum):
-    VARIABLE = auto()
-    RECORD = auto()
-    RECORD_FIELD = auto()
-    PROCEDURE = auto()
-    PROCEDURE_PARAMETER = auto()
-    QUANTIFICATION_VARIABLE = auto()
-    LOOP_VARIABLE = auto()
-    LAMBDA_VARIABLE = auto()
-
-
-@dataclass
-class SymbolTableIdentifierEntry:
-    id_: int
-    scope: int
-    name: str
-    declared_type: BaseType | None
-
-    """How was this symbol table entry (identifier) declared? Ex. as a variable or as the name of a procedure?"""
-    context: IdentifierContext
-
-
-class ScopeContext(Enum):
-    BASE = auto()
-    RECORD = auto()
-    PROCEDURE = auto()
-    QUANTIFICATION = auto()
-    LOOP = auto()
-    LAMBDA = auto()
-
-
-@dataclass
-class ScopeTableEntry:
-    id_: int
-    parent: int | None
-
-    """Symbols in this scope"""
-    declared_symbols: set[int]
-
-    """Why was a new scope created? Ex. for a procedure body or a for loop body"""
-    context: ScopeContext
+from src.mod.data.symbol_table.entry import (
+    IdentifierContext,
+    ScopeContext,
+    SymbolTableIdentifierEntry,
+    ScopeTableEntry,
+)
+from src.mod.data.symbol_table.error import SymbolTableError
 
 
 @dataclass
