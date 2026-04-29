@@ -18,6 +18,7 @@ from src.mod.data.ast_.common import (
     ListOp,
     UnaryOp,
     Quantifier,
+    QualifiedQuantifier,
     ControlFlowStmt,
     Enumeration,
 )
@@ -375,6 +376,46 @@ class BagComprehension(Quantifier):
 
 
 @dataclass
+class QualifiedUnionAll(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.UNION_ALL
+
+
+@dataclass
+class QualifiedIntersectionAll(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.INTERSECTION_ALL
+
+
+@dataclass
+class QualifiedSum(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.SUM
+
+
+@dataclass
+class QualifiedProduct(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.PRODUCT
+
+
+@dataclass
+class QualifiedSequenceComprehension(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.SEQUENCE
+
+
+@dataclass
+class QualifiedSetComprehension(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.SET
+
+
+@dataclass
+class QualifiedRelationComprehension(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.RELATION
+
+
+@dataclass
+class QualifiedBagComprehension(QualifiedQuantifier):
+    op_type: QuantifierOperator = QuantifierOperator.BAG
+
+
+@dataclass
 class SequenceEnumeration(Enumeration):
     op_type: CollectionOperator = CollectionOperator.SEQUENCE
 
@@ -402,5 +443,17 @@ class Forall(Quantifier):
 
 @dataclass
 class Exists(Quantifier):
+    expression: ASTNode = field(default_factory=True_)
+    op_type: QuantifierOperator = QuantifierOperator.EXISTS
+
+
+@dataclass
+class QualifiedForall(QualifiedQuantifier):
+    expression: ASTNode = field(default_factory=True_)
+    op_type: QuantifierOperator = QuantifierOperator.FORALL
+
+
+@dataclass
+class QualifiedExists(QualifiedQuantifier):
     expression: ASTNode = field(default_factory=True_)
     op_type: QuantifierOperator = QuantifierOperator.EXISTS

@@ -17,6 +17,7 @@ from src.mod.data.ast_.parser_only import (
     Identifier,
     MapletIdentifier,
     TupleIdentifier,
+    IdentifierListTypes,
 )
 from src.mod.data.ast_.operators import (
     Operators,
@@ -41,6 +42,7 @@ from src.mod.data.ast_.common import (
     UnaryOp,
     ListOp,
     Quantifier,
+    QualifiedQuantifier,
     ControlFlowStmt,
     Enumeration,
     Type_,
@@ -146,12 +148,18 @@ from src.mod.data.ast_.common_extended import (
     #
     Forall,
     Exists,
+    QualifiedForall,
+    QualifiedExists,
     #
     #
     UnionAll,
     IntersectionAll,
     Sum,
     Product,
+    QualifiedUnionAll,
+    QualifiedIntersectionAll,
+    QualifiedSum,
+    QualifiedProduct,
     #
     #
     Break,
@@ -169,6 +177,10 @@ from src.mod.data.ast_.common_extended import (
     SetComprehension,
     RelationComprehension,
     BagComprehension,
+    QualifiedSequenceComprehension,
+    QualifiedSetComprehension,
+    QualifiedRelationComprehension,
+    QualifiedBagComprehension,
 )
 from src.mod.data.ast_.optimizer_only import (
     GeneratorSelection,

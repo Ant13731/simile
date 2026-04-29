@@ -9,6 +9,8 @@ from src.mod.pipeline.analysis.reserved_keywords import (
 )
 from src.mod.pipeline.analysis.ambiguous_quantification import (
     populate_bound_identifiers,
+    find_unbound_identifiers,
+    promote_quantifiers_to_qualified,
 )
 from src.mod.pipeline.analysis.type_analysis import (
     type_check,
@@ -16,4 +18,9 @@ from src.mod.pipeline.analysis.type_analysis import (
 
 from src.mod.pipeline.analysis.analysis import (
     semantic_analysis,
+)
+
+from src.mod.pipeline.analysis.normalize_ast import (
+    normalize_ast,
+    ast_promoter,
 )

@@ -536,19 +536,23 @@ class Parser:
                 return ast_.LambdaDef(params, predicate, self.expr())
             case TokenType.GENERAL_UNION:
                 ident_list, predicate, expression = self.quantification_body()
-                union_all = ast_.UnionAll(predicate, expression)
-                union_all._bound_identifiers = set(ident_list.flatten_until_leaf_node())
+                union_all: ast_.ASTNode = ast_.UnionAll(predicate, expression)
+                if ident_list:
+                    union_all = ast_.QualifiedUnionAll(ident_list, predicate, expression)
+                # union_all._bound_identifiers = set(ident_list.flatten_until_leaf_node())
                 return union_all
             case TokenType.GENERAL_INTERSECTION:
                 ident_list, predicate, expression = self.quantification_body()
-                intersection_all = ast_.IntersectionAll(predicate, expression)
-                intersection_all._bound_identifiers = set(ident_list.flatten_until_leaf_node())
+                intersection_all: ast_.ASTNode = ast_.IntersectionAll(predicate, expression)
+                if ident_list:
+                    intersection_all = ast_.QualifiedIntersectionAll(ident_list, predicate, expression)
+                # intersection_all._bound_identifiers = set(ident_list.flatten_until_leaf_node())
                 return intersection_all
             case _:
                 self.error("Invalid start to quantification")
 
     @store_derivation
-    def quantification_body(self) -> tuple[ast_.TupleIdentifier, ast_.ListOp, ast_.ASTNode]:
+    def quantification_body(self) -> tuple[ast_.TupleIdentifier | None, ast_.ListOp, ast_.ASTNode]:
         # expr should cover the first entry in a list of identifiers,
         starting_index = self.current_index
         first_part = self.expr()
@@ -573,7 +577,7 @@ class Parser:
         predicate = self.predicate()
         if not isinstance(predicate, ast_.ListOp):
             predicate = ast_.And([predicate])
-        return ast_.TupleIdentifier(()), predicate, first_part
+        return None, predicate, first_part
 
     @store_derivation
     def pair_expr(self) -> ast_.ASTNode:
@@ -862,8 +866,10 @@ class Parser:
         if quantification_operator is None:
             self.error(f"Failed to convert collection operator {collection_operator} to quantification operator")
 
-        ret = ast_.Quantifier(predicate, expression, quantification_operator)
-        ret._bound_identifiers = set(ident_list.flatten_until_leaf_node())
+        ret: ast_.ASTNode = ast_.Quantifier(predicate, expression, quantification_operator)
+        if ident_list:
+            ret = ast_.QualifiedQuantifier(ident_list, predicate, expression, quantification_operator)
+        # ret._bound_identifiers = set(ident_list.flatten_until_leaf_node()) # TODO remove
         self.consume(closing_symbol, f"Expected closing symbol for collection")
         return ret
 

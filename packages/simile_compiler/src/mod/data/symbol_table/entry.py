@@ -13,6 +13,7 @@ class IdentifierContext(Enum):
     QUANTIFICATION_VARIABLE = auto()
     LOOP_VARIABLE = auto()
     LAMBDA_VARIABLE = auto()
+    MODULE_IMPORT = auto()
 
 
 @dataclass
@@ -28,9 +29,9 @@ class SymbolTableIdentifierEntry:
 
 class ScopeContext(Enum):
     BASE = auto()
-    RECORD = auto()
     PROCEDURE = auto()
     QUANTIFICATION = auto()
+    CONDITIONAL = auto()
     LOOP = auto()
     LAMBDA = auto()
 

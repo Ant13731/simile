@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Type, ClassVar
 
+from src.mod.data.symbol_table.entry import SymbolTableIdentifierEntry
 from src.mod.data.types.error import SimileTypeError
 from src.mod.data.types.base import BaseType
 from src.mod.data.types.traits import Trait, GenericBoundTrait
@@ -81,4 +82,4 @@ class ModuleImports(BaseType):
 
     Any type-checking functions called on environments (which is what this dict really is) should raise an error."""
 
-    import_objects: dict[str, BaseType]
+    import_objects: list[SymbolTableIdentifierEntry]

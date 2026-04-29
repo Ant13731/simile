@@ -544,6 +544,7 @@ class ListOp(InheritedEqMixin, ASTNode):
         return candidate_generators, predicates
 
 
+# TODO move to parser_only file (once typing/semantic analysis is sorted out)
 @dataclass(eq=False)
 class Quantifier(ASTNode):
     predicate: ListOp  # includes generators
@@ -560,6 +561,7 @@ class Quantifier(ASTNode):
         #
         # One identifier name should appear only once in the set of bound identifiers
         self._bound_identifiers: set[Identifier | MapletIdentifier] = set()  # | None = None
+        self._temp_bound_identifiers_before_qualified_promotion: TupleIdentifier | None = None
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, self.__class__):
@@ -664,6 +666,46 @@ class Quantifier(ASTNode):
         for i in self._bound_identifiers:
             identifiers |= i.flatten()
         return identifiers
+
+
+@dataclass(eq=False)
+class QualifiedQuantifier(ASTNode):
+    bound_identifiers: TupleIdentifier
+    predicate: ListOp  # includes generators
+    expression: ASTNode
+    op_type: QuantifierOperator
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, self.__class__):
+            return False
+
+        if len(fields(self)) != len(fields(other)):
+            return False
+
+        for f in fields(self):
+            if f.name not in map(lambda x: x.name, fields(other)):
+                return False
+
+        if self.op_type != other.op_type:
+            return False
+        if self.predicate != other.predicate:
+            return False
+        if self.expression != other.expression:
+            return False
+        if self.bound_identifiers != other.bound_identifiers:
+            return False
+
+        for f in fields(self):
+            if f.name.startswith("_"):
+                continue
+            self_value = getattr(self, f.name)
+            try:
+                other_value = getattr(other, f.name)
+            except AttributeError:
+                return False
+            if self_value != other_value:
+                return False
+        return True
 
 
 @dataclass(eq=False)

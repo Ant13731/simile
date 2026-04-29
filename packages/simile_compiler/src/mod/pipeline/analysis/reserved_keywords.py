@@ -50,7 +50,7 @@ def check_clash(node: ast_.ASTNode, name: str) -> ReservedKeywordErr | None:
     return None
 
 
-def reserved_keywords_check(ast: T) -> T:
+def reserved_keywords_check(ast: ast_.ASTNode) -> None:
     """Throws an error if reserved keywords are used as identifiers in the AST."""
 
     def traversal_function(node: ast_.ASTNode) -> ReservedKeywordErr | None:
@@ -79,4 +79,3 @@ def reserved_keywords_check(ast: T) -> T:
 
     if errors:
         raise ValueError(f"Reserved keywords used as identifiers: {'\n'.join(map(str,errors))}")
-    return ast

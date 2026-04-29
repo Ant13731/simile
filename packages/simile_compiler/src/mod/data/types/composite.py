@@ -32,7 +32,7 @@ from src.mod.data.types.primitive import StringType
 @dataclass
 class RecordType(BaseType):
     # Internally a (many-to-one) (total on defined fields) function
-    fields: OrderedDict[str, BaseType]
+    fields: dict[str, BaseType]
     valid_traits: ClassVar[set[Type[Trait]]] = {
         *BaseType.valid_traits,
         ManyToOneTrait,
@@ -85,7 +85,7 @@ class RecordType(BaseType):
 
 @dataclass
 class ProcedureType(BaseType):
-    arg_types: OrderedDict[str, BaseType]
+    arg_types: dict[str, BaseType]
     return_type: BaseType
 
     def _is_eq_type(self, other: BaseType) -> bool:
