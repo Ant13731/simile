@@ -1,0 +1,2 @@
+class SymbolTableError(Exception):
+    pass

@@ -1,0 +1,89 @@
+from dataclasses import dataclass, field
+from enum import Enum, auto
+
+from src.mod.data.types.base import BaseType
+from src.mod.data.symbol_table.entry import (
+    IdentifierContext,
+    ScopeContext,
+    SymbolTableIdentifierEntry,
+    ScopeTableEntry,
+)
+from src.mod.data.symbol_table.error import SymbolTableError
+
+
+@dataclass
+class SymbolTable:
+    symbols: dict[int, SymbolTableIdentifierEntry] = field(default_factory=dict)
+    scopes: dict[int, ScopeTableEntry] = field(default_factory=dict)
+
+    _symbol_id_counter: int = 0
+    _scope_id_counter: int = 0
+    _current_scope_list: list[ScopeTableEntry] = field(default_factory=list)
+
+    def add_symbol(self, name: str, context: IdentifierContext, declared_type: BaseType | None = None) -> int:
+        """Returns the id of the new symbol table entry."""
+        if len(self._current_scope_list) == 0:
+            raise SymbolTableError("Cannot add symbol because no scope has been added to the symbol table yet (current_scope_list is empty)")
+        current_scope = self._current_scope_list[-1]
+
+        if name in [self.symbols[symbol_id].name for symbol_id in current_scope.declared_symbols]:
+            raise SymbolTableError(f"Cannot add new symbol with name {name} because a symbol with that name already exists in the current scope with id {current_scope.id_}")
+
+        self._symbol_id_counter += 1
+        new_symbol = SymbolTableIdentifierEntry(
+            id_=self._symbol_id_counter,
+            scope=current_scope.id_,
+            name=name,
+            context=context,
+            declared_type=declared_type,
+        )
+
+        self.symbols[new_symbol.id_] = new_symbol
+        current_scope.declared_symbols.add(new_symbol.id_)
+        return self._symbol_id_counter
+
+    def add_scope(self, context: ScopeContext) -> int:
+        """Returns the id of the new scope table entry."""
+        self._scope_id_counter += 1
+        new_scope = ScopeTableEntry(
+            id_=self._scope_id_counter,
+            parent=self._current_scope_list[-1].id_ if self._current_scope_list else None,
+            declared_symbols=set(),
+            context=context,
+        )
+
+        self.scopes[new_scope.id_] = new_scope
+        self._current_scope_list.append(new_scope)
+        return self._scope_id_counter
+
+    def pop_scope_level(self) -> None:
+        """Pops the current scope level, changing the current scope for new additions."""
+        if not self._current_scope_list:
+            raise SymbolTableError("Cannot pop scope level because already at top level")
+        self._current_scope_list.pop()
+
+    def lookup_symbol(self, symbol_id: int, scope_id: int) -> SymbolTableIdentifierEntry:
+        """Looks up a symbol by its id and scope, returning the symbol table entry."""
+        if symbol_id not in self.symbols:
+            raise SymbolTableError(f"Symbol with id {symbol_id} not found in symbol table")
+        if scope_id not in self.scopes:
+            raise SymbolTableError(f"Scope with id {scope_id} not found in symbol table")
+        if symbol_id not in self.scopes[scope_id].declared_symbols:
+            raise SymbolTableError(f"Symbol with id {symbol_id} not declared in scope with id {scope_id}")
+        return self.symbols[symbol_id]
+
+    def does_symbol_exist_in_current_scope(self, name: str) -> bool:
+        if not self._current_scope_list:
+            raise SymbolTableError("Cannot check symbol existence because no scope has been added to the symbol table yet (current_scope_list is empty)")
+        current_scope = self._current_scope_list[-1]
+        return name in [self.symbols[symbol_id].name for symbol_id in current_scope.declared_symbols]
+
+    def get_top_level_symbols(self) -> list[SymbolTableIdentifierEntry]:
+        """Returns a list of symbol table entries for symbols declared at the top level (i.e. in the base scope)."""
+        top_level_scopes = [scope for scope in self.scopes.values() if scope.parent is None]
+        if not top_level_scopes:
+            raise SymbolTableError("No top level scope found in symbol table")
+        if len(top_level_scopes) > 1:
+            raise SymbolTableError(f"Multiple top level scopes found in symbol table. This should be impossible. Scope ids: {[scope.id_ for scope in top_level_scopes]}")
+        top_level_scope = top_level_scopes[0]
+        return [self.symbols[symbol_id] for symbol_id in top_level_scope.declared_symbols]

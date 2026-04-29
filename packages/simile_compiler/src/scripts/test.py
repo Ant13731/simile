@@ -1,6 +1,6 @@
 from src.mod import parse
-from src.mod import ast_
-from src.mod import analysis
+from src.mod.data import ast_
+from src.mod.pipeline import analysis
 from src.mod import collection_optimizer, REWRITE_COLLECTION
 from src.mod import RustCodeGenerator, CPPCodeGenerator
 from src.mod import scan

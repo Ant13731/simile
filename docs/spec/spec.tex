@@ -1570,7 +1570,7 @@ For simplicity, we implement subtype changes in a few binary operators as a bool
 \subsection{Static Analysis - Type System Extensions with Traits}
 
 \subsubsection{Trait Collection}
-Traits are used to augment types, providing the compiler with additional context for the use of an abstract type that could influence the generated implementation. The following paragraphs list identified traits and provides justification for their existence.
+Traits are used to augment types, providing the compiler with additional context for the use of an abstract type that could influence the generated implementation. The following paragraphs list identified traits and provide justification for their existence.
 
 \paragraph{Constant Pre-computation} The type may contain values for easily identifiable constants, allowing for specialized generated instructions. When possible, constant traits will propagate along operations until the constant values can no longer be guaranteed.
 \begin{itemize}
@@ -1715,6 +1715,22 @@ TODO design decision: should traits be applied automatically or just verified? I
     \hypo{Size}
     \infer1{Iterable}
   \end{prooftree}
+  \\
+  \tag{Orderable Literal is Min}
+  \begin{prooftree}
+    \hypo{Literal}
+    \hypo{Orderable}
+    \hypo{\lnot Min}
+    \infer3{Min=Literal}
+  \end{prooftree}
+  \\
+  \tag{Orderable Literal is Max}
+  \begin{prooftree}
+    \hypo{Literal}
+    \hypo{Orderable}
+    \hypo{\lnot Max}
+    \infer3{Max=Literal}
+  \end{prooftree}
   % \\
   % \tag{Unknown value clears literals TODO move this to the operation section TODO add unknown trait so we can keep domain + unknown? Could help some values...}
   % \begin{prooftree}
@@ -1759,7 +1775,6 @@ Some types are incompatible with some traits, and some types must have some trai
   \item Min
   \item Max
   \item Size (num of bits? or just depend on min/max? If so, min/max must be given, with a default value of 64 bit range)
-  \item Iterable*
   \item Orderable*
 \end{itemize}
 
@@ -1771,6 +1786,7 @@ Some types are incompatible with some traits, and some types must have some trai
   \item UniqueElements
   \item Total
   \item Iterable*
+  \item Empty
   \item Orderable (lexicographic if dependents are orderable?)
 \end{itemize}
 

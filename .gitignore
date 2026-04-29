@@ -335,3 +335,5 @@ generated/
 packages/simile_compiler/build/
 *.coverage*
 coverage.xml
+
+.venv_old
