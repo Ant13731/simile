@@ -72,11 +72,22 @@ class SymbolTable:
             raise SymbolTableError(f"Symbol with id {symbol_id} not declared in scope with id {scope_id}")
         return self.symbols[symbol_id]
 
-    def does_symbol_exist_in_current_scope(self, name: str) -> bool:
+    def current_scope(self) -> ScopeTableEntry:
+        """Returns the current scope table entry."""
         if not self._current_scope_list:
-            raise SymbolTableError("Cannot check symbol existence because no scope has been added to the symbol table yet (current_scope_list is empty)")
-        current_scope = self._current_scope_list[-1]
-        return name in [self.symbols[symbol_id].name for symbol_id in current_scope.declared_symbols]
+            raise SymbolTableError("Cannot get current scope because no scope has been added to the symbol table yet (current_scope_list is empty)")
+        return self._current_scope_list[-1]
+
+    def lookup_identifier_in_current_scope(self, identifier: str) -> SymbolTableIdentifierEntry:
+        """Looks up a symbol by its id and scope, returning the symbol table entry."""
+        for scope in reversed(self._current_scope_list):
+            for symbol_id in scope.declared_symbols:
+                if self.symbols[symbol_id].name == identifier:
+                    return self.symbols[symbol_id]
+        raise SymbolTableError(f"Identifier '{identifier}' not found in current scope")
+
+    def does_symbol_exist_in_current_scope(self, name: str) -> bool:
+        return name in [self.symbols[symbol_id].name for symbol_id in self.current_scope().declared_symbols]
 
     def get_top_level_symbols(self) -> list[SymbolTableIdentifierEntry]:
         """Returns a list of symbol table entries for symbols declared at the top level (i.e. in the base scope)."""

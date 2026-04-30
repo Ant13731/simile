@@ -19,6 +19,12 @@ from src.mod.data.ast_.parser_only import (
     TupleIdentifier,
     IdentifierListTypes,
 )
+from src.mod.data.ast_.symbol_table_only import (
+    Symbol,
+    TupleSymbol,
+    MapletSymbol,
+    SymbolListTypes,
+)
 from src.mod.data.ast_.operators import (
     Operators,
     BinaryOperator,
