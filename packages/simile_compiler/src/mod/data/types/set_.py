@@ -35,7 +35,6 @@ from src.mod.data.types.tuple_ import PairType
 from src.mod.data.types.meta import AnyType_
 from src.mod.data.types.composite import ProcedureType
 
-
 # TODO we basically need a SetSimulator that will return the expected type, element type, and traits when executing a set operation
 # Then we need a code generator that will follow through on the simulator's typed promise - maybe make a mirror class that outputs generated code instead of types?
 # Whats the cleanest way to do this?
@@ -52,7 +51,7 @@ class SetType(BaseType):
     This class contains the interface of sets, but can be expanded."""
 
     # We opt not for generic types since we dont want to hijack python's type system - we want to make our own
-    _element_type: BaseType = field(init=False)
+    element_type: BaseType
     """The Simile-type of elements in the set"""
 
     valid_traits: ClassVar[set[Type[Trait]]] = {
@@ -69,17 +68,6 @@ class SetType(BaseType):
         TotalTrait,
         UniqueElementsTrait,
     }
-
-    def __init__(self, element_type: BaseType, *, trait_collection: TraitCollection | None = None) -> None:
-        if trait_collection is None:
-            super().__init__()
-        else:
-            super().__init__(trait_collection=trait_collection)
-        self._element_type = element_type
-
-    @property
-    def element_type(self) -> BaseType:
-        return self._element_type
 
     # These functions control the return types and trait-trait interactions (where applicable)
     # I suppose this kind-of simulates the program execution just looking at traits and element types
@@ -321,6 +309,8 @@ class RelationType(SetType):
     }
 
     def __init__(self, left: BaseType, right: BaseType, *, trait_collection: TraitCollection | None = None) -> None:
+        if trait_collection is None:
+            trait_collection = TraitCollection()
         super().__init__(element_type=PairType(left=left, right=right), trait_collection=trait_collection)
 
     @property
@@ -484,7 +474,7 @@ class BagType(RelationType):
         self.trait_collection.many_to_one_trait = ManyToOneTrait()
 
     @property
-    def element_type(self) -> BaseType:
+    def element_type_(self) -> BaseType:
         return self.left
 
     def _populate_mandatory_traits(self) -> None:
@@ -493,22 +483,22 @@ class BagType(RelationType):
 
     def bag_union(self, other: BagType) -> BagType:
         self._is_subtype_or_error(other, (BagType(AnyType_()),))
-        new_element_type = BaseType.max_type([self.element_type, other.element_type])
+        new_element_type = BaseType.max_type([self.element_type_, other.element_type_])
         return BagType(element_type=new_element_type)
 
     def bag_intersection(self, other: BagType) -> BagType:
         self._is_subtype_or_error(other, (BagType(AnyType_()),))
-        new_element_type = BaseType.max_type([self.element_type, other.element_type])
+        new_element_type = BaseType.max_type([self.element_type_, other.element_type_])
         return BagType(element_type=new_element_type)
 
     def bag_add(self, other: BagType) -> BagType:
         self._is_subtype_or_error(other, (BagType(AnyType_()),))
-        new_element_type = BaseType.max_type([self.element_type, other.element_type])
+        new_element_type = BaseType.max_type([self.element_type_, other.element_type_])
         return BagType(element_type=new_element_type)
 
     def bag_difference(self, other: BagType) -> BagType:
         self._is_subtype_or_error(other, (BagType(AnyType_()),))
-        new_element_type = BaseType.max_type([self.element_type, other.element_type])
+        new_element_type = BaseType.max_type([self.element_type_, other.element_type_])
         return BagType(element_type=new_element_type)
 
     def size(self) -> IntType:
@@ -524,7 +514,7 @@ class SequenceType(RelationType):
         self.trait_collection.many_to_one_trait = ManyToOneTrait()
 
     @property
-    def element_type(self) -> BaseType:
+    def element_type_(self) -> BaseType:
         return self.right
 
     def _populate_mandatory_traits(self) -> None:
@@ -533,7 +523,7 @@ class SequenceType(RelationType):
 
     def concat(self, other: SequenceType) -> SequenceType:
         self._is_subtype_or_error(other, (SequenceType(AnyType_()),))
-        new_element_type = BaseType.max_type([self.element_type, other.element_type])
+        new_element_type = BaseType.max_type([self.element_type_, other.element_type_])
         return SequenceType(element_type=new_element_type)
 
 
@@ -544,7 +534,7 @@ class EnumType(SetType):
     members: set[str] = field(default_factory=set)
 
     def __post_init__(self):
-        self._element_type = StringType()
+        self.element_type = StringType()
         super().__post_init__()
 
     def _populate_mandatory_traits(self) -> None:

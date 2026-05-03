@@ -9,6 +9,12 @@ from src.mod.data.ast_.parser_only import (
     MapletIdentifier,
     TupleIdentifier,
 )
+from src.mod.data.ast_.symbol_table_only import (
+    Symbol,
+    MapletSymbol,
+    TupleSymbol,
+    SymbolListTypes,
+)
 from src.mod.data.ast_.operators import (
     BinaryOperator,
     RelationOperator,
@@ -670,7 +676,7 @@ class Quantifier(ASTNode):
 
 @dataclass(eq=False)
 class QualifiedQuantifier(ASTNode):
-    bound_identifiers: TupleIdentifier
+    bound_identifiers: TupleIdentifier | TupleSymbol
     predicate: ListOp  # includes generators
     expression: ASTNode
     op_type: QuantifierOperator
@@ -765,7 +771,7 @@ class Type_(ASTNode):
 
 @dataclass
 class LambdaDef(ASTNode):
-    params: TupleIdentifier
+    params: TupleIdentifier | TupleSymbol
     predicate: ASTNode
     expression: ASTNode
 
@@ -978,7 +984,7 @@ class ElseIf(ASTNode):
 
 @dataclass
 class For(ASTNode):
-    iterable_names: TupleIdentifier
+    iterable_names: TupleIdentifier | TupleSymbol
     iterable: ASTNode
     body: ASTNode | Statements
 
@@ -999,6 +1005,7 @@ class While(ASTNode):
         return BaseSimileType.None_
 
 
+# TODO move to parser_only
 @dataclass
 class RecordDef(ASTNode):
     name: Identifier
@@ -1006,6 +1013,14 @@ class RecordDef(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
+
+
+# TODO move to symbol_table_only
+@dataclass
+class RecordDefSymbol(ASTNode):
+    name: Symbol
+    fields: list[Symbol]
+    record_scope_id: int
 
 
 # @dataclass
@@ -1018,6 +1033,7 @@ class RecordDef(ASTNode):
 #         return BaseSimileType.None_
 
 
+# TODO move to parser_only
 @dataclass
 class ProcedureDef(ASTNode):
     name: Identifier
@@ -1027,6 +1043,14 @@ class ProcedureDef(ASTNode):
 
     def _get_type(self) -> SimileType:
         return BaseSimileType.None_
+
+
+# TODO move to symbol_table_only
+@dataclass
+class ProcedureDefSymbol(ASTNode):
+    name: Symbol
+    args: list[Symbol]
+    body: ASTNode | Statements
 
 
 @dataclass

@@ -66,8 +66,8 @@ class DeferToSymbolTable(BaseType):
 
     Any type-checking functions called on unresolved types should raise an error."""
 
-    lookup_type: str
-    """Identifier to look up in table"""
+    lookup_symbol_entry: SymbolTableIdentifierEntry
+    """Entry corresponding to the initial identifier"""
 
     def _is_eq_type(self, other: BaseType) -> bool:
         raise SimileTypeError("Cannot compare DeferToSymbolTable types before resolution")

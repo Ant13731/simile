@@ -14,6 +14,7 @@ class IdentifierContext(Enum):
     LOOP_VARIABLE = auto()
     LAMBDA_VARIABLE = auto()
     MODULE_IMPORT = auto()
+    GENERIC_TYPE_PARAMETER = auto()
 
 
 @dataclass
@@ -34,6 +35,7 @@ class ScopeContext(Enum):
     CONDITIONAL = auto()
     LOOP = auto()
     LAMBDA = auto()
+    RECORD = auto()
 
 
 @dataclass
