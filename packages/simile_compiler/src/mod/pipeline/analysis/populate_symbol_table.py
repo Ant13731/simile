@@ -176,11 +176,11 @@ class PopulateSymbolTable:
                 for param in params:
                     if not isinstance(param.name, ast_.Identifier):
                         raise SimileTypeError(f"Invalid procedure parameter name (must be an identifier): {param.name}", param)
-                    param_type = self._ast_to_type(param.type_, True)
+                    param_type = self._ast_to_type(param.type_)
                     assert isinstance(param_type, BaseType), "Procedure parameters must have a valid type annotation"
                     params_dict[param.name.name] = param_type
 
-                return_type_ = self._ast_to_type(return_type, True)
+                return_type_ = self._ast_to_type(return_type)
                 assert isinstance(return_type_, BaseType), "Procedure return type must have a valid type annotation"
                 self.symbol_table.add_symbol(
                     name.name,
@@ -212,7 +212,7 @@ class PopulateSymbolTable:
                 for item in items:
                     if not isinstance(item.name, ast_.Identifier):
                         raise SimileTypeError(f"Invalid struct field name (must be an identifier): {item.name}", item)
-                    field_type = self._ast_to_type(item.type_, True)
+                    field_type = self._ast_to_type(item.type_)
                     assert isinstance(field_type, BaseType)
                     fields[item.name.name] = field_type
 
@@ -259,6 +259,9 @@ class PopulateSymbolTable:
             # Symbols
             # TODO check for enum def in all assignment statements
             case ast_.Assignment(ast_.Identifier(name), value, with_clauses, _):
+                # TODO if variable is already defined, this could just be a reassignment?
+                #  Then it would be the responsibility of the type analysis pass to check that the reassignment is valid
+                # But normal assignment without a type annotation could produce a symbol (ex. typedef)
                 self.symbol_table.add_symbol(
                     name,
                     IdentifierContext.VARIABLE,
@@ -279,130 +282,73 @@ class PopulateSymbolTable:
                 return self._convert_identifier_to_symbol(ast), False
         return None, True
 
-    def _ast_to_type(
-        self,
-        ast_type: ast_.Type_ | ast_.ASTNode | ast_.None_,
-        assume_generic_if_not_bound: bool = False,
-    ) -> BaseType | None:
+    def _ast_to_type(self, ast_type: ast_.Type_ | ast_.ASTNode | ast_.None_) -> BaseType | None:
         if isinstance(ast_type, ast_.None_):
             return None
         primitive_types = get_primitive_types()
+        composite_types = [
+            "set",
+            "sequence",
+            "bag",
+            "relation",
+            "generic",
+            "tuple",
+        ]
+
+        params = []
+        if isinstance(ast_type, ast_.Type_):
+            params = ast_type.generics
+            ast_type = ast_type.type_
 
         match ast_type:
             case ast_.Identifier(name) if name in primitive_types:
                 return primitive_types[name]
+            case ast_.Identifier("set"):
+                if len(params) != 1:
+                    raise SimileTypeError(f"Set type annotation must have exactly 1 parameter, got {len(params)}: {params}", ast_type)
+                param_type = self._ast_to_type_err_on_none(params[0])
+                return SetType(param_type)
+            case ast_.Identifier("sequence"):
+                if len(params) != 1:
+                    raise SimileTypeError(f"Sequence type annotation must have exactly 1 parameter, got {len(params)}: {params}", ast_type)
+                param_type = self._ast_to_type_err_on_none(params[0])
+                return SequenceType(param_type)
+            case ast_.Identifier("bag"):
+                if len(params) != 1:
+                    raise SimileTypeError(f"Bag type annotation must have exactly 1 parameter, got {len(params)}: {params}", ast_type)
+                param_type = self._ast_to_type_err_on_none(params[0])
+                return BagType(param_type)
+            case ast_.Identifier("relation"):
+                if len(params) != 2:
+                    raise SimileTypeError(f"Relation type annotation must have exactly 2 parameters, got {len(params)}: {params}", ast_type)
+                left_param_type = self._ast_to_type_err_on_none(params[0])
+                right_param_type = self._ast_to_type_err_on_none(params[1])
+                return RelationType(left_param_type, right_param_type)
+            case ast_.Identifier("generic"):
+                return GenericType()
+            case ast_.Identifier("tuple"):
+                params_as_types = list(map(self._ast_to_type_err_on_none, params))
+                return TupleType(tuple(params_as_types))
             case ast_.Identifier(symbol_table_name):
                 symbol_table_entry = self.symbol_table.lookup_identifier_in_current_scope(symbol_table_name)
-                if symbol_table_entry.declared_type is None:
-                    if not assume_generic_if_not_bound:
-                        raise SimileTypeError(f"Identifier {symbol_table_name} does not have a declared type in the symbol table (failed to convert ASTNode to type)", ast_type)
-                    self.symbol_table.add_symbol(
-                        symbol_table_name,
-                        IdentifierContext.GENERIC_TYPE_PARAMETER,
-                        GenericType(symbol_table_name),
-                    )
-                return DeferToSymbolTable(symbol_table_entry)
-            case ast_.Type_(base_type, generics):
-                _base_type = self._ast_to_type(base_type, assume_generic_if_not_bound)
-                _concretized_generics: list[BaseType] = []
-                for i, generic in enumerate(generics):
-                    concretized_generic = self._ast_to_type(generic, assume_generic_if_not_bound)
-                    if concretized_generic is None:
-                        raise SimileTypeError(f"Generic type argument {i} cannot be None: {generics}", ast_type)
-                    _concretized_generics.append(concretized_generic)
-
-                # Fill in generic types with concrete values
-                match _base_type:
-                    case DeferToSymbolTable(symbol_table_entry):
-                        return self._ast_to_type(
-                            ast_.Type_(ast_.Identifier(symbol_table_entry.name), generics),
-                            assume_generic_if_not_bound,
-                        )
-                    case RecordType(fields):
-                        concretized_generics_index = 0
-                        for field_name, field_type in fields.items():
-                            if not isinstance(field_type, GenericType):
-                                continue
-                            if concretized_generics_index >= len(_concretized_generics):
-                                raise SimileTypeError(
-                                    f"Type {base_type} expects {concretized_generics_index} generic arguments, got {len(_concretized_generics)}: {_concretized_generics}", ast_type
-                                )
-                            fields[field_name] = _concretized_generics[concretized_generics_index]
-                            concretized_generics_index += 1
-                        if concretized_generics_index != len(_concretized_generics):
-                            raise SimileTypeError(
-                                f"Type {base_type} expects {concretized_generics_index} generic arguments, got {len(_concretized_generics)}: {_concretized_generics}", ast_type
-                            )
-                        return RecordType(fields, trait_collection=_base_type.trait_collection)
-                    case ProcedureType(args, return_):
-                        generic_type_map = {}
-                        new_args = {}
-                        concretized_generics_index = 0
-                        for name, type_ in args.items():
-                            if isinstance(type_, GenericType):
-                                generic_type_map[type_.id_] = _concretized_generics[concretized_generics_index]
-                                new_args[name] = _concretized_generics[concretized_generics_index]
-                                concretized_generics_index += 1
-                                continue
-                            new_args[name] = type_
-                        if concretized_generics_index != len(_concretized_generics):
-                            raise SimileTypeError(
-                                f"Type {_base_type} expects {concretized_generics_index} generic arguments, got {len(_concretized_generics)}: {_concretized_generics}", ast_type
-                            )
-                        if isinstance(return_, GenericType):
-                            if return_.id_ not in generic_type_map:
-                                raise SimileTypeError(
-                                    f"Return type of procedure cannot be a generic type that is not also used in the argument types. Found return type {return_} with id {return_.id_} but only found generic types {generic_type_map.keys()} in the argument types",
-                                    ast_type,
-                                )
-                            return_ = generic_type_map[return_.id_]
-                        return ProcedureType(new_args, return_, trait_collection=_base_type.trait_collection)
-                    case SequenceType(PairType((_, element))):
-                        if len(_concretized_generics) != 1:
-                            raise SimileTypeError(f"Type {_base_type} expects 1 generic argument, got {len(_concretized_generics)}: {_concretized_generics}", ast_type)
-                        new_element = _concretized_generics[0]
-                        return SequenceType(new_element, trait_collection=_base_type.trait_collection)
-                    case BagType(PairType((element, _))):
-                        if len(_concretized_generics) != 1:
-                            raise SimileTypeError(f"Type {_base_type} expects 1 generic argument, got {len(_concretized_generics)}: {_concretized_generics}", ast_type)
-                        new_element = _concretized_generics[0]
-                        return BagType(new_element, trait_collection=_base_type.trait_collection)
-                    case RelationType(PairType((left, right))):
-                        if len(_concretized_generics) != 2:
-                            raise SimileTypeError(f"Type {_base_type} expects 2 generic arguments, got {len(_concretized_generics)}: {_concretized_generics}", ast_type)
-                        if not isinstance(left, GenericType) or not isinstance(right, GenericType):
-                            raise SimileTypeError(
-                                f"Only generic types can be used as attributes in type annotations, got {left} of type {type(left)} and {right} of type {type(right)}", ast_type
-                            )
-                        new_left, new_right = _concretized_generics
-                        return PairType(new_left, new_right, trait_collection=_base_type.trait_collection)
-                    case SetType(element):
-                        if len(_concretized_generics) != 1:
-                            raise SimileTypeError(f"Type {_base_type} expects 1 generic argument, got {len(_concretized_generics)}: {_concretized_generics}", ast_type)
-                        new_element = _concretized_generics[0]
-                        return SetType(new_element, trait_collection=_base_type.trait_collection)
-                    case PairType((left, right)):
-                        if len(_concretized_generics) != 2:
-                            raise SimileTypeError(f"Type {_base_type} expects 2 generic arguments, got {len(_concretized_generics)}: {_concretized_generics}", ast_type)
-                        if not isinstance(left, GenericType) or not isinstance(right, GenericType):
-                            raise SimileTypeError(
-                                f"Only generic types can be used as attributes in type annotations, got {left} of type {type(left)} and {right} of type {type(right)}", ast_type
-                            )
-                        new_left, new_right = _concretized_generics
-                        return PairType(new_left, new_right, trait_collection=_base_type.trait_collection)
-                    case TupleType(items):
-                        if len(items) != len(_concretized_generics):
-                            raise SimileTypeError(f"Type {_base_type} expects {len(items)} generic arguments, got {len(_concretized_generics)}: {_concretized_generics}", ast_type)
-                        _not_none_attributes = []
-                        for item, attr in zip(items, _concretized_generics):
-                            if not isinstance(item, GenericType):
-                                raise SimileTypeError(f"Only generic types can be used as attributes in type annotations, got {item} of type {type(item)}", ast_type)
-                            _not_none_attributes.append(attr)
-                        return TupleType(tuple(_not_none_attributes), trait_collection=_base_type.trait_collection)
-
-                raise SimileTypeError(f"Failed to resolve (concretize) generic type {_base_type}", ast_type)
+                params_as_types = list(map(self._ast_to_type_err_on_none, params))
+                return DeferToSymbolTable(symbol_table_entry, params_as_types)
+            case ast_.RelationOp(left, right, op):
+                if len(params) != 0:
+                    raise SimileTypeError(f"Infix relation operator type annotation cannot have parameters, got {len(params)}: {params}", ast_type)
+                left_type = self._ast_to_type_err_on_none(left)
+                right_type = self._ast_to_type_err_on_none(right)
+                rel_type = RelationType(left_type, right_type)
+                rel_type.apply_traits_from_relation_operator(op)
+                return rel_type
 
         raise SimileTypeError(f"Unknown type annotation: {ast_type} (failed to convert ASTNode to type)", ast_type)
+
+    def _ast_to_type_err_on_none(self, param: ast_.ASTNode) -> BaseType:
+        param_as_type = self._ast_to_type(param)
+        if param_as_type is None:
+            raise SimileTypeError(f"Failed to parse type param {param}", param)
+        return param_as_type
 
     def _convert_identifier_to_symbol(self, ast: ast_.IdentifierListTypes) -> ast_.SymbolListTypes:
         match ast:

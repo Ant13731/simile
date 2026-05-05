@@ -14,7 +14,6 @@ class IdentifierContext(Enum):
     LOOP_VARIABLE = auto()
     LAMBDA_VARIABLE = auto()
     MODULE_IMPORT = auto()
-    GENERIC_TYPE_PARAMETER = auto()
 
 
 @dataclass

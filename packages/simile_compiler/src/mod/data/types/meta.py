@@ -25,7 +25,7 @@ class GenericType(BaseType):
     IDs are only locally valid (i.e., introduced by a procedure argument and used by a procedure's return value).
     """
 
-    id_: str
+    # id_: str
     valid_traits: ClassVar[set[Type[Trait]]] = {
         *BaseType.valid_traits,
         GenericBoundTrait,
@@ -34,7 +34,8 @@ class GenericType(BaseType):
     def _is_eq_type(self, other: BaseType) -> bool:
         if not isinstance(other, GenericType):
             return False
-        return self.id_ == other.id_ and self.trait_collection.generic_bound_trait == other.trait_collection.generic_bound_trait
+        # return self.id_ == other.id_ and self.trait_collection.generic_bound_trait == other.trait_collection.generic_bound_trait
+        return self.trait_collection.generic_bound_trait == other.trait_collection.generic_bound_trait
 
     def _is_subtype(self, other: BaseType) -> bool:
         if self.trait_collection.generic_bound_trait is None:
@@ -68,6 +69,9 @@ class DeferToSymbolTable(BaseType):
 
     lookup_symbol_entry: SymbolTableIdentifierEntry
     """Entry corresponding to the initial identifier"""
+
+    params: list[BaseType]
+    """In case the identifier is a generic type (or otherwise expects parameters)"""
 
     def _is_eq_type(self, other: BaseType) -> bool:
         raise SimileTypeError("Cannot compare DeferToSymbolTable types before resolution")
