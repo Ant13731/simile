@@ -5,19 +5,9 @@ from typing import ClassVar, Any, TYPE_CHECKING
 
 from src.mod.data.types.error import SimileTypeError
 
-
-from typing import TYPE_CHECKING
-
 if TYPE_CHECKING:
     from src.mod.data.ast_.base import ASTNode
     from src.mod.data.types.base import BaseType
-
-
-# TODO make a function to translate ASTNodes into traits when they appear in the trait position
-# Parser should parse as an astnode, then typechecker/symb table will try to promote to traits where applicable
-def interpret_astnode_as_traits(node: ASTNode) -> list[Trait]:
-    """Interpret an ASTNode as a Trait, if possible."""
-    raise NotImplementedError
 
 
 @dataclass
@@ -156,6 +146,53 @@ class TraitCollection:
 
         merged._fill_implicit_traits()
         return merged
+
+    # TODO make an add_trait like this for merging? (ex. take the lowest of the min)
+    def set_trait(self, trait: Trait) -> None:
+        """Set a trait on this TraitCollection, modifying it in place.
+
+        Only GenericBoundTrait adds to existing entries, other traits will overwrite any existing trait of the same type.
+        """
+        match trait:
+            case LiteralTrait(_):
+                self.literal_trait = trait
+            case DomainTrait(_):
+                self.domain_trait = trait
+            case MinTrait(_):
+                self.min_trait = trait
+            case MaxTrait(_):
+                self.max_trait = trait
+            case SizeTrait(_):
+                self.size_trait = trait
+            case GenericBoundTrait(items):
+                if self.generic_bound_trait is not None:
+                    self.generic_bound_trait.bound_types.extend(items)
+                else:
+                    self.generic_bound_trait = trait
+            case OrderableTrait():
+                self.orderable_trait = trait
+            case IterableTrait():
+                self.iterable_trait = trait
+            case ImmutableTrait():
+                self.immutable_trait = trait
+            case TotalOnDomainTrait():
+                self.total_on_domain_trait = trait
+            case TotalOnRangeTrait():
+                self.total_on_range_trait = trait
+            case ManyToOneTrait():
+                self.many_to_one_trait = trait
+            case OneToManyTrait():
+                self.one_to_many_trait = trait
+            case EmptyTrait():
+                self.empty_trait = trait
+            case TotalTrait():
+                self.total_trait = trait
+            case UniqueElementsTrait():
+                self.unique_elements_trait = trait
+            case _:
+                raise SimileTypeError(f"Unknown trait: {trait} (failed to set trait on TraitCollection)")
+        self._fill_implicit_traits()
+        return
 
 
 @dataclass

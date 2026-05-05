@@ -4,6 +4,7 @@ from typing_extensions import OrderedDict
 
 
 from src.mod.data import ast_
+from src.mod.data.ast_.operators import BinaryOperator
 from src.mod.data.symbol_table import SymbolTableError, get_primitive_types
 from src.mod.data.symbol_table import SymbolTable, IdentifierContext, ScopeContext
 from src.mod.data.types import (
@@ -222,7 +223,7 @@ class PopulateSymbolTable:
                     RecordType(fields=fields),
                 )
 
-                record_scope_id = self.symbol_table.add_scope(ScopeContext.RECORD)
+                record_scope = self.symbol_table.add_scope(ScopeContext.RECORD)
 
                 field_symbols: list[ast_.Symbol] = []
                 for field_name, field_type in fields.items():
@@ -240,7 +241,7 @@ class PopulateSymbolTable:
 
                 _symbol = self._convert_identifier_to_symbol(ast_.Identifier(name))
                 assert isinstance(_symbol, ast_.Symbol)
-                return ast_.RecordDefSymbol(_symbol, field_symbols, record_scope_id), False
+                return ast_.RecordDefSymbol(_symbol, field_symbols, record_scope), False
             case ast_.LambdaDef(params, predicate, expression):
                 assert isinstance(params, ast_.IdentifierListTypes)
 
@@ -257,20 +258,67 @@ class PopulateSymbolTable:
                 return ast_.LambdaDef(_param_symbols, _predicate, _expression), False
 
             # Symbols
-            # TODO check for enum def in all assignment statements
-            case ast_.Assignment(ast_.Identifier(name), value, with_clauses, _):
-                # TODO if variable is already defined, this could just be a reassignment?
-                #  Then it would be the responsibility of the type analysis pass to check that the reassignment is valid
-                # But normal assignment without a type annotation could produce a symbol (ex. typedef)
+
+            # Dont allow regular assignments to define types
+            # case ast_.Assignment(ast_.Identifier(name), value, with_clauses, _):
+            #     # TODO if variable is already defined, this could just be a reassignment?
+            #     #  Then it would be the responsibility of the type analysis pass to check that the reassignment is valid
+            #     # But normal assignment without a type annotation could produce a symbol (ex. typedef)
+            #     if not self.symbol_table.does_symbol_exist_in_current_scope(name):
+            #         self.symbol_table.add_symbol(
+            #             name,
+            #             IdentifierContext.VARIABLE,
+            #         )
+            case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("enum"), [])), value, with_clauses, _):
+                if not isinstance(value, ast_.Enumeration):
+                    raise SimileTypeError(f"Enum type annotation can only be applied to enumeration definitions, got {type(value)}", value)
+
+                members: set[str] = set()
+                for _item in value.items:
+                    if not isinstance(_item, ast_.Identifier):
+                        raise SimileTypeError(f"Invalid enum item name (must be an identifier): {_item}", _item)
+                    if self.symbol_table.does_symbol_exist_in_current_scope(_item.name):
+                        raise SimileTypeError(f"Enum item name {_item.name} already exists in current scope, cannot be used as enum item name", _item)
+                    members.add(_item.name)
+
+                trait_collection = self._with_clauses_to_trait_collection(with_clauses)
                 self.symbol_table.add_symbol(
                     name,
-                    IdentifierContext.VARIABLE,
+                    IdentifierContext.ENUM,
+                    EnumType(members=members, trait_collection=trait_collection),
+                )
+                for member in members:
+                    symbol_item = self.symbol_table.add_symbol(
+                        member,
+                        IdentifierContext.ENUM_ITEM,
+                    )
+                    literal_trait_collection = TraitCollection(literal_trait=LiteralTrait(ast_.Symbol(symbol_item)))
+                    symbol_item.declared_type = EnumType(
+                        members=members,
+                        trait_collection=literal_trait_collection.merge(trait_collection, True),
+                    )
+
+            case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("type"), [])), value, with_clauses, _):
+                trait_collection = self._with_clauses_to_trait_collection(with_clauses)
+                type_value = self._ast_to_type(value)
+                if type_value is None:
+                    raise SimileTypeError(f"Type definitions must have a valid type annotation, got None", value)
+                type_value.trait_collection = type_value.trait_collection.merge(trait_collection, True)
+                self.symbol_table.add_symbol(
+                    name,
+                    IdentifierContext.TYPE_NAME,
+                    type_value,
                 )
             case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), declared_type), value, with_clauses, _):
+                trait_collection = self._with_clauses_to_trait_collection(with_clauses)
+                _declared_type = self._ast_to_type(declared_type)
+                if _declared_type is None:
+                    raise SimileTypeError(f"Variable definitions must have a valid type annotation, got None", declared_type)
+                _declared_type.trait_collection = _declared_type.trait_collection.merge(trait_collection, True)
                 self.symbol_table.add_symbol(
                     name,
                     IdentifierContext.VARIABLE,
-                    self._ast_to_type(declared_type),
+                    _declared_type,
                 )
             case ast_.Import(module_file_path, import_objects):
                 raise NotImplementedError("Import statements are not yet supported in the symbol table population pass")
@@ -282,23 +330,65 @@ class PopulateSymbolTable:
                 return self._convert_identifier_to_symbol(ast), False
         return None, True
 
+    def _with_clauses_to_trait_collection(self, with_clauses: list[ast_.ASTNode]) -> TraitCollection:
+        trait_collection = TraitCollection()
+        seen_with_clause_trait_classes: list[type[Trait]] = []
+        for clause in with_clauses:
+            trait = self._ast_to_trait(clause)
+            if not isinstance(trait, GenericBoundTrait) and any(isinstance(trait, seen_trait) for seen_trait in seen_with_clause_trait_classes):
+                raise SimileTypeError(f"Trait {trait} cannot be defined twice. Already seen traits: {seen_with_clause_trait_classes}", clause)
+            trait_collection.set_trait(trait)
+            seen_with_clause_trait_classes.append(trait.__class__)
+        return trait_collection
+
+    def _ast_to_trait(self, with_clause: ast_.ASTNode) -> Trait:
+        flag_only_traits = [
+            OrderableTrait(),
+            IterableTrait(),
+            ImmutableTrait(),
+            TotalOnDomainTrait(),
+            TotalOnRangeTrait(),
+            ManyToOneTrait(),
+            OneToManyTrait(),
+            EmptyTrait(),
+            TotalTrait(),
+            UniqueElementsTrait(),
+        ]
+
+        match with_clause:
+            case ast_.Identifier(name):
+                for trait_type in flag_only_traits:
+                    if trait_type.name == name:
+                        return trait_type
+            # case BinaryOp(left, right, BinaryOperator.EQUAL):
+            case ast_.BinaryOp(ast_.Identifier(LiteralTrait.name), right, ast_.BinaryOperator.EQUAL):
+                return LiteralTrait(right)
+            case ast_.BinaryOp(ast_.Identifier(DomainTrait.name), ast_.Enumeration(items, ast_.CollectionOperator.SET), ast_.BinaryOperator.EQUAL):
+                return DomainTrait(items)
+            case ast_.BinaryOp(ast_.Identifier(MinTrait.name), right, ast_.BinaryOperator.EQUAL):
+                return MinTrait(right)
+            case ast_.BinaryOp(ast_.Identifier(MaxTrait.name), right, ast_.BinaryOperator.EQUAL):
+                return MaxTrait(right)
+            case ast_.BinaryOp(ast_.Identifier(SizeTrait.name), ast_.Int(right), ast_.BinaryOperator.EQUAL):
+                return SizeTrait(int(right))
+            case ast_.BinaryOp(ast_.Identifier(GenericBoundTrait.name), right, ast_.BinaryOperator.EQUAL):
+                generic_bound_type = self._ast_to_type(right)
+                if generic_bound_type is None:
+                    raise SimileTypeError(f"Generic bound trait must have a valid type annotation, got None", right)
+                return GenericBoundTrait([generic_bound_type])
+
+        raise SimileTypeError(f"Unknown trait in with clause: {with_clause} (failed to convert ASTNode to Trait)", with_clause)
+
     def _ast_to_type(self, ast_type: ast_.Type_ | ast_.ASTNode | ast_.None_) -> BaseType | None:
         if isinstance(ast_type, ast_.None_):
             return None
-        primitive_types = get_primitive_types()
-        composite_types = [
-            "set",
-            "sequence",
-            "bag",
-            "relation",
-            "generic",
-            "tuple",
-        ]
 
         params = []
         if isinstance(ast_type, ast_.Type_):
             params = ast_type.generics
             ast_type = ast_type.type_
+
+        primitive_types = get_primitive_types()
 
         match ast_type:
             case ast_.Identifier(name) if name in primitive_types:
@@ -354,7 +444,7 @@ class PopulateSymbolTable:
         match ast:
             case ast_.Identifier(name):
                 symbol_table_entry = self.symbol_table.lookup_identifier_in_current_scope(name)
-                return ast_.Symbol(symbol_table_entry.id_, symbol_table_entry)
+                return ast_.Symbol(symbol_table_entry)
             case ast_.MapletIdentifier((left, right)):
                 _left = self._convert_identifier_to_symbol(left)
                 _right = self._convert_identifier_to_symbol(right)

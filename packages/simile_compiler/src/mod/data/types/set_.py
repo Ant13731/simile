@@ -530,12 +530,8 @@ class SequenceType(RelationType):
 @dataclass
 class EnumType(SetType):
     # Internally a set of identifiers
-    # element_type = StringType()  # TODO add trait domain
+    element_type: BaseType = field(default_factory=StringType)
     members: set[str] = field(default_factory=set)
-
-    def __post_init__(self):
-        self.element_type = StringType()
-        super().__post_init__()
 
     def _populate_mandatory_traits(self) -> None:
         from src.mod.data.ast_ import String

@@ -58,8 +58,10 @@ def reserved_keywords_check(ast: ast_.ASTNode) -> None:
             case ast_.Assignment(ast_.Identifier(name), _) | ast_.Assignment(ast_.TypedName(ast_.Identifier(name), _), _):
                 return check_clash(node, name)
 
-            case ast_.For(iterable_names, _, _):
+            case ast_.For(iterable_names, _, _) | ast_.QualifiedQuantifier(iterable_names, _, _) | ast_.LambdaDef(iterable_names, _, _):
                 for ident in iterable_names.flatten():
+                    if not isinstance(ident, ast_.Identifier):
+                        continue
                     if (ret := check_clash(node, ident.name)) is not None:
                         return ret
 

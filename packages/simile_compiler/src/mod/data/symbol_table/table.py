@@ -20,8 +20,8 @@ class SymbolTable:
     _scope_id_counter: int = 0
     _current_scope_list: list[ScopeTableEntry] = field(default_factory=list)
 
-    def add_symbol(self, name: str, context: IdentifierContext, declared_type: BaseType | None = None) -> int:
-        """Returns the id of the new symbol table entry."""
+    def add_symbol(self, name: str, context: IdentifierContext, declared_type: BaseType | None = None) -> SymbolTableIdentifierEntry:
+        """Returns the new symbol table entry."""
         if len(self._current_scope_list) == 0:
             raise SymbolTableError("Cannot add symbol because no scope has been added to the symbol table yet (current_scope_list is empty)")
         current_scope = self._current_scope_list[-1]
@@ -40,10 +40,10 @@ class SymbolTable:
 
         self.symbols[new_symbol.id_] = new_symbol
         current_scope.declared_symbols.add(new_symbol.id_)
-        return self._symbol_id_counter
+        return new_symbol
 
-    def add_scope(self, context: ScopeContext) -> int:
-        """Returns the id of the new scope table entry."""
+    def add_scope(self, context: ScopeContext) -> ScopeTableEntry:
+        """Returns the new scope table entry."""
         self._scope_id_counter += 1
         new_scope = ScopeTableEntry(
             id_=self._scope_id_counter,
@@ -54,7 +54,7 @@ class SymbolTable:
 
         self.scopes[new_scope.id_] = new_scope
         self._current_scope_list.append(new_scope)
-        return self._scope_id_counter
+        return new_scope
 
     def pop_scope_level(self) -> None:
         """Pops the current scope level, changing the current scope for new additions."""

@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, is_dataclass
 import pathlib
 from typing import TypeVar
+from warnings import deprecated
 
 from src.mod.pipeline.scanner import Location
 from src.mod.pipeline.parser import parse, ParseError
@@ -18,14 +19,15 @@ from src.mod.data.ast_.symbol_table_types import (
     GenericType,
 )
 
-
 T = TypeVar("T", bound=ast_.ASTNode)
 
 
+@deprecated("Moving to external symbol table")
 class ParseImportError(Exception):
     pass
 
 
+@deprecated("Moving to external symbol table")
 def populate_ast_environments(ast: T, current_env: ast_.SymbolTableEnvironment | None = None) -> T:
     """Attach a symbol table to the AST."""
     ast = add_environments_to_ast(ast, current_env)
@@ -33,6 +35,7 @@ def populate_ast_environments(ast: T, current_env: ast_.SymbolTableEnvironment |
     return ast
 
 
+@deprecated("Moving to external symbol table")
 def add_environments_to_ast(ast: T, current_env: ast_.SymbolTableEnvironment | None = None) -> T:
     """Helper to establish empty environments in all statement "blocks" of the AST"""
     if current_env is None:
@@ -59,6 +62,7 @@ def add_environments_to_ast(ast: T, current_env: ast_.SymbolTableEnvironment | N
     return ast
 
 
+@deprecated("Moving to external symbol table")
 def _populate_ast_environments_aux(node: ast_.ASTNode) -> None:
     if not isinstance(node, ast_.ASTNode):
         raise TypeError(f"Expected ASTNode in ast environment population, got {type(node)}")
@@ -169,6 +173,7 @@ def _populate_ast_environments_aux(node: ast_.ASTNode) -> None:
                 _populate_ast_environments_aux(child)
 
 
+@deprecated("Moving to external symbol table")
 def _check_and_add_for_enum(node: ast_.ASTNode, name: str, value: ast_.ASTNode) -> tuple[bool, str]:
     """Returns True if the enum was added, False if its name/builtup identifiers already exists. When False, a reason is provided"""
     if node._env is None:
@@ -196,6 +201,7 @@ def _check_and_add_for_enum(node: ast_.ASTNode, name: str, value: ast_.ASTNode) 
     return True, ""
 
 
+@deprecated("Moving to external symbol table")
 def _populate_from_assignment(node: ast_.ASTNode, target: ast_.ASTNode, value: ast_.ASTNode) -> None:
     assert node._env is not None, "Assignment node should have an environment - ensure add_empty_environments_to_ast was called before populating environments"
 
@@ -245,6 +251,7 @@ def _populate_from_assignment(node: ast_.ASTNode, target: ast_.ASTNode, value: a
             raise SimileTypeError(f"Unsupported assignment target type: {type(target)} (expected Identifier or StructAccess or TypedName counterparts)", target)
 
 
+@deprecated("Moving to external symbol table")
 def _populate_from_import(
     node: ast_.ASTNode,
     import_objects: ast_.TupleIdentifier | ast_.None_ | ast_.ImportAll,

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from src.mod.data.ast_.base import ASTNode
+from src.mod.data.ast_.helpers.dataclass import flatten
 from src.mod.data.symbol_table.entry import SymbolTableIdentifierEntry
 
 
@@ -12,8 +13,11 @@ from src.mod.data.symbol_table.entry import SymbolTableIdentifierEntry
 class Symbol(ASTNode):
     """Symbol-table converted identifier for variables, functions, etc. in the AST."""
 
-    id: int
     symbol_table_entry: SymbolTableIdentifierEntry
+
+    def flatten(self) -> list[Symbol]:
+        """Used to simplify the flatten operation of :cls:`MapletSymbol` and :cls:`TupleSymbol`"""
+        return [self]
 
 
 @dataclass
@@ -21,6 +25,10 @@ class TupleSymbol(ASTNode):
     """Special variation of tuple used for binding loop and quantification variables"""
 
     items: tuple[SymbolListTypes, ...]
+
+    def flatten(self) -> list[Symbol]:
+        """Used to simplify the flatten operation of :cls:`MapletSymbol` and :cls:`TupleSymbol`"""
+        return flatten(list(map(lambda item: item.flatten(), self.items)))
 
 
 L = TypeVar("L", bound="Symbol | TupleSymbol | MapletSymbol")

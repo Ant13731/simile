@@ -40,6 +40,7 @@ from src.mod.data.ast_.symbol_table_types import (
     DeferToSymbolTable,
     RelationSubTypeMask,
 )
+from src.mod.data.symbol_table.entry import ScopeTableEntry
 
 
 # TODO generate constructors for the typed dataclasses as a sort of shorthand, especially useful for matching/TRS rule creation
@@ -1020,7 +1021,7 @@ class RecordDef(ASTNode):
 class RecordDefSymbol(ASTNode):
     name: Symbol
     fields: list[Symbol]
-    record_scope_id: int
+    record_scope: ScopeTableEntry
 
 
 # @dataclass
