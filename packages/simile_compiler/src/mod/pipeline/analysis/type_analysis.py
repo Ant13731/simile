@@ -2,31 +2,341 @@ from __future__ import annotations
 from dataclasses import dataclass, field, is_dataclass
 import pathlib
 from typing import TypeVar
+from functools import singledispatch
 
 from src.mod.pipeline.scanner import Location
 from src.mod.pipeline.parser import parse, ParseError
 from src.mod.data import ast_
-from src.mod.data.ast_.symbol_table_types import (
-    SimileType,
-    ModuleImports,
-    ProcedureTypeDef,
-    StructTypeDef,
-    EnumTypeDef,
-    SimileTypeError,
-    BaseSimileType,
-)
+from src.mod.data.symbol_table import SymbolTable
+from src.mod.data import types
 
 
-T = TypeVar("T", bound=ast_.ASTNode)
+def type_check(ast: ast_.ASTNode, symbol_table: SymbolTable) -> None:
+    # TODO resolve types for assignments and the like
+    return None
 
 
-def type_check(ast: ast_.ASTNode) -> None:
-    """Calls `ast.get_type` throughout the entire AST.
+@singledispatch
+def resolve_type(ast: ast_.ASTNode, symbol_table: SymbolTable) -> types.BaseType:
+    raise NotImplementedError(f"Type checking not implemented for AST node of type {type(ast)} at location {ast.get_location()}")
 
-    The `get_type` property performs hidden checks before returning a result."""
 
-    # Getting the type of an ast node performs some type checks under the hood, so we just "call" the property and discard its result
-    ast.get_type
+@resolve_type.register
+def _(ast: ast_.Symbol, symbol_table: SymbolTable) -> types.BaseType:
+    symbol_info = symbol_table.lookup_symbol(ast.symbol_table_entry.id_, ast.symbol_table_entry.scope)
+    if symbol_info.declared_type is None:
+        raise types.SimileTypeError(f"Symbol table entry {ast.symbol_table_entry} does not have an assigned type during type resolution", ast)
+    return symbol_info.declared_type
 
-    for child in ast.children(True):
-        type_check(child)
+
+@resolve_type.register
+def _(ast: ast_.TupleSymbol, symbol_table: SymbolTable) -> types.BaseType:
+    ast_types = [resolve_type(item, symbol_table) for item in ast.items]
+    return types.TupleType(tuple(ast_types))
+
+
+@resolve_type.register
+def _(ast: ast_.Int, symbol_table: SymbolTable) -> types.BaseType:
+    trait_collection = types.TraitCollection()
+    trait_collection.set_trait(types.LiteralTrait(ast))
+    return types.IntType(trait_collection=trait_collection)
+
+
+@resolve_type.register
+def _(ast: ast_.Float, symbol_table: SymbolTable) -> types.BaseType:
+    trait_collection = types.TraitCollection()
+    trait_collection.set_trait(types.LiteralTrait(ast))
+    return types.FloatType(trait_collection=trait_collection)
+
+
+@resolve_type.register
+def _(ast: ast_.String, symbol_table: SymbolTable) -> types.BaseType:
+    trait_collection = types.TraitCollection()
+    trait_collection.set_trait(types.LiteralTrait(ast))
+    return types.StringType(trait_collection=trait_collection)
+
+
+@resolve_type.register
+def _(ast: ast_.True_, symbol_table: SymbolTable) -> types.BaseType:
+    trait_collection = types.TraitCollection()
+    trait_collection.set_trait(types.LiteralTrait(ast))
+    return types.BoolType(trait_collection=trait_collection)
+
+
+@resolve_type.register
+def _(ast: ast_.False_, symbol_table: SymbolTable) -> types.BaseType:
+    trait_collection = types.TraitCollection()
+    trait_collection.set_trait(types.LiteralTrait(ast))
+    return types.BoolType(trait_collection=trait_collection)
+
+
+@resolve_type.register
+def _(ast: ast_.None_, symbol_table: SymbolTable) -> types.BaseType:
+    return types.NoneType_()
+
+
+@resolve_type.register
+def _(ast: ast_.LambdaDef, symbol_table: SymbolTable) -> types.BaseType:
+    arg_types = {}
+    for arg in ast.params.items:
+        assert isinstance(arg, ast_.Symbol), "LambdaDef parameters must be Symbols"
+        arg_types[(arg.symbol_table_entry.id_, arg.symbol_table_entry.scope)] = resolve_type(arg, symbol_table)
+
+    assert isinstance(resolve_type(ast.predicate, symbol_table), types.BoolType), "Predicate of LambdaDef must be of type BoolType"
+
+    return types.ProcedureType(
+        arg_types=arg_types,
+        return_type=resolve_type(ast.expression, symbol_table),
+    )
+
+
+@resolve_type.register
+def _(ast: ast_.StructAccess, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Call, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Image, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Type_, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.TypedName, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Assignment, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Return, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.ControlFlowStmt, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.If, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.ElseIf, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Else, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.For, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.While, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.RecordDefSymbol, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.ProcedureDefSymbol, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.ImportAll, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Import, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Start, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Statements, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Implies, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Equivalent, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotEquivalent, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Add, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Subtract, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Multiply, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Divide, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.IntDivide, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Modulo, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Exponent, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.LessThan, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.LessThanOrEqual, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.GreaterThan, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.GreaterThanOrEqual, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Equal, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotEqual, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Is, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.IsNot, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.In, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotIn, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Union, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Intersection, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Difference, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Subset, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.SubsetEq, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Superset, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.SupersetEq, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotSubset, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotSubsetEq, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotSuperset, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NotSupersetEq, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Maplet, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.RelationOverriding, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Composition, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.CartesianProduct, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Upto, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Concat, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.DomainSubtraction, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.DomainRestriction, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.RangeSubtraction, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.RangeRestriction, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Relation, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.TotalRelation, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.SurjectiveRelation, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.TotalSurjectiveRelation, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.PartialFunction, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.TotalFunction, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.PartialInjection, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.TotalInjection, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.PartialSurjection, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.TotalSurjection, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Bijection, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Not, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Negative, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Powerset, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.NonemptyPowerset, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Inverse, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.And, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Or, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Forall, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Exists, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedForall, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedExists, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.UnionAll, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.IntersectionAll, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Sum, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Product, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedUnionAll, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedIntersectionAll, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedSum, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedProduct, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.Break, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Continue, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.Skip, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.SequenceEnumeration, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.SetEnumeration, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.RelationEnumeration, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.BagEnumeration, symbol_table: SymbolTable) -> types.BaseType: ...
+
+
+@resolve_type.register
+def _(ast: ast_.SequenceComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.SetComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.RelationComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.BagComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedSequenceComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedSetComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedRelationComprehension, symbol_table: SymbolTable) -> types.BaseType: ...
+@resolve_type.register
+def _(ast: ast_.QualifiedBagComprehension, symbol_table: SymbolTable) -> types.BaseType: ...

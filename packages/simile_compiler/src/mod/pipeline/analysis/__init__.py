@@ -8,7 +8,7 @@ from src.mod.pipeline.analysis.reserved_keywords import (
     ReservedKeywordErr,
 )
 from src.mod.pipeline.analysis.type_analysis import (
-    type_check,
+    resolve_type,
 )
 
 from src.mod.pipeline.analysis.analysis import (
@@ -18,4 +18,5 @@ from src.mod.pipeline.analysis.analysis import (
 from src.mod.pipeline.analysis.normalize_ast import (
     normalize_ast,
     ast_promoter,
+    assert_no_parser_only_nodes,
 )

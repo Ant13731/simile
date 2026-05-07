@@ -85,7 +85,7 @@ class RecordType(BaseType):
 
 @dataclass
 class ProcedureType(BaseType):
-    arg_types: dict[str, BaseType]
+    arg_types: dict[tuple[int, int], BaseType]
     return_type: BaseType
 
     def _is_eq_type(self, other: BaseType) -> bool:

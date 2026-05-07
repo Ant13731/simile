@@ -8,6 +8,14 @@ def normalize_ast(node: ast_.ASTNode) -> ast_.ASTNode:
     return node.find_and_replace_with_func(ast_promoter)
 
 
+def assert_no_parser_only_nodes(node: ast_.ASTNode) -> None:
+    """Asserts that there are no parser-only AST nodes in the given AST. Should be called after normalize_ast."""
+    if isinstance(node, (ast_.Identifier, ast_.TupleIdentifier)):
+        raise SimileTypeError(f"Parser-only AST node {node} found after normalization pass. Parser-only nodes should be replaced during symbol table population.", node)
+    for child in node.children():
+        assert_no_parser_only_nodes(child)
+
+
 def ast_promoter(node: ast_.ASTNode) -> ast_.ASTNode | None:
     if isinstance(node, ast_.BinaryOp):
         return _promote_binary_op(node)
