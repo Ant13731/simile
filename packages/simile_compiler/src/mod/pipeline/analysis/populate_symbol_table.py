@@ -12,12 +12,11 @@ from src.mod.data.symbol_table import (
     SymbolTableError,
     SymbolTableIdentifierEntry,
 )
-from src.mod.data.traits.trait_operations import merge_traits, MergeTraitBehaviour
+from src.mod.data.traits.trait_operations import MergeTraitBehaviour
 from src.mod.data.types import (
     BaseType,
     BoolType,
     GenericType,
-    DeferToSymbolTable,
     StringType,
     IntType,
     FloatType,
@@ -37,7 +36,7 @@ from src.mod.data.types import (
     ImportedSymbol,
     TraitType,
 )
-from src.mod.data.traits import LiteralTrait, MinTrait
+from src.mod.data.traits import LiteralTrait, MinTrait, Traits
 from src.mod.data.standard_library import STANDARD_LIBRARY_FOLDER
 
 from src.mod.data.types.primitive import NoneType_
@@ -99,8 +98,8 @@ class PopulateSymbolTable:
         "record": RecordType({}),
         # type sugar
         "ℤ": SetType(IntType()),
-        "ℕ": SetType(IntType(traits={MinTrait(0)})),
-        "ℕ₁": SetType(IntType(traits={MinTrait(1)})),
+        "ℕ": SetType(IntType(traits=Traits({MinTrait(0)}))),
+        "ℕ₁": SetType(IntType(traits=Traits({MinTrait(1)}))),
         # traits as typed objects?
         # TODO how should we handle traits as first-class objects? I suppose they should just be an expr?
         "trait": TraitType(None),
@@ -341,7 +340,7 @@ class PopulateSymbolTable:
                     raise SimileTypeError(f"Type definitions must have a valid type annotation, got None", value)
                 # Promote the type to a typeOfType only if it doesnt already represent a type (like generic types do represent a type value)
                 # typeOfType should not wrap such objects
-                type_value.traits = merge_traits(type_value.traits, traits, MergeTraitBehaviour.PREFER_LEFT)
+                type_value.traits = type_value.traits.merge_copy(traits, MergeTraitBehaviour.PREFER_LEFT)
                 if not isinstance(type_value, GenericType | AnyType_ | TypeOfType):
                     type_value = TypeOfType(type_value)
 
@@ -367,14 +366,14 @@ class PopulateSymbolTable:
                 )
             case ast_.TraitApplication(ast_.Assignment(ast_.TypedName(ast_.Identifier(name), declared_type), value, is_choice), trait_asts):
                 _trait_asts = [self.populate(trait) for trait in trait_asts]
-                trait_collection = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
+                traits = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
                 _declared_type = TypeAnnotationResolver.resolve_type_annotation(declared_type, self.symbol_table)
                 if _declared_type is None:
                     raise SimileTypeError(f"Variable definitions must have a valid type annotation, got None", declared_type)
                 if isinstance(_declared_type, TypeOfType):
                     # Type is actually used - unwrap the TypeOfType
                     _declared_type = _declared_type.type_of
-                _declared_type.traits = merge_traits(_declared_type.traits, trait_collection, MergeTraitBehaviour.PREFER_LEFT)
+                _declared_type.traits = _declared_type.traits.merge_copy(traits, MergeTraitBehaviour.PREFER_LEFT)
                 _name = self.symbol_table.add_symbol(
                     name,
                     IdentifierContext.VARIABLE,

@@ -1,4 +1,6 @@
 from enum import Enum, auto
+from dataclasses import dataclass, field
+from typing import TypeVar
 
 
 from src.mod.data.traits.base import (
@@ -10,6 +12,7 @@ from src.mod.data.traits.base import (
     UndefinedTrait,
     GenericBoundTrait,
 )
+from src.mod.data.traits.error import SimileTraitError
 from src.mod.data.traits.orderable import (
     OrderableTrait,
     MinTrait,
@@ -40,55 +43,77 @@ class MergeTraitBehaviour(Enum):
     THROW_ON_UNRESOLVABLE = auto()
 
 
-def find_traits[T](traits: set[BaseTrait], trait_type: type[T]) -> set[T] | None:
-    found_traits: set[T] = set()
-    for trait in traits:
-        if isinstance(trait, trait_type):
-            found_traits.add(trait)
-
-    if found_traits:
-        return found_traits
-    return None
+T = TypeVar("T", bound=BaseTrait)
 
 
-def merge_traits(left: set[BaseTrait], right: set[BaseTrait], merge_behaviour: MergeTraitBehaviour) -> set[BaseTrait]:
-    # Merging traits generally takes the widest possible value (union of the underlying sets)
-    # But some traits may actually narrow upon merging with specific operations (ex. an intersection of two sets with different domains)
-    # So we need to carefully evaluate what needs narrowing and what needs widening
+@dataclass
+class Traits:
+    items: dict[type[BaseTrait], BaseTrait] = field(default_factory=dict)
 
-    # Narrowing merges:
-    # - DomainTrait unions with DomainTrait
-    # - MinTrait takes the min of both
-    # - MaxTrait takes the max of both
-    # - ...
-    raise NotImplementedError
+    def __init__(self, traits: set[BaseTrait] | None = None):
+        self.items = {}
+        if traits is not None:
+            for trait in traits:
+                self.add(trait)
 
+    def find(self, trait_type: type[T]) -> T | None:
+        return self.items.get(trait_type)  # type: ignore
 
-def deduplicate_traits(traits: set[BaseTrait]) -> set[BaseTrait]:
-    # Rules (TODO verify with spec):
-    # - DomainTrait with no values => Remove DomainTrait
-    raise NotImplementedError
+    def add(self, item: BaseTrait) -> None:
+        if type(item) not in self.items:
+            self.items[type(item)] = item
+            return
+        if type(item) == GenericBoundTrait:
+            existing_generic_bound_trait = self.find(GenericBoundTrait)
+            assert existing_generic_bound_trait is not None
+            combined_bound_trait = existing_generic_bound_trait.merge_copy(item)
+            self.items[GenericBoundTrait] = combined_bound_trait
+            return
+        raise SimileTraitError(f"Trait of type {type(item)} already exists in the collection.")
 
+    def remove(self, item: BaseTrait) -> None:
+        if type(item) in self.items and self.items[type(item)] == item:
+            del self.items[type(item)]
 
-def derive_traits(traits: set[BaseTrait]) -> set[BaseTrait]:
-    # Rules (TODO verify with spec):
-    # - DomainTrait + Orderable => MinTrait and MaxTrait
-    # - DomainTrait + Orderable + Min/MaxTrait where domain has a value smaller/larger => widened Min/MaxTrait
-    # - Literal + no DomainTrait => DomainTrait with one literal value
-    # - Literal + DomainTrait without Literal => DomainTrait with literal value added
-    # - Min/MaxTrait => Orderable
-    # - Unique + Size + Domain + Size==len(Domain) => Total
-    # - Size == 0 => Empty
-    # - Size != 0 + Empty => remove Empty
-    # - Size => Iterable
-    # - Literal + Orderable + no Min/Max => Min/Max with literal value
-    # TODO write down trait-trait dependencies
-    raise NotImplementedError
+    def update(self, other: set[BaseTrait]) -> None:
+        for trait in other:
+            self.add(trait)
 
+    def deduplicate(self) -> None:
+        # Rules (TODO verify with spec):
+        # - DomainTrait with no values => Remove DomainTrait
+        raise NotImplementedError
 
-def check_incompatible_traits(traits: list[BaseTrait]) -> None:
-    # Check if specific traits are incompatible with one another (ex. max below min)
-    raise NotImplementedError
+    def derive(self) -> None:
+        # Rules (TODO verify with spec):
+        # - DomainTrait + Orderable => MinTrait and MaxTrait
+        # - DomainTrait + Orderable + Min/MaxTrait where domain has a value smaller/larger => widened Min/MaxTrait
+        # - Literal + no DomainTrait => DomainTrait with one literal value
+        # - Literal + DomainTrait without Literal => DomainTrait with literal value added
+        # - Min/MaxTrait => Orderable
+        # - Unique + Size + Domain + Size==len(Domain) => Total
+        # - Size == 0 => Empty
+        # - Size != 0 + Empty => remove Empty
+        # - Size => Iterable
+        # - Literal + Orderable + no Min/Max => Min/Max with literal value
+        # TODO write down trait-trait dependencies
+        raise NotImplementedError
+
+    def check_compatible(self) -> None:
+        # Check if specific traits are incompatible with one another (ex. max below min)
+        raise NotImplementedError
+
+    def merge_copy(self, other: Traits, behaviour: MergeTraitBehaviour = MergeTraitBehaviour.PREFER_LEFT) -> Traits:
+        # Merging traits generally takes the widest possible value (union of the underlying sets)
+        # But some traits may actually narrow upon merging with specific operations (ex. an intersection of two sets with different domains)
+        # So we need to carefully evaluate what needs narrowing and what needs widening
+
+        # Narrowing merges:
+        # - DomainTrait unions with DomainTrait
+        # - MinTrait takes the min of both
+        # - MaxTrait takes the max of both
+        # - ...
+        raise NotImplementedError
 
 
 # Old merge functions, delete when done:

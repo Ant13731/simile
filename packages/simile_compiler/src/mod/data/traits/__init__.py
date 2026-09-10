@@ -33,10 +33,6 @@ from src.mod.data.traits.set_ import (
 )
 from src.mod.data.traits.trait_operations import (
     MergeTraitBehaviour,
-    find_traits,
-    merge_traits,
-    deduplicate_traits,
-    derive_traits,
-    check_incompatible_traits,
+    Traits,
 )
 from src.mod.data.traits.error import SimileTraitError

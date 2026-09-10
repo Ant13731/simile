@@ -21,7 +21,7 @@ from src.mod.data.traits import (
     EmptyTrait,
     TotalTrait,
     UniqueTrait,
-    find_traits,
+    Traits,
 )
 from src.mod.data.types.typing_rule_decorator import typing_rule
 
@@ -72,7 +72,7 @@ class TupleType(BaseType):
         return True
 
     def _is_sub_traits(self, other: _TraitMixin) -> bool:
-        empty_traits = find_traits(self.traits, EmptyTrait)
+        empty_traits = self.traits.find(EmptyTrait)
         if empty_traits is not None:
             return True
         raise NotImplementedError
@@ -92,9 +92,9 @@ class TupleType(BaseType):
 @dataclass
 class PairType(TupleType):
 
-    def __init__(self, left: BaseType, right: BaseType, *, traits: set[BaseTrait] | None = None) -> None:
+    def __init__(self, left: BaseType, right: BaseType, *, traits: Traits | None = None) -> None:
         if traits is None:
-            traits = set()
+            traits = Traits()
 
         super().__init__(items=[left, right], traits=traits)
 

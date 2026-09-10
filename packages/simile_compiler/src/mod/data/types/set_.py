@@ -27,9 +27,9 @@ from src.mod.data.traits import (
     EmptyTrait,
     TotalTrait,
     UniqueTrait,
-    find_traits,
     RelationalDomainTrait,
     RelationalRangeTrait,
+    Traits,
 )
 from src.mod.data.types.base import BaseType, BoolType, _TraitMixin
 from src.mod.data.types.primitive import FloatType, NoneType_, IntType, StringType
@@ -93,7 +93,7 @@ class SetType(BaseType):
         return self.element_type.is_subtype(other.element_type)
 
     def _is_sub_traits(self, other: _TraitMixin) -> bool:
-        empty_traits = find_traits(self.traits, EmptyTrait)
+        empty_traits = self.traits.find(EmptyTrait)
         if empty_traits is not None:
             return True
         raise NotImplementedError
@@ -146,7 +146,7 @@ class SetType(BaseType):
 
     @classmethod
     def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> SetType:
-        return cls(element_type=element_type, traits=traits)
+        return cls(element_type=element_type, traits=Traits(traits))
 
     # Single operations
     def cardinality(self) -> IntType:
@@ -170,7 +170,7 @@ class SetType(BaseType):
 
     def choice(self) -> BaseType:
         """Select an arbitrary element from the set."""
-        if find_traits(self.traits, EmptyTrait) is not None:
+        if self.traits.find(EmptyTrait) is not None:
             raise SimileTypeError("Cannot choose an element from a known empty set (EmptyTrait found).")
 
         return self.element_type
@@ -185,14 +185,14 @@ class SetType(BaseType):
 
     def min(self) -> BaseType:
         """Return the minimum element in the set."""
-        if find_traits(self.traits, OrderableTrait) is None:
+        if self.traits.find(OrderableTrait) is None:
             raise SimileTypeError(f"Cannot get minimum of set with non-orderable element type: {self.element_type}")
 
         return self.element_type
 
     def max(self) -> BaseType:
         """Return the maximum element in the set."""
-        if find_traits(self.traits, OrderableTrait) is None:
+        if self.traits.find(OrderableTrait) is None:
             raise SimileTypeError(f"Cannot get maximum of set with non-orderable element type: {self.element_type}")
 
         return self.element_type
@@ -331,9 +331,9 @@ class RelationType(SetType):
         UniqueTrait,
     }
 
-    def __init__(self, left: BaseType, right: BaseType, *, traits: set[BaseTrait] | None = None) -> None:
+    def __init__(self, left: BaseType, right: BaseType, *, traits: Traits | None = None) -> None:
         if traits is None:
-            traits = set()
+            traits = Traits()
         super().__init__(element_type=PairType(left=left, right=right), traits=traits)
 
     @property
@@ -377,10 +377,10 @@ class RelationType(SetType):
         return traits
 
     def _relation_traits_to_tuple(self) -> tuple[bool, bool, bool, bool]:
-        total_on_domain_trait = find_traits(self.traits, TotalOnDomainTrait)
-        total_on_range_trait = find_traits(self.traits, TotalOnRangeTrait)
-        one_to_many_trait = find_traits(self.traits, OneToManyTrait)
-        many_to_one_trait = find_traits(self.traits, ManyToOneTrait)
+        total_on_domain_trait = self.traits.find(TotalOnDomainTrait)
+        total_on_range_trait = self.traits.find(TotalOnRangeTrait)
+        one_to_many_trait = self.traits.find(OneToManyTrait)
+        many_to_one_trait = self.traits.find(ManyToOneTrait)
         return (
             total_on_domain_trait is not None,
             total_on_range_trait is not None,
@@ -393,7 +393,7 @@ class RelationType(SetType):
         """Cast a SetType to a RelationType, if possible."""
         if not isinstance(element_type, PairType):
             raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
-        return RelationType(left=element_type.left, right=element_type.right, traits=traits)
+        return RelationType(left=element_type.left, right=element_type.right, traits=Traits(traits))
 
     def inverse(self) -> RelationType:
         new_type = deepcopy(self)
@@ -489,10 +489,7 @@ class RelationType(SetType):
         assert isinstance(domain_set, SetType)
 
         new_type = deepcopy(self)
-        try:
-            new_type.traits.remove(TotalOnDomainTrait())
-        except KeyError:
-            pass
+        new_type.traits.remove(TotalOnDomainTrait())
         return new_type
 
     def range_restriction(self, range_set: BaseType) -> RelationType:
@@ -500,10 +497,7 @@ class RelationType(SetType):
         assert isinstance(range_set, SetType)
 
         new_type = deepcopy(self)
-        try:
-            new_type.traits.remove(TotalOnRangeTrait())
-        except KeyError:
-            pass
+        new_type.traits.remove(TotalOnRangeTrait())
         return new_type
 
     def range_subtraction(self, range_set: BaseType) -> RelationType:
@@ -511,10 +505,7 @@ class RelationType(SetType):
         assert isinstance(range_set, SetType)
 
         new_type = deepcopy(self)
-        try:
-            new_type.traits.remove(TotalOnRangeTrait())
-        except KeyError:
-            pass
+        new_type.traits.remove(TotalOnRangeTrait())
         return new_type
 
     def bag_image(self, bag: BagType) -> BagType:
@@ -527,7 +518,7 @@ class RelationType(SetType):
 @dataclass
 class BagType(RelationType):
 
-    def __init__(self, element_type: BaseType, *, traits: set[BaseTrait] | None = None) -> None:
+    def __init__(self, element_type: BaseType, *, traits: Traits | None = None) -> None:
         super().__init__(left=element_type, right=IntType(), traits=traits)
 
     @property
@@ -536,7 +527,7 @@ class BagType(RelationType):
 
     @classmethod
     def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> BagType:
-        return cls(element_type=element_type, traits=traits)
+        return cls(element_type=element_type, traits=Traits(traits))
 
     def base_traits(self) -> set[BaseTrait]:
         return {ManyToOneTrait()}
@@ -573,12 +564,12 @@ class BagType(RelationType):
 @dataclass
 class SequenceType(RelationType):
 
-    def __init__(self, element_type: BaseType, *, traits: set[BaseTrait] | None = None) -> None:
+    def __init__(self, element_type: BaseType, *, traits: Traits | None = None) -> None:
         super().__init__(left=IntType(), right=element_type, traits=traits)
 
     @classmethod
     def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> SequenceType:
-        return cls(element_type=element_type, traits=traits)
+        return cls(element_type=element_type, traits=Traits(traits))
 
     @property
     def element_type_(self) -> BaseType:

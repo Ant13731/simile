@@ -61,43 +61,43 @@ class TypeSynthesizer:
     def _(self, ast: ast_.TraitApplication) -> types.BaseType:
         base_type = self.synthesize_type(ast.target)
         newly_applied_traits = TraitResolver.resolve_traits(ast.traits, self.symbol_table)
-        base_type.traits = traits.merge_traits(base_type.traits, newly_applied_traits, traits.MergeTraitBehaviour.PREFER_LEFT)
+        base_type.traits = base_type.traits.merge_copy(newly_applied_traits, traits.MergeTraitBehaviour.PREFER_LEFT)
         return base_type
 
     @typing_rule("")
     @synthesize_type.register
     def _(self, ast: ast_.Int) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
-        return types.IntType(traits={traits.LiteralTrait(literal_value)})
+        return types.IntType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
     @synthesize_type.register
     def _(self, ast: ast_.Float) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
-        return types.FloatType(traits={traits.LiteralTrait(literal_value)})
+        return types.FloatType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
     @synthesize_type.register
     def _(self, ast: ast_.String) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
-        return types.StringType(traits={traits.LiteralTrait(literal_value)})
+        return types.StringType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
     @synthesize_type.register
     def _(self, ast: ast_.True_) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
-        return types.BoolType(traits={traits.LiteralTrait(literal_value)})
+        return types.BoolType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
     @synthesize_type.register
     def _(self, ast: ast_.False_) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
-        return types.BoolType(traits={traits.LiteralTrait(literal_value)})
+        return types.BoolType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
     @synthesize_type.register
     def _(self, ast: ast_.None_) -> types.BaseType:
-        return types.NoneType_(traits={traits.LiteralTrait(None)})
+        return types.NoneType_(traits=traits.Traits({traits.LiteralTrait(None)}))
 
     @typing_rule("Lambda Expression")
     @synthesize_type.register

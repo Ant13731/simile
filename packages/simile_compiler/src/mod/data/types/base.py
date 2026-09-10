@@ -16,8 +16,7 @@ from src.mod.data.traits import (
     ImmutableTrait,
     GenericBoundTrait,
     MergeTraitBehaviour,
-    merge_traits,
-    find_traits,
+    Traits,
 )
 
 T = TypeVar("T", bound="BaseType")
@@ -26,17 +25,16 @@ T = TypeVar("T", bound="BaseType")
 # Primitive types
 @dataclass(kw_only=True)
 class _TraitMixin:
-    traits: set[BaseTrait] = field(default_factory=set)
+    traits: Traits = field(default_factory=Traits)
     compatible_traits: ClassVar[set[type[BaseTrait]]] = {ImmutableTrait}
 
     def base_traits(self) -> set[BaseTrait]:
         raise NotImplementedError
 
-    @classmethod
-    def check_incompatible_traits(cls, traits: set[BaseTrait]) -> NoReturn | None:
-        for trait in traits:
-            if not isinstance(trait, tuple(cls.compatible_traits)):
-                raise SimileTraitError(f"Cannot apply trait {trait} to type {cls.__name__}: incompatible trait")
+    def check_incompatible_traits(self) -> NoReturn | None:
+        for trait in self.traits.items.values():
+            if not isinstance(trait, tuple(self.compatible_traits)):
+                raise SimileTraitError(f"Cannot apply trait {trait} to type {self.__class__.__name__}: incompatible trait")
         return None
 
     def _is_eq_traits(self, other: _TraitMixin) -> bool:
@@ -54,14 +52,14 @@ class BaseType(_TraitMixin):
     """Base type for all Simile types."""
 
     # Actual type methods
-    def cast(self, caster: T, traits: set[BaseTrait] | None = None) -> T:
+    def cast(self, caster: T, traits: Traits | None = None) -> T:
         """Cast the type to a different type."""
         caster = deepcopy(caster)
         # TODO only add traits if the traits make sense to add (ex. no min trait allowed on a StringType)
         # Each type should specify which traits are allowed
 
         if traits is not None:
-            caster.traits = merge_traits(caster.traits, traits, MergeTraitBehaviour.PREFER_RIGHT)
+            caster.traits = caster.traits.merge_copy(traits, MergeTraitBehaviour.PREFER_RIGHT)
         return caster
 
     def equals(self, other: BaseType) -> BoolType:
@@ -101,12 +99,12 @@ class BaseType(_TraitMixin):
 
         # Sub Top Type for generics
         if not isinstance(self, GenericType) and isinstance(other, GenericType):
-            generic_traits = find_traits(other.traits, GenericBoundTrait)
-            if generic_traits is None:
+            generic_trait = other.traits.find(GenericBoundTrait)
+            if generic_trait is None:
                 return is_sub_trait  # unbound generic is supertype of all types
 
-            for other_bound in generic_traits:
-                if self.is_subtype(other_bound.bound_type):
+            for other_bound in generic_trait.bound_types:
+                if self.is_subtype(other_bound):
                     return is_sub_trait
             return False
 

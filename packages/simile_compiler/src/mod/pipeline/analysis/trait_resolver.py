@@ -25,8 +25,8 @@ from src.mod.data.traits import (
     EmptyTrait,
     SizeTrait,
     TotalTrait,
+    Traits,
 )
-from src.mod.data.traits.trait_operations import deduplicate_traits, derive_traits, merge_traits
 from src.mod.pipeline.analysis.type_annotation_resolver import TypeAnnotationResolver
 
 
@@ -56,14 +56,13 @@ class TraitResolver:
     }
 
     @classmethod
-    def resolve_traits(cls, trait_asts: list[ast_.ASTNode], symbol_table: SymbolTable) -> set[BaseTrait]:
-        traits: set[BaseTrait] = set()
+    def resolve_traits(cls, trait_asts: list[ast_.ASTNode], symbol_table: SymbolTable) -> Traits:
+        traits = Traits()
         for trait_ast in trait_asts:
             resolved_traits = cls.resolve_trait(trait_ast, symbol_table)
             traits.update(resolved_traits)
-
-        traits = deduplicate_traits(traits)
-        traits = derive_traits(traits)
+        traits.derive()
+        traits.deduplicate()
         return traits
 
     @classmethod
@@ -79,7 +78,7 @@ class TraitResolver:
                     generic_bound_type = TypeAnnotationResolver.resolve_type_annotation(right, symbol_table)
                     if generic_bound_type is None:
                         raise SimileTraitError(f"Generic bound trait must have a valid type annotation, got None", right)
-                    return {GenericBoundTrait(generic_bound_type)}
+                    return {GenericBoundTrait((generic_bound_type,))}
 
                 # rest of these match to python-like types for analysis
                 right_literal = cls.literal_ast_to_python(right)
