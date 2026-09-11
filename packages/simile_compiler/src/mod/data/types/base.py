@@ -204,4 +204,4 @@ class BoolType(BaseType):
         return BoolType()
 
     def base_traits(self) -> set[BaseTrait]:
-        return {DomainTrait({True, False})}
+        return {DomainTrait(frozenset({True, False}))}

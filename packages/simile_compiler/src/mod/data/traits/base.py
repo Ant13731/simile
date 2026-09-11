@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 # These must be hash-safe
 SimileLiteralAsPythonOrderable = int | float | str | tuple
-SimileLiteralAsPython = bool | SimileLiteralAsPythonOrderable | set | None
+SimileLiteralAsPython = bool | SimileLiteralAsPythonOrderable | frozenset | None
 
 
 @dataclass(frozen=True)

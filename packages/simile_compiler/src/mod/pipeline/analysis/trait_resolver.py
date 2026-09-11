@@ -61,8 +61,7 @@ class TraitResolver:
         for trait_ast in trait_asts:
             resolved_traits = cls.resolve_trait(trait_ast, symbol_table)
             traits.update(resolved_traits)
-        traits.derive()
-        traits.deduplicate()
+        traits.normalize()
         return traits
 
     @classmethod
@@ -94,9 +93,9 @@ class TraitResolver:
                             raise SimileTraitError("Maximum trait can only be applied to orderable literals", right)
                         return {MaxTrait(value=right_literal)}
                     case "domain":
-                        if not isinstance(right_literal, set | tuple):
+                        if not isinstance(right_literal, frozenset | tuple):
                             raise SimileTraitError("Domain trait can only applied to literal collections", right)
-                        return {DomainTrait(values=set(right_literal))}
+                        return {DomainTrait(values=frozenset(right_literal))}
                     case "size":
                         if not isinstance(right_literal, int):
                             raise SimileTraitError("Size trait can only be applied to integer literals", right)
@@ -123,7 +122,7 @@ class TraitResolver:
             case ast_.Enumeration(items, op_type):
                 converted_items = [cls.literal_ast_to_python(item) for item in items]
                 if op_type in {ast_.CollectionOperator.SET, ast_.CollectionOperator.RELATION, ast_.CollectionOperator.BAG}:
-                    return set(converted_items)
+                    return frozenset(converted_items)
                 return tuple(converted_items)
             case ast_.TupleLiteral(items):
                 converted_items = [cls.literal_ast_to_python(item) for item in items]

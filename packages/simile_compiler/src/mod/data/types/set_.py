@@ -595,7 +595,7 @@ class EnumType(SetType):
     def base_traits(self) -> set[BaseTrait]:
         return {
             ImmutableTrait(),
-            DomainTrait(set(self.members)),
+            DomainTrait(frozenset(self.members)),
             SizeTrait(len(self.members)),
         }
 

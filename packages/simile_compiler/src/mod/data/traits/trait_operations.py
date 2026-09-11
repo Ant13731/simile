@@ -1,6 +1,7 @@
 from enum import Enum, auto
 from dataclasses import dataclass, field
-from typing import TypeVar
+from typing import TypeVar, get_args
+from copy import copy
 
 
 from src.mod.data.traits.base import (
@@ -40,17 +41,18 @@ from src.mod.data.traits.set_ import (
 class MergeTraitBehaviour(Enum):
     PREFER_LEFT = auto()
     PREFER_RIGHT = auto()
-    THROW_ON_UNRESOLVABLE = auto()
+    # THROW_ON_UNRESOLVABLE = auto()
 
 
 T = TypeVar("T", bound=BaseTrait)
 
 
-@dataclass
+@dataclass(init=False)
 class Traits:
     items: dict[type[BaseTrait], BaseTrait] = field(default_factory=dict)
 
     def __init__(self, traits: set[BaseTrait] | None = None):
+        super().__init__()
         self.items = {}
         if traits is not None:
             for trait in traits:
@@ -59,15 +61,15 @@ class Traits:
     def find(self, trait_type: type[T]) -> T | None:
         return self.items.get(trait_type)  # type: ignore
 
-    def add(self, item: BaseTrait) -> None:
-        if type(item) not in self.items:
-            self.items[type(item)] = item
-            return
+    def add(self, item: BaseTrait, clobber_existing: bool = True) -> None:
         if type(item) == GenericBoundTrait:
             existing_generic_bound_trait = self.find(GenericBoundTrait)
             assert existing_generic_bound_trait is not None
             combined_bound_trait = existing_generic_bound_trait.merge_copy(item)
             self.items[GenericBoundTrait] = combined_bound_trait
+            return
+        if clobber_existing or type(item) not in self.items:
+            self.items[type(item)] = item
             return
         raise SimileTraitError(f"Trait of type {type(item)} already exists in the collection.")
 
@@ -79,23 +81,86 @@ class Traits:
         for trait in other:
             self.add(trait)
 
-    def deduplicate(self) -> None:
+    def normalize(self) -> None:
         # Rules (TODO verify with spec):
-        # - DomainTrait with no values => Remove DomainTrait
-        raise NotImplementedError
+        # Domain Empty - DomainTrait with no values => Remove DomainTrait
+        if domain_trait := self.find(DomainTrait):
+            if len(domain_trait.values) == 0:
+                self.remove(domain_trait)
 
-    def derive(self) -> None:
-        # Rules (TODO verify with spec):
-        # - DomainTrait + Orderable => MinTrait and MaxTrait
+        # Literal Implies a Domain - Literal + no DomainTrait => DomainTrait with one literal value
+        if literal_trait := self.find(LiteralTrait):
+            if not self.find(DomainTrait):
+                self.add(DomainTrait(values=frozenset([literal_trait.value])))
+
+        # Literal within Domain - Literal + DomainTrait without Literal => DomainTrait with literal value added
+        if literal_trait := self.find(LiteralTrait):
+            if domain_trait := self.find(DomainTrait):
+                if literal_trait.value not in domain_trait.values:
+                    new_domain_values = frozenset(domain_trait.values) | frozenset([literal_trait.value])
+                    self.add(DomainTrait(values=new_domain_values))
+        # All Domain objects must have the same type
+        if domain_trait := self.find(DomainTrait):
+            first_type = type(next(iter(domain_trait.values), None))
+            for value in domain_trait.values:
+                if type(value) != first_type:
+                    raise SimileTraitError(f"DomainTrait values must all be of the same (python) type, but found {first_type} and {type(value)} in {domain_trait.values}")
+
+        # Orderable Domain with/without Min/Max
         # - DomainTrait + Orderable + Min/MaxTrait where domain has a value smaller/larger => widened Min/MaxTrait
-        # - Literal + no DomainTrait => DomainTrait with one literal value
-        # - Literal + DomainTrait without Literal => DomainTrait with literal value added
-        # - Min/MaxTrait => Orderable
-        # - Unique + Size + Domain + Size==len(Domain) => Total
-        # - Size == 0 => Empty
-        # - Size != 0 + Empty => remove Empty
-        # - Size => Iterable
-        # - Literal + Orderable + no Min/Max => Min/Max with literal value
+        # - DomainTrait + Orderable => Min/MaxTrait
+        if (domain_trait := self.find(DomainTrait)) and self.find(OrderableTrait):
+            if domain_trait.get_value_type() in set(get_args(SimileLiteralAsPythonOrderable)):
+                if min_trait := self.find(MinTrait):
+                    min_value = min(domain_trait.values)  # type: ignore
+                    try:
+                        if min_value < min_trait.value:  # type: ignore
+                            self.add(MinTrait(value=min_value))  # type: ignore
+                    except TypeError:
+                        raise SimileTraitError(f"MinTrait value type {type(min_trait.value)} does not match DomainTrait value type {type(min_value)}")
+
+                if max_trait := self.find(MaxTrait):
+                    max_value = max(domain_trait.values)  # type: ignore
+                    try:
+                        if max_value > max_trait.value:  # type: ignore
+                            self.add(MaxTrait(value=max_value))  # type: ignore
+                    except TypeError:
+                        raise SimileTraitError(f"MaxTrait value type {type(max_trait.value)} does not match DomainTrait value type {type(max_value)}")
+
+        # Min/Max implies Order - Min/MaxTrait => Orderable
+        if self.find(MinTrait) or self.find(MaxTrait):
+            if not self.find(OrderableTrait):
+                self.add(OrderableTrait())
+
+        # Full set - Unique + Size + Domain + Size==len(Domain) => Total
+        if self.find(EmptyTrait) is None and self.find(UniqueTrait) and (size_trait := self.find(SizeTrait)) and (domain_trait := self.find(DomainTrait)):
+            if size_trait.size == len(domain_trait.values):
+                self.add(TotalTrait())
+
+        # Empty Size - Size == 0 => Empty
+        if size_trait := self.find(SizeTrait):
+            if size_trait.size == 0:
+                self.add(EmptyTrait())
+
+        # Non-empty Size - Size != 0 + Empty => remove Empty
+        if size_trait := self.find(SizeTrait):
+            if size_trait.size != 0:
+                self.remove(EmptyTrait())
+
+        # Size implies Iterable - Size => Iterable
+        if self.find(SizeTrait):
+            self.add(IterableTrait())
+
+        # Orderable Literal is Min/Max - Literal + Orderable + no Min/Max => Min/Max with literal value
+        if literal_trait := self.find(LiteralTrait):
+            if self.find(OrderableTrait):
+                if literal_trait.value not in set(get_args(SimileLiteralAsPythonOrderable)):
+                    raise SimileTraitError(f"LiteralTrait value {literal_trait.value} is not orderable, but OrderableTrait is present")
+                if not self.find(MinTrait):
+                    self.add(MinTrait(value=literal_trait.value))  # type: ignore
+                if not self.find(MaxTrait):
+                    self.add(MaxTrait(value=literal_trait.value))  # type: ignore
+
         # TODO write down trait-trait dependencies
         raise NotImplementedError
 
@@ -107,87 +172,59 @@ class Traits:
         # Merging traits generally takes the widest possible value (union of the underlying sets)
         # But some traits may actually narrow upon merging with specific operations (ex. an intersection of two sets with different domains)
         # So we need to carefully evaluate what needs narrowing and what needs widening
+        #
+        # Generally used for when users define overriding traits, so we defer to user's judgement as a base and verify after
+        # TODO think about how this actually used - if we just use it for trait applications and casting with traits,
+        # then we should define a proper semantics - maybe we dont actually want to merge a copy, but instead repeatedly
+        # add (and clobber) traits. For example:
+        # x: int
+        #    trait min = 9
+        #
+        # This should still keep the orderable trait, and if x already had a domain from 0-10, we restrict that domain
+        # What is the responsibility of normalization, and what is the responsibility of merging? Maybe we shouldnt even
+        # have a merge function, but let callers resolve their own behaviour. Or rather, we should define two methods here:
+        # cast_with_trait and trait_application, corresponding to the methods that the actual types have
+
+        traits = Traits()
+        traits_to_add = Traits()
+        match behaviour:
+            case MergeTraitBehaviour.PREFER_LEFT:
+                traits.items = copy(self.items)
+                traits_to_add.items = copy(other.items)
+            case MergeTraitBehaviour.PREFER_RIGHT:
+                traits.items = copy(other.items)
+                traits_to_add.items = copy(self.items)
 
         # Narrowing merges:
-        # - DomainTrait unions with DomainTrait
+        # - Two equal literals remain the same literal, else widen to a domain with both literals
+        if base_literal_trait := self.find(LiteralTrait):
+            if addon_literal_trait := other.find(LiteralTrait):
+                if base_literal_trait.value == addon_literal_trait.value:
+                    traits.add(base_literal_trait)
+                else:
+                    traits.add(DomainTrait(values=frozenset([base_literal_trait.value, addon_literal_trait.value])))
+
         # - MinTrait takes the min of both
+        if base_min_trait := self.find(MinTrait):
+            if addon_min_trait := other.find(MinTrait):
+                new_min_value = min(base_min_trait.value, addon_min_trait.value)
+                traits.add(MinTrait(value=new_min_value))
+
         # - MaxTrait takes the max of both
+        if base_max_trait := self.find(MaxTrait):
+            if addon_max_trait := other.find(MaxTrait):
+                new_max_value = max(base_max_trait.value, addon_max_trait.value)
+                traits.add(MaxTrait(value=new_max_value))
+
+        # - DomainTrait unions with DomainTrait
+        if base_domain_trait := self.find(DomainTrait):
+            if addon_domain_trait := other.find(DomainTrait):
+                new_domain_values = frozenset(base_domain_trait.values) | frozenset(addon_domain_trait.values)
+                traits.add(DomainTrait(values=new_domain_values))
         # - ...
-        raise NotImplementedError
+        traits.normalize()
+        return traits
 
-
-# Old merge functions, delete when done:
-# def _fill_implicit_traits(self) -> None:
-#     """Some traits implicitly encompass others. This fills in that closure.
-#     Ex. a Literal[1] implies min=1 and max=1.
-
-#     Mandatory traits should have been filled in first, restricted traits should be checked after
-#     """
-
-#     # Domain Empty
-#     if self.domain_trait and len(self.domain_trait.values) == 0:
-#         self.domain_trait = None
-
-#     # Literal Implies a Domain
-#     if self.literal_trait and self.domain_trait is None:
-#         self.domain_trait = DomainTrait([self.literal_trait.value])
-
-#     # Literal within Domain
-#     if self.literal_trait and self.domain_trait:
-#         if self.literal_trait.value not in self.domain_trait.values:
-#             self.domain_trait = DomainTrait(self.domain_trait.values + [self.literal_trait.value])
-
-#     # Orderable Domain without Min
-#     if self.domain_trait and self.orderable_trait and self.min_trait is None:
-#         self.min_trait = MinTrait.from_domain_trait(self.domain_trait)
-
-#     # Orderable Domain with Min
-#     if self.domain_trait and self.orderable_trait and self.min_trait:
-#         min_trait_from_domain = MinTrait.from_domain_trait(self.domain_trait)
-#         if min_trait_from_domain:
-#             self.min_trait = self.min_trait.merge(min_trait_from_domain)
-
-#     # Orderable Domain without Max
-#     if self.domain_trait and self.orderable_trait and self.max_trait is None:
-#         self.max_trait = MaxTrait.from_domain_trait(self.domain_trait)
-
-#     # Orderable Domain with Max
-#     if self.domain_trait and self.orderable_trait and self.max_trait:
-#         max_trait_from_domain = MaxTrait.from_domain_trait(self.domain_trait)
-#         if max_trait_from_domain:
-#             self.max_trait = self.max_trait.merge(max_trait_from_domain)
-
-#     # Min implies Order
-#     if self.min_trait and self.orderable_trait is None:
-#         self.orderable_trait = OrderableTrait()
-
-#     # Max implies Order
-#     if self.max_trait and self.orderable_trait is None:
-#         self.orderable_trait = OrderableTrait()
-
-#     # Full set
-#     if self.unique_elements_trait and self.size_trait and self.domain_trait and self.size_trait.size == len(self.domain_trait.values) and self.empty_trait is None:
-#         self.total_trait = TotalTrait()
-
-#     # Empty Size
-#     if self.size_trait and self.size_trait.size == 0:
-#         self.empty_trait = EmptyTrait()
-
-#     # Non-empty Size
-#     if self.size_trait and self.size_trait.size > 0:
-#         self.empty_trait = None
-
-#     # Size implies Iterable
-#     if self.size_trait:
-#         self.iterable_trait = IterableTrait()
-
-#     # Orderable Literal is Min
-#     if self.literal_trait and self.orderable_trait and self.min_trait is None:
-#         self.min_trait = MinTrait(value=self.literal_trait.value)
-
-#     # Orderable Literal is Max
-#     if self.literal_trait and self.orderable_trait and self.max_trait is None:
-#         self.max_trait = MaxTrait(value=self.literal_trait.value)
 
 # def merge(self, other: TraitCollection, prioritize_self_over_other: bool = False) -> TraitCollection:
 #     """Merge this TraitCollection with another, returning a new TraitCollection.
