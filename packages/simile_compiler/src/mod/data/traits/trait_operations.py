@@ -11,6 +11,8 @@ from src.mod.data.traits.base import (
     ImmutableTrait,
     LiteralTrait,
     UndefinedTrait,
+)
+from src.mod.data.traits.meta import (
     GenericBoundTrait,
 )
 from src.mod.data.traits.error import SimileTraitError
@@ -45,6 +47,50 @@ class MergeTraitBehaviour(Enum):
 
 
 T = TypeVar("T", bound=BaseTrait)
+
+
+@dataclass(init=False)
+class InternalTraitCollection:
+    items: dict[type[BaseTrait], BaseTrait] = field(default_factory=dict)
+
+    def __init__(self, traits: set[BaseTrait] | None = None):
+        super().__init__()
+        self.items = {}
+        if traits is not None:
+            for trait in traits:
+                self.add(trait)
+
+    def find(self, trait_type: type[T]) -> T | None:
+        return self.items.get(trait_type)  # type: ignore
+
+    def add(self, item: BaseTrait, clobber_existing: bool = True) -> None:
+        if type(item) == GenericBoundTrait:
+            existing_generic_bound_trait = self.find(GenericBoundTrait)
+            assert existing_generic_bound_trait is not None
+            combined_bound_trait = existing_generic_bound_trait.merge_copy(item)
+            self.items[GenericBoundTrait] = combined_bound_trait
+            return
+        if clobber_existing or type(item) not in self.items:
+            self.items[type(item)] = item
+            return
+        raise SimileTraitError(f"Trait of type {type(item)} already exists in the collection.")
+
+    def remove(self, item: BaseTrait) -> None:
+        if type(item) in self.items and self.items[type(item)] == item:
+            del self.items[type(item)]
+
+    def update(self, other: set[BaseTrait]) -> None:
+        for trait in other:
+            self.add(trait)
+
+
+@dataclass(init=False)
+class Traits2:
+    explicit: InternalTraitCollection
+    type_implicit: InternalTraitCollection
+    derived: InternalTraitCollection
+
+    # @classmethod
 
 
 @dataclass(init=False)

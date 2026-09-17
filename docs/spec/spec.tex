@@ -25,6 +25,7 @@
 \usepackage{xcolor}
 \usepackage{minted}
 \usepackage[left=1.5cm, right=1.5cm]{geometry}
+\usepackage{pifont}% http://ctan.org/pkg/pifont
 \usepackage{hyperref}
 
 % NOTE:
@@ -88,7 +89,11 @@
   \ensuremath{#1} & \texttt{#2} & #3\\%
 }
 
-\newcommand{\ruleSpace}{\ \ \ }
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+\newcommand{\ccmark}{%
+    \cmark\kern-0.4em\cmark%
+}
 
 % From https://tex.stackexchange.com/questions/82782/footnote-in-align-environment
 \makeatletter
@@ -541,7 +546,7 @@ ASCII tokens will be provided as an alternative to unicode format where suitable
 \begin{longtable}{c c l}
     \textbf{Token} & \textbf{ASCII Token} & \textbf{Name} \\
     \endhead
-    \lexentry{\cdot}{.}{Center Dot (Quantifier Separator) \footnote{Anywhere $\cdot$ is valid, $.$ is valid, except the parser may attempt to treat $.$ as a record field access instead of a quantifier separator (like $a.b$), so we prefer the use of $\cdot$ instead.}}
+    \lexentry{\cdot}{.:}{Center Dot (Quantifier Separator) \footnote{Anywhere $\cdot$ is valid, $.$ is valid, except the parser may attempt to treat $.$ as a record field access instead of a quantifier separator (like $a.b$), so we prefer the use of $\cdot$ instead.}} % TODO should we not allow this, and instead just stick with .:?
     \lexentry{.}{}{Dot}
     \lexentry{,}{iter\_and}{Comma}
     \lexentry{`}{iter\_or}{Comma}
@@ -1080,7 +1085,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Tuples}
 \begin{prooftree}
 \hypo{\Gamma \vdash T_1, ..., T_n}
-\infer1{\Gamma \vdash tuple[T_1, ..., T_n] \ruleSpace tuple[T_1, ..., T_n] = T_1 \times ... \times T_n}
+\infer1{\Gamma \vdash tuple[T_1, ..., T_n] \quad tuple[T_1, ..., T_n] = T_1 \times ... \times T_n}
 \end{prooftree}
 \\
 \tag{Empty Tuple}
@@ -1104,7 +1109,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Relation Type}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \rel T_2 \ruleSpace T_1 \rel T_2 = set[tuple[T_1, T_2]]}
+\infer1{\Gamma \vdash T_1 \rel T_2 \quad T_1 \rel T_2 = set[tuple[T_1, T_2]]}
 \end{prooftree}
 \\
 \tag{Bag Type}
@@ -1149,61 +1154,61 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Relation Subtype - Total Relation}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \trel T_2 \ruleSpace T_1 \trel T_2 = (T_1 \rel T_2)[\text{with } t]}
+\infer1{\Gamma \vdash T_1 \trel T_2 \quad T_1 \trel T_2 = (T_1 \rel T_2)[\text{with } t]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Surjective Relation}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \srel T_2 \ruleSpace T_1 \srel T_2 = (T_1 \rel T_2)[\text{with } t_r]}
+\infer1{\Gamma \vdash T_1 \srel T_2 \quad T_1 \srel T_2 = (T_1 \rel T_2)[\text{with } t_r]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Total Surjective Relation}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \strel T_2 \ruleSpace T_1 \strel T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } t_r]}
+\infer1{\Gamma \vdash T_1 \strel T_2 \quad T_1 \strel T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } t_r]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Partial Function}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \pfun T_2 \ruleSpace T_1 \pfun T_2 = (T_1 \rel T_2)[\text{with } 1-]}
+\infer1{\Gamma \vdash T_1 \pfun T_2 \quad T_1 \pfun T_2 = (T_1 \rel T_2)[\text{with } 1-]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Total Function}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \tfun T_2 \ruleSpace T_1 \tfun T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } 1-]}
+\infer1{\Gamma \vdash T_1 \tfun T_2 \quad T_1 \tfun T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } 1-]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Partial Injection}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \pinj T_2 \ruleSpace T_1 \pinj T_2 = (T_1 \rel T_2)[\text{with } 1-, \text{ with } 1-_r]}
+\infer1{\Gamma \vdash T_1 \pinj T_2 \quad T_1 \pinj T_2 = (T_1 \rel T_2)[\text{with } 1-, \text{ with } 1-_r]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Total Injection}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \tinj T_2 \ruleSpace T_1 \tinj T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } 1-, \text{ with } 1-_r]}
+\infer1{\Gamma \vdash T_1 \tinj T_2 \quad T_1 \tinj T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } 1-, \text{ with } 1-_r]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Partial Surjection}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \psur T_2 \ruleSpace T_1 \psur T_2 = (T_1 \rel T_2)[\text{with } t_r, \text{ with } 1-]}
+\infer1{\Gamma \vdash T_1 \psur T_2 \quad T_1 \psur T_2 = (T_1 \rel T_2)[\text{with } t_r, \text{ with } 1-]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Total Surjection}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \tsur T_2 \ruleSpace T_1 \tsur T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } t_r, \text{ with } 1-]}
+\infer1{\Gamma \vdash T_1 \tsur T_2 \quad T_1 \tsur T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } t_r, \text{ with } 1-]}
 \end{prooftree}
 \\
 \tag{Relation Subtype - Bijection}
 \begin{prooftree}
 \hypo{\Gamma \vdash set[T_1], set[T_2]}
-\infer1{\Gamma \vdash T_1 \tbij T_2 \ruleSpace T_1 \tbij T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } t_r, \text{ with } 1-, \text{ with } 1-_r]}
+\infer1{\Gamma \vdash T_1 \tbij T_2 \quad T_1 \tbij T_2 = (T_1 \rel T_2)[\text{with } t, \text{ with } t_r, \text{ with } 1-, \text{ with } 1-_r]}
 \end{prooftree}
 \end{gather}
 
@@ -1228,7 +1233,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Type Alias}
 \begin{prooftree}
 \hypo{\Gamma \vdash I := T}
-\infer1{\Gamma, I \vdash \diamond \ruleSpace I = T}
+\infer1{\Gamma, I \vdash \diamond \quad I = T}
 \end{prooftree}
 \\
 \tag{Refined Variable Assignment}
@@ -1542,7 +1547,7 @@ Let $\otimes = \{\cup, \cap, +, -\}$
 \tag{Bag Operations - Image}
 \begin{prooftree}
 \hypo{\Gamma \vdash a: T_1 \rel T_2, b: bag[T_1]}
-\infer1{\Gamma \vdash a[b]: bag[T_2] \ruleSpace a[b] = a^{-1} \circ b}
+\infer1{\Gamma \vdash a[b]: bag[T_2] \quad a[b] = a^{-1} \circ b}
 \end{prooftree}
 \end{gather}
 
@@ -1911,55 +1916,201 @@ For simplicity, we implement subtype changes in a few binary operators as a bool
 
 \subsection{Static Analysis - Type System Extensions with Traits}
 
-\subsubsection{Trait Collection}
-Traits are used to augment types, providing the compiler with additional context for the use of an abstract type that could influence the generated implementation. The following paragraphs list identified traits and provide justification for their existence.
+% What are traits?
+Traits extend Simile's type system by giving programmers the ability to provide additional context for the intended use of a defined variable. Traits never override Simile's set theoretic semantics; a program with no user-defined traits is assumed to be correct and functional. However, traits can influence the optimization process and concretization of abstract data structures.  With user-provided context, static analysis becomes more complete and the optimizer may choose more aggressive rewrites. In a sense, traits in Simile are akin to pragmas in other languages, but closer to type refinements rather than direct compiler commands.
 
-\paragraph{Constant Pre-computation} The type may contain values for easily identifiable constants, allowing for specialized generated instructions. When possible, constant traits will propagate along operations until the constant values can no longer be guaranteed.
+For example, consider a variable defining a relation:
+\begin{algorithmic}
+  \State $r: relation[int, int] := \{\}$
+\end{algorithmic}
+Without insight into the use of the variable $r$, we may be forced to concretize the abstract type conservatively. The compiler may choose the safest option: straightforward array of tuples or a bidirectional hashmap, with both concrete structures giving up time complexity or memory efficiency respectively. However, if we as domain experts know that this relation is one-to-one, we can provide such insights to the compiler directly:
+\begin{algorithmic}
+  \State $r: relation[int, int] := \{\}$
+  \State \quad trait $many\_to\_one$
+  \State \quad trait $one\_to\_many$
+\end{algorithmic}
+Concretization can then see that a hashmap is well-suited to representing the data. Even further, since $r$ is one-to-one, we may even choose to save memory by concretizing to two arrays aligned by index. To the programmer, the important semantics remain the same; $r$ is a relation and behaves like one for the duration of the program, but the compiler can choose to swap the detailed implementation with one better-suited for the problem.
+
+There is one caveat to building these features into the language itself: we trust that users will not provide deliberately misleading traits. It is difficult to check that trait assignments themselves are correct or well-defined through static analysis alone, so an unknowing programmer may stumble into undefined behaviour. For example, consider:
+\begin{algorithmic}
+  \State $x: int := 3$
+  \State \quad trait $minimum = 1$
+  \State \quad trait $maximum = 4$
+\end{algorithmic}
+The compiler may see that this integer is restricted to a very small range and thus choose a smaller integer representation size. However, if the programmer then writes:
+\begin{algorithmic}
+  \State $x := 5$
+\end{algorithmic}
+This assumption breaks and does not fit into the general type. We may be able to spot such hardcoded misuses of the trait system, but if $5$ was instead an I/O function, we can only provide runtime checks that slow down the system (and may turn out to be slower than just using a normal i32 type in the first place.
+
+Given the power and danger of using traits, programs without traits by default should behave as expected. Note that this danger happens only on assignment, since traits are assumed correct for the variable to which they are assigned. When performing operations, the compiler will widen or narrow traits as is needed to remain in a good state.
+
+\subsubsection{Available Traits}
+The following paragraphs list and categorize identified traits.
+
+For parameterized types that accept type arguments, traits will be propagated to the "parent" type as much as possible. For example, a $set[int]$ restricting the range of the underlying integers should have that trait specified on the outer $set$ type rather than the underlying $int$ type.
+% For parameterized types that accept type arguments (like set, relation, sequence, tuple, ...), some traits may apply to the type argument when sensible. For example, a $set[int]$ restricting the range of the underlying integers should have that trait specified on the underlying $int$ type rather than the outer $set$ type (although we may loosen this with syntactic sugar). Like Event-B, $set$ types are really powersets of the underlying element type, whereas primitive types represent values chosen from a \textit{set} of primitive values.
+
+\paragraph{Base Traits} Applicable to almost every object
 \begin{itemize}
-    \item $Literal$: A trait containing a single literal value. If a type has this trait, it is guaranteed to be of this value.
-    \item $Domain$: A looser form of $Literal$ that carries a set of possible values. When applied, the type is restricted to (one of) the values from this $Domain$.
-    \item Leave out for now: $UnknownElementInDomain$: Loosens the $Domain$ guarantee so that values in the domain are only likely to appear, but not guaranteed? We would need to see if this opens up any optimizations...
-    \item $Immutable$: Represents types whos values (and value contents) cannot be modified. Should we instead assume immutability and have a Mutable trait?
+    \item \textit{Literal}: A trait containing a single literal value. If a type has this trait, it is guaranteed to be of this value.
+    \item \textit{Domain}: A looser form of \textit{Literal} that carries a set of possible values. When applied, the type is restricted to (one of) the values from this $Domain$. Relations use a different definition of domain.
+    \item \textit{Undefined}: Intended for use by compiler analysis. Used when a value \textit{may} be undefined. Ex. $choice(\{\})$.
+    % \item Leave out for now: $UnknownElementInDomain$: Loosens the $Domain$ guarantee so that values in the domain are only likely to appear, but not guaranteed? We would need to see if this opens up any optimizations...
+    \item \textit{Immutable}: Represents values that cannot be reassigned/modified. %Should we instead assume immutability and have a Mutable trait?
 \end{itemize}
 
-\paragraph{Arithmetic} Restricts the value of primitive types. Collection types wishing to take advantage of this information should instead store it in the underlying primitive element type. For example, applying $Min$ to a $set[int]$ should be written as $set[int[$with $min=0]]$, not $set[int, $with $min=0]$ (although we can loosen this with syntactic sugar). Like Event-B, $set$ types are really powersets of the underlying element type, whereas primitive types represent values chosen from a \textit{set} of primitive values.
+\paragraph{Arithmetic} Restricts the value of primitive types
 \begin{itemize}
-    \item $Orderable$: Values of this type can be ordered. This may be useful for order-based implementations like BTrees for sets.
-    \item $Min$: minimum value
-    \item $Max$: maximum value
+    \item \textit{Orderable}: Values of this type can be ordered. This may be useful for order-based implementations like BTrees for sets.
+    \item \textit{Min}: Minimum value.
+    \item \textit{Max}: Maximum value. Combine with the \textit{Min} trait to create a range.
 \end{itemize}
 
 \paragraph{Collection Traits}
 \begin{itemize}
-    \item $Iterable$: All collections are iterable (they can be used as a for-loop generator).
-    \item $Empty$: A collection with guaranteed cardinality = 0.
-    \item $Size$: An over-estimate of a set's size. When available, Size will never under-estimate the number of elements in a collection.
-    \item $UniqueElements$: All entries are guaranteed to be unique. More useful for the domain/range of relations, checking if a bag only has range = 1, or if a sequence has no repeats.
-    \item $Total$: The elements in a set cover the entirety of the domain of the underlying element type. On relations, this means every possible pair combination is an element.
+    \item \textit{Iterable}: All collections are iterable (they can be used as a for-loop generator).
+    \item \textit{Empty}: A collection with guaranteed cardinality = 0.
+    \item \textit{Size}: An over-estimate of a set's size. When available, Size will never under-estimate the number of elements in a collection.
+    \item \textit{Unique}: All entries are guaranteed to be unique. More useful for non-set collections (which are always assumed to be unique). Ex. a non-repeating sequence.
+    \item \textit{Total}: The elements in a set cover the entirety of the domain of the underlying element type. Relations have their own definition of totality.
 \end{itemize}
 
 \paragraph{Relations}
 Represents the relational subtype properties (injectiveness, surjectiveness, etc.)
 \begin{itemize}
-    \item $TotalOnDomain$: All elements of the domain are within the mapping.
-    \item $TotalOnRange$: All elements of the range are within the mapping.
-    \item $ManyToOne$: Elements of the domain may be repeated with different range values.
-    \item $OneToMany$: Elements of the range may be repeated with different range values. $ManyToOne$ and $OneToMany$ imply a one-to-one mapping
+    \item \textit{ManyToOne}: Elements of the domain may be repeated with different range values.
+    \item \textit{OneToMany}: Elements of the range may be repeated with different range values. \textit{ManyToOne} and \textit{OneToMany} imply a one-to-one mapping.
+    \item \textit{TotalOnDomain}: All elements of the domain are within the mapping.
+    \item \textit{TotalOnRange}: All elements of the range are within the mapping.
+    \item \textit{RelationalDomain}: The set of elements that may populate the relation's domain. Replacement of \textit{Domain} for relations.
+    \item \textit{RelationalRange}: The set of elements that may populate the relation's range.
 \end{itemize}
 
 \paragraph{Generics}
 \begin{itemize}
-    \item $GenericBound$: Contains the set of types a generic may become. For example, $T[$with $GenericBound=\{int, float\}$ represents any numeric value.
+    \item \textit{GenericBound}: Contains the set of types a generic may become. For example, the following generic type represents any numeric value:
+    \begin{algorithmic}
+      \State $T: type := generic$
+      \State \quad trait $generic\_bound = int$
+      \State \quad trait $generic\_bound = float$
+    \end{algorithmic}
 \end{itemize}
 
+\paragraph{Procedure}
+\begin{itemize}
+    \item \textit{TreatAsExpr}: Inline this function and treat it as an expression/operator. Useful for having function-call notation act like an operator. For example:
+    \begin{algorithmic}
+      \State procedure $add(s: set[T], e: T) -> set[T]:$
+      \State \quad trait $treat\_as\_expr$
+      \State \quad return $s \cup \{e\}$
+    \end{algorithmic}
+\end{itemize}
 
+\subsubsection{Type-trait interactions}
+Some types are incompatible with some traits, and some types must have some traits. We provide tables showing compatibility between traits and types. A double-checkmark means the trait is always present - a base trait of that type.
+
+\paragraph{Primitives}
+\begin{center}
+\begin{longtable}{l c c c c c}
+    & none & bool & int & float & str \\
+    \endhead
+    Immutable & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Literal  & None & \cmark & \cmark & \cmark & \cmark \\
+    Undefined  & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Orderable  & \xmark & \xmark & \ccmark & \ccmark & \ccmark \\ % str uses lexicographic ordering
+    Min  & \xmark & \xmark & \cmark & \cmark & \cmark \\
+    Max  & \xmark & \xmark & \cmark & \cmark & \cmark \\
+    Domain  & \{None\} & \{True, False\} & \cmark & \cmark & \cmark \\
+    Iterable  & \xmark & \xmark & \xmark & \xmark & \ccmark \\
+    Unique  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    Empty  & \xmark & \xmark & \xmark & \xmark & \cmark \\
+    Size  & \xmark & \xmark & \xmark & \xmark & \cmark \\
+    Total  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    OneToMany  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    ManyToOne  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    TotalOnDomain  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    TotalOnRange  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    RelationalDomain  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    RelationalRange  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    GenericBound  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    TreatAsExpr  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+\end{longtable}
+\end{center}
+
+\paragraph{Collections}
+\begin{center}
+\begin{longtable}{l c c c c c c}
+    & tuple & set & enum & relation & bag & sequence \\
+    \endhead
+    Immutable & \cmark & \cmark & \ccmark & \cmark & \cmark & \cmark \\ % TODO should add frozen to restrict modification of the set itself, rather than just restricting reassignment
+    Literal & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Undefined & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Orderable & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\ % For most of these, only orderable if the underlying types are orderable
+    Min & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Max & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Domain & \cmark & \cmark & \ccmark & \xmark & \cmark & \cmark \\
+    Iterable & \ccmark & \ccmark & \ccmark & \ccmark & \ccmark & \ccmark \\
+    Unique & \cmark & \ccmark & \ccmark & \cmark & \cmark & \cmark \\
+    Empty & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark \\
+    Size & \cmark & \cmark & \ccmark & \cmark & \cmark & \cmark \\ % TODO add a count for bags (the sum of range values)
+    Total & \cmark & \cmark & \cmark & \xmark & \cmark & \cmark \\
+    OneToMany & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark \\
+    ManyToOne & \xmark & \xmark & \xmark & \cmark & \ccmark & \ccmark \\
+    TotalOnDomain & \xmark & \xmark & \xmark & \cmark & \xmark & \xmark \\
+    TotalOnRange & \xmark & \xmark & \xmark & \cmark & \xmark & \xmark \\
+    RelationalDomain & \xmark & \xmark & \xmark & \cmark & \xmark & \xmark \\
+    RelationalRange & \xmark & \xmark & \xmark & \cmark & \xmark & \xmark \\
+    GenericBound & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    TreatAsExpr & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
+\end{longtable}
+\end{center}
+
+\paragraph{Other}
+\begin{center}
+\begin{longtable}{l c c c}
+    & record & procedure & type (generic) \\
+    \endhead
+    Immutable & \cmark & \xmark & \cmark \\
+    Literal & \cmark & \xmark & \cmark \\
+    Undefined & \cmark & \cmark & \cmark \\
+    Orderable & \xmark & \xmark & \cmark \\
+    Min & \xmark & \xmark & \cmark \\
+    Max & \xmark & \xmark & \cmark \\
+    Domain & \xmark & \xmark & \cmark \\ %
+    % How should procedure handle domains? similar to relations? perhaps it can use its own tuple domain, like trait arg_domain[0] = {...};trait arg_domain[1] = {...};
+    % or we could do arg_domain = ({...}, {...}, {...}, ...)
+    Iterable & \ccmark & \xmark & \cmark \\
+    Unique & \xmark & \xmark & \cmark \\
+    Empty & \xmark & \xmark & \cmark \\
+    Size & \ccmark & \xmark & \cmark \\
+    Total & \xmark & \xmark & \cmark \\
+    OneToMany & \xmark & \xmark & \cmark \\
+    ManyToOne & \ccmark & \xmark & \cmark \\
+    TotalOnDomain & \ccmark & \xmark & \cmark \\
+    TotalOnRange & \xmark & \xmark & \cmark \\ % Records are not guaranteed to have the same "range" type across all fields
+    RelationalDomain & \ccmark (field names) & \xmark & \cmark \\
+    RelationalRange & \xmark & \xmark & \cmark \\
+    GenericBound & \xmark & \xmark & \cmark \\
+    TreatAsExpr & \xmark & \cmark & \cmark \\ % Generics can be bound to procedures too...
+\end{longtable}
+\end{center}
 
 \subsubsection{Trait-trait Interactions}
-Collection of trait-implies-trait interactions that are universal (i.e., they do not depend on a type). Most traits are really just boolean values, as in, does this type have this property. Thus when traits used with boolean operations should be interpreted as truthy/falsy.
+Traits can interact with other traits outside of types. Universal interactions, which don't follow a type or its operations, generally fall into two categories:
+\begin{itemize}
+    \item Derivable traits. Often, the jurisdiction of traits will overlap with one another: a Literal trait implies a \textit{Domain}, and we can derive the \textit{Min}/\textit{Max} traits from an \textit{Orderable} \textit{Domain}. These will be automatically derived by the compiler when needed.
+    \item Incompatible traits. Interactions between these traits are unresolvable automatically and would leave the trait system in a bad state if left alone. To handle incompatible traits safely, we refuse to compile the program until the issue is resolved. Automatically derived traits should never become incompatible (only user-defined traits clashing with user/automatic traits).
+\end{itemize}
 
-Interpret these as if it were type initialization rules. So, if a type were initialized with these traits, we would get the following implications ``for-free''. A type can only have one of each trait (except for multiple literals?), so traits given in the assumption can be used in the result without ambiguity or naming. Traits with function notation (parenthesis) are assumed to be new constructions.
+Most traits are simple flags, as in, ``does this type have this property?''. In the following type (or rather, trait) rules, trait names used with boolean operations should be interpreted as truthy (it is present). A type can only have one of each trait to prevent ambiguity or clashing.
 
-TODO design decision: should traits be applied automatically or just verified? If we apply automatically, we could give best effort and then error/remove traits that are incompatible. In verification, we just throw an error. We may use trait restrictions per-type to further determine incompatibilities (ex. an integer cannot be empty?).
+% TODO add in semantics for multiple trait definitions on one assignment
+% TODO generic_bound should only be definable once and take in a set of types? dont allow repeated definitions
+
+% OLD TODO design decision: should traits be applied automatically or just verified? If we apply automatically, we could give best effort and then error/remove traits that are incompatible. In verification, we just throw an error. We may use trait restrictions per-type to further determine incompatibilities (ex. an integer cannot be empty?).
+\paragraph{Derivable Traits}
+% TODO fix below according to code
 
 \begin{gather}
   % \tag{Literal Empty}
@@ -2034,7 +2185,7 @@ TODO design decision: should traits be applied automatically or just verified? I
   \\
   \tag{Full set}
   \begin{prooftree}
-    \hypo{UniqueElements}
+    \hypo{Unique}
     \hypo{Size = len(Domain)}
     \hypo{\lnot Empty} % could an empty set be total if its domain consists of nothing? what is this a set of?
     \infer3{Total}
@@ -2082,403 +2233,435 @@ TODO design decision: should traits be applied automatically or just verified? I
   % \end{prooftree}
 \end{gather}
 
-\subsubsection{Type-trait interactions}
-Some types are incompatible with some traits, and some types must have some traits. This section lists the possible traits for each type - asterisks are for mandatory traits, and traits not listed are not allowed for that specific type.
-
-\paragraph{All types} Literal and Domain support constant propagations and compile time computations.
-\begin{itemize}
-  \item Immutable
-  \item Literals
-  \item Domain
-\end{itemize} %
-
-\paragraph{Bool}
-\begin{itemize}
-  \item Domain = $\{$true, false$\}$*
-\end{itemize}
-
-\paragraph{None}
-\begin{itemize}
-  \item Literal*
-  \item Domain? (implied from literal)
-\end{itemize}
-
-\paragraph{String}
-\begin{itemize}
-  \item Empty
-  \item Size (length)
-  \item Unique?
-  \item Iterable*
-  \item Orderable (lexicographic)*
-\end{itemize}
-
-\paragraph{Int, Float}
-\begin{itemize}
-  \item Min
-  \item Max
-  \item Size (num of bits? or just depend on min/max? If so, min/max must be given, with a default value of 64 bit range)
-  \item Orderable*
-\end{itemize}
-
-\paragraph{Tuple}
-\begin{itemize}
-  \item Min
-  \item Max
-  \item Size (length)
-  \item UniqueElements
-  \item Total
-  \item Iterable*
-  \item Empty
-  \item Orderable (lexicographic if dependents are orderable?)
-\end{itemize}
-
-\paragraph{Maplet} Tuple but with the addition of:
-\begin{itemize}
-  \item Domain?
-  \item Size = 2*
-\end{itemize}
-
-\paragraph{Record}
-\begin{itemize}
-  \item Iterable* (treat as a relation)
-  \item Domain* (str entries)
-  \item ManyToOne* (treat as a relation with keys = strings)
-\end{itemize}
-
-\paragraph{Procedure}
-\begin{itemize}
-  \item Domain should be stored in the domain of the input types since there are too many to count? Range should be the domain of the return type
-  \item Need to worry about generics?
-\end{itemize}
-
-\paragraph{Set}
-\begin{itemize}
-  \item Orderable if children are
-  \item Min
-  \item Max
-  \item Iterable*
-  \item Empty
-  \item UniqueElements*
-  \item Size
-  \item Total
-\end{itemize}
-
-\paragraph{Relation} All traits except generic trait
-
-\paragraph{Bag} Same as relation, with ManyToOne*. Should we add a trait called Count, which is the sum of the range values?
-
-\paragraph{Seq} Same as relation, with ManyToOne*, Size*
-
-\paragraph{Enum}
-\begin{enumerate}
-  \item Immutable*
-  \item Domain*
-  \item Literal*
-  \item Iterable*
-  \item UniqueELements*
-  \item Size*?
-  \item Can never be total unless enum size = 1, then always total
-\end{enumerate}
+\paragraph{Incompatible Traits}
+% TODO
 
 \subsubsection{Operation-Trait Interactions}
-Operations on $Literal$ traits will always produce a $Literal$ where possible, following the effects of applying the function on values. For conciseness, we omit all $Literal$ interactions and instead refer to the semantics of the operations themselves. % Which has yet to be written formally...
+Operations on \textit{Literal} traits will always produce a \textit{Literal} where possible, following the effects of applying the function on values. For conciseness, we omit all \textit{Literal} interactions and instead refer to the semantics of the operations themselves. Further, we use a shorthand for defining traits on types: $T[<trait>]$ is the same as saying:
+\begin{algorithmic}
+    \State $T: type := generic$
+    \State \quad trait $<trait>$
+\end{algorithmic}
+% Which has yet to be written formally...
 
+\paragraph{Base}
+\subparagraph{Equals}
+\subparagraph{Not equals}
+\paragraph{Bool}
+\subparagraph{Not}
+\subparagraph{Equivalent}
+\subparagraph{Not equivalent}
+\subparagraph{Implies}
+\subparagraph{And}
+\subparagraph{Or}
+\paragraph{Arithmetic}
+\subparagraph{Less than} Opposite for greater than.
 \begin{gather}
-    \tag{Less than with max-min}
-    \begin{prooftree}
-        \hypo{a: T[Max=x]}
-        \hypo{b : T[Min=y]}
-        \hypo{x < y}
-        \infer3{(a < b): Bool[Literal=true]}
-    \end{prooftree}
-    \\
-    \tag{Less than or equal with max-min}
-    \begin{prooftree}
-        \hypo{a: T[Max=x]}
-        \hypo{b : T[Min=y]}
-        \hypo{x \leq y}
-        \infer3{(a \leq b): Bool[Literal=true]}
-    \end{prooftree}
-    \\
-    \tag{Less than with min-max}
-    \begin{prooftree}
-        \hypo{a: T[Min=x]}
-        \hypo{b : T[Max=y]}
-        \hypo{x > y}
-        \infer3{(a < b): Bool[Literal=false]}
-    \end{prooftree}
-    \\
-    \tag{Less than or equal with min-max}
-    \begin{prooftree}
-        \hypo{a: T[Min=x]}
-        \hypo{b : T[Max=y]}
-        \hypo{x > y}
-        \infer3{(a \leq b): Bool[Literal=false]}
-    \end{prooftree}
-    % Similar for greater than
-    \\
-    \tag{Upto}
-    \begin{prooftree}
-        \hypo{a: Int[Literal]}
-        \hypo{b: Int[Literal]}
-        \infer2{(a \upto b): set[Int[Min=a, Max=b], Literal=\{a, a+1, ..., b\}, Total]}
-    \end{prooftree} % If only one of these are literals, we should still try to get either a max or min value
-    \\
-    \tag{Is Empty}
-    \begin{prooftree}
-        \hypo{s: set[Empty]}
-        \infer1{(s = \{\}): Bool[Literal=true]}
-    \end{prooftree}
-    \\
-    \tag{Set add}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=x]}
-        \hypo{a: T}
-        \infer2{(s \cup \{a\}): set[T, Size=x+1]} % Can check literals to see if the size will actually increase. For now, best overestimation guess
-    \end{prooftree}
-    \\
-    \tag{Set add with Total}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=x, Total]}
-        \hypo{a: T}
-        \infer2{(s \cup \{a\}): set[T, Size=x, Total]}
-    \end{prooftree}
-    \\
-    \tag{Set delete}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=x]}
-        \hypo{a: T}
-        \infer2{(s \setminus \{a\}): set[T, Size=x]}
-    \end{prooftree}
-    \\
-    \tag{Set delete removes Total}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=x, Total]}
-        \hypo{a: T}
-        \infer2{(s \setminus \{a\}): set[T, Size=x-1]}
-    \end{prooftree}
-    \\
-    \tag{Membership within domain}
-    \begin{prooftree}
-        \hypo{s: set[T[Domain=S]]}
-        \hypo{a: T[Literal=A]}
-        \infer2{(a \in s): Bool[Literal=A \in S]}
-    \end{prooftree}
-    \\
-    \tag{Membership within total domain}
-    \begin{prooftree}
-        \hypo{s: set[T, Total]}
-        \hypo{a: T}
-        \infer2{(a \in s): Bool[Literal=true]}
-    \end{prooftree}
-    \\
-    \tag{Enumeration}
-    \begin{prooftree}
-        \hypo{a_1, a_2, ..., a_n: T}
-        \infer1{\{a_1, a_2, ..., a_n\}: set[T, Size=n]}
-    \end{prooftree}
-    \\
-    \tag{Cardinality}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=n]}
-        \infer1{card(s): Int[Max=n]}
-    \end{prooftree}
-    \\
-    \tag{Powerset}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=n, Total]}
-        \infer1{powerset(s): set[set[T], Size=2^n, Total]}
-    \end{prooftree}
-    \\
-    \tag{Empty choice fails (statically)}
-    \begin{prooftree}
-        \hypo{s: set[T, Empty]}
-        \infer1{choice(s): TypeError}
-    \end{prooftree}
-    \\
-    \tag{Sum bounds}
-    \begin{prooftree}
-        \hypo{s: set[T[Max=y, Size=n]]}
-        \infer1{sum(s): T[Max=y\times n]}
-    \end{prooftree}
-    \\
-    \tag{Product bounds}
-    \begin{prooftree}
-        \hypo{s: set[T[Max=y, Size=n]]}
-        \infer1{sum(s): T[Max=y^n]}
-    \end{prooftree}
-    \\
-    \tag{Min looks for Min}
-    \begin{prooftree}
-        \hypo{s: set[T[Min=y]]}
-        \hypo{a: T[Literal=y]}
-        \hypo{a \in s}
-        \infer3{min(s): T[Literal=y]}
-    \end{prooftree}
-    \\
-    \tag{Max looks for Max}
-    \begin{prooftree}
-        \hypo{s: set[T[Max=y]]}
-        \hypo{a: T[Literal=y]}
-        \hypo{a \in s}
-        \infer3{max(s): T[Literal=y]}
-    \end{prooftree}
-    \\
-    \tag{Union Literal}
-    \begin{prooftree}
-        \hypo{s: set[T, Literal=a]}
-        \hypo{t: set[T, Literal=b]}
-        \infer2{(s \cup t): set[T, Literal=a \cup b]}
-    \end{prooftree}
-    \\
-    \tag{Union with widest Domain}
-    \begin{prooftree}
-        \hypo{s: set[T[Domain=a]]}
-        \hypo{t: set[T[Domain=b]]}
-        \infer2{(s \cup t): set[T[Domain=a \cup b]]}
-    \end{prooftree}
-    \\
-    \tag{Union with lowest Min}
-    \begin{prooftree}
-        \hypo{s: set[T[Min=a]]}
-        \hypo{t: set[T[Min=b]]}
-        \hypo{a < b}
-        \infer3{(s \cup t): set[T[Min=a]]}
-    \end{prooftree}
-    \\
-    \tag{Union with highest Max}
-    \begin{prooftree}
-        \hypo{s: set[T[Max=a]]}
-        \hypo{t: set[T[Max=b]]}
-        \hypo{a < b}
-        \infer3{(s \cup t): set[T[Max=b]]}
-    \end{prooftree}
-    \\
-    \tag{Union with Empty keeps Traits}
-    \begin{prooftree}
-        \hypo{s: set[T, Empty]}
-        \hypo{t: set[T, x]}
-        \hypo{a < b}
-        \infer3{(s \cup t): set[T, x]}
-    \end{prooftree}
-    \\
-    \tag{Union with widest size}
-    \begin{prooftree}
-        \hypo{s: set[T, Size=x]}
-        \hypo{t: set[T, Size=y]}
-        \hypo{x < y}
-        \infer3{(s \cup t): set[T, Size=y]}
-    \end{prooftree}
-    \\
-    \tag{Union with Total stays}
-    \begin{prooftree}
-        \hypo{s: set[T]}
-        \hypo{t: set[T,Total]}
-        \infer2{(s \cup t): set[T, Total]}
-    \end{prooftree}
-    \\
-    \tag{Generics with set ops}
-    \begin{prooftree}
-        \hypo{s: set[T[GenericBound=x]]}
-        \hypo{t: set[T[GenericBound=y]]}
-        \infer2{(s \oplus t): set[T[GenericBound=x \cap y]]}
-    \end{prooftree}
-    % Intersection and difference, much of the same but take minimum, order matters for difference (eg difference from empty set), precompute literals, set operations takes the minimum of bound types for generics
-    \\
-    \tag{Cartesian Product}
-    \begin{prooftree}
-        \hypo{s: set[T[Domain=x]]}
-        \hypo{t: set[V[Domain=y]]}
-        \infer2{(s \times t): set[tuple[T, V, Domain=x \times y]]}
-    \end{prooftree}
-    \\
-    \tag{Total Cartesian Product}
-    \begin{prooftree}
-        \hypo{s: set[T, Total]}
-        \hypo{t: set[V, Total]}
-        \infer2{(s \times t): set[tuple[T, V, Total]]}
-    \end{prooftree}
-    \\
-    \tag{Subset with min-max}
-    \begin{prooftree}
-        \hypo{s: set[T, Min=w, Max=x]}
-        \hypo{t: set[T, Min=y, Max=z]}
-        \hypo{w > y}
-        \hypo{x < z}
-    % Then we should only consider values within w and x range? Assuming they are ordered...
-        \infer4{(s \subset t: set[T, Min=w, Max=x]): Bool}
-    \end{prooftree}
-    \\
-    % NOTE: These are in addition to the relation-specific traits in the above section!
-    \tag{Inverse swaps Domain}
-    \begin{prooftree}
-        \hypo{r: relation[T[Domain=x], V[Domain=y]]}
-        \infer1{r^{-1}: relation[V[Domain=y], T[Domain=x]]}
-    \end{prooftree}
-    \\
-    % NOTE: These are in addition to the relation-specific traits in the above section!
-    \tag{Empty Composition}
-    \begin{prooftree}
-        \hypo{s: relation[T, V, Empty]}
-        \hypo{t: relation[V, U]} % this one may be empty too
-        \infer2{s \circ t: relation[T, U, Empty]}
-    \end{prooftree}
-    \\
-    % NOTE: These are in addition to the relation-specific traits in the above section!
-    \tag{Image with Empty Arg}
-    \begin{prooftree}
-        \hypo{r: relation[T, V]}
-        \hypo{s: set[T, Empty]}
-        \infer2{r[s]: set[V, Empty]}
-    \end{prooftree}
-    \\
-    % NOTE: These are in addition to the relation-specific traits in the above section!
-    \tag{Image with Empty Relation}
-    \begin{prooftree}
-        \hypo{r: relation[T, V, Empty]}
-        \hypo{s: set[T]}
-        \infer2{r[s]: set[V, Empty]}
-    \end{prooftree}
-    % TODO more can be determined to be empty by using max/min/domain
-    \\
-    % NOTE: These are in addition to the relation-specific traits in the above section!
-    \tag{Image with ManyToOne}
-    \begin{prooftree}
-        \hypo{r: relation[T, V, TotalOnDomain]}
-        \hypo{s: set[T, Domain=domain(r), Size > 0]}
-        \infer2{r[s]: set[V, Size > 0]}
-    \end{prooftree}
-    \\
-    % NOTE: These are in addition to the relation-specific traits in the above section!
-    \tag{Image with ManyToOne}
-    \begin{prooftree}
-        \hypo{r: relation[T, V, ManyToOne]}
-        \hypo{s: set[T, Size = n]}
-        \infer2{r[s]: set[V, Size = n]}
-    \end{prooftree}
-    \\
-    \tag{Total domain}
-    \begin{prooftree}
-        \hypo{r: relation[T, V, TotalOnDomain]}
-        \infer1{domain(r): set[T, Total]}
-    \end{prooftree}
-    \\
-    \tag{Total range}
-    \begin{prooftree}
-        \hypo{r: relation[T, V, TotalOnRange]}
-        \infer1{range(r): set[V, Total]}
-    \end{prooftree}
-    \\
-    \tag{Concat with Size}
-    \begin{prooftree}
-        \hypo{s: sequence[T, Size=x]}
-        \hypo{t: sequence[T, Size=y]}
-        \infer2{s \concat t: sequence[T, Size=x+y]}
-    \end{prooftree}
-    % Procedure call? need to propagate traits from return value type - should be done at procedure definition time?
+  \tag{Less than with max-min}
+  \begin{prooftree}
+    \hypo{a: T[Max=x]}
+    \hypo{b : T[Min=y]}
+    \hypo{x < y}
+    \infer3{(a < b): Bool[Literal=true]}
+  \end{prooftree}
+  \\
+  \tag{Less than with min-max}
+  \begin{prooftree}
+    \hypo{a: T[Min=x]}
+    \hypo{b : T[Max=y]}
+    \hypo{x > y}
+    \infer3{(a < b): Bool[Literal=false]}
+  \end{prooftree}
 \end{gather}
+\subparagraph{Less than or equals} Opposite for greater than or equals.
+\begin{gather}
+  \tag{Less than or equal with max-min}
+  \begin{prooftree}
+    \hypo{a: T[Max=x]}
+    \hypo{b : T[Min=y]}
+    \hypo{x \leq y}
+    \infer3{(a \leq b): Bool[Literal=true]}
+  \end{prooftree}
+  \\
+  \tag{Less than or equal with min-max}
+  \begin{prooftree}
+    \hypo{a: T[Min=x]}
+    \hypo{b : T[Max=y]}
+    \hypo{x > y}
+    \infer3{(a \leq b): Bool[Literal=false]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Negate}
+\subparagraph{Int divide}
+\subparagraph{Modulo}
+\subparagraph{Add}
+\subparagraph{Subtract}
+\subparagraph{Divide}
+\subparagraph{Multiply}
+\subparagraph{Power}
+\subparagraph{Upto}
+\begin{gather}
+  \tag{Upto literal}
+  \begin{prooftree}
+    \hypo{a: Int[Literal]}
+    \hypo{b: Int[Literal]}
+    \infer2{(a \upto b): set[Int[Min=a, Max=b], Literal=\{a, a+1, ..., b\}, Total]}
+  \end{prooftree} % If only one of these are literals, we should still try to get either a max or min value
+\end{gather}
+% \paragraph{String}
+\paragraph{Tuple}
+\subparagraph{Enumeration}
+\subparagraph{Maplet}
+\paragraph{Record}
+\subparagraph{Access}
+\paragraph{Set}
+\subparagraph{Enumeration}
+\begin{gather}
+  \tag{Enumeration}
+  \begin{prooftree}
+    \hypo{a_1, a_2, ..., a_n: T}
+    \infer1{\{a_1, a_2, ..., a_n\}: set[T, Size=n]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Clear}
+\subparagraph{Is empty}
+\begin{gather}
+  \tag{Is Empty}
+  \begin{prooftree}
+    \hypo{s: set[Empty]}
+    \infer1{(s = \{\}): Bool[Literal=true]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Add}
+\begin{gather}
+  \tag{Set add}
+  \begin{prooftree}
+    \hypo{s: set[T, Size=x]}
+    \hypo{a: T}
+    \infer2{(s \cup \{a\}): set[T, Size=x+1]} % Can check literals to see if the size will actually increase. For now, best overestimation guess
+  \end{prooftree}
+  \\
+  \tag{Set add with Total}
+  \begin{prooftree}
+    \hypo{s: set[T, Size=x, Total]}
+    \hypo{a: T}
+    \infer2{(s \cup \{a\}): set[T, Size=x, Total]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Remove}
+\begin{gather}
+  \tag{Set delete}
+  \begin{prooftree}
+    \hypo{s: set[T, Size=x]}
+    \hypo{a: T}
+    \infer2{(s \setminus \{a\}): set[T, Size=x]}
+  \end{prooftree}
+  \\
+  \tag{Set delete removes Total}
+  \begin{prooftree}
+    \hypo{s: set[T, Size=x, Total]}
+    \hypo{a: T}
+    \infer2{(s \setminus \{a\}): set[T, Size=x-1]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{In}
+\begin{gather}
+  \tag{Membership within domain}
+  \begin{prooftree}
+    \hypo{s: set[T[Domain=S]]}
+    \hypo{a: T[Literal=A]}
+    \infer2{(a \in s): Bool[Literal=A \in S]}
+  \end{prooftree}
+  \\
+  \tag{Membership within total domain}
+  \begin{prooftree}
+    \hypo{s: set[T, Total]}
+    \hypo{a: T}
+    \infer2{(a \in s): Bool[Literal=true]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Not in}
+\subparagraph{Cardinality}
+\begin{gather}
+  \tag{Cardinality}
+  \begin{prooftree}
+    \hypo{s: set[T, Size=n]}
+    \infer1{card(s): Int[Max=n]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Powerset}
+\begin{gather}
+  \tag{Powerset}
+  \begin{prooftree}
+      \hypo{s: set[T, Size=n, Total]}
+      \infer1{powerset(s): set[set[T], Size=2^n, Total]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Choice}
+\begin{gather}
+  \tag{Empty choice fails (statically)}
+  \begin{prooftree}
+    \hypo{s: set[T, Empty]}
+    \infer1{choice(s): TypeError}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Min}
+\begin{gather}
+  \tag{Min looks for Min}
+  \begin{prooftree}
+    \hypo{s: set[T[Min=y]]}
+    \hypo{a: T[Literal=y]}
+    \hypo{a \in s}
+    \infer3{min(s): T[Literal=y]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Max}
+\begin{gather}
+  \tag{Max looks for Max}
+  \begin{prooftree}
+    \hypo{s: set[T[Max=y]]}
+    \hypo{a: T[Literal=y]}
+    \hypo{a \in s}
+    \infer3{max(s): T[Literal=y]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Sum}
+\begin{gather}
+  \tag{Sum bounds}
+  \begin{prooftree}
+    \hypo{s: set[T[Max=y, Size=n]]}
+    \infer1{sum(s): T[Max=y\times n]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Product}
+\begin{gather}
+  \tag{Product bounds}
+  \begin{prooftree}
+    \hypo{s: set[T[Max=y, Size=n]]}
+    \infer1{sum(s): T[Max=y^n]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Union}
+\begin{gather}
+  \tag{Union Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, Literal=a]}
+    \hypo{t: set[T, Literal=b]}
+    \infer2{(s \cup t): set[T, Literal=a \cup b]}
+  \end{prooftree}
+  \\
+  \tag{Union with widest Domain}
+  \begin{prooftree}
+    \hypo{s: set[T[Domain=a]]}
+    \hypo{t: set[T[Domain=b]]}
+    \infer2{(s \cup t): set[T[Domain=a \cup b]]}
+  \end{prooftree}
+  \\
+  \tag{Union with lowest Min}
+  \begin{prooftree}
+    \hypo{s: set[T[Min=a]]}
+    \hypo{t: set[T[Min=b]]}
+    \hypo{a < b}
+    \infer3{(s \cup t): set[T[Min=a]]}
+  \end{prooftree}
+  \\
+  \tag{Union with highest Max}
+  \begin{prooftree}
+    \hypo{s: set[T[Max=a]]}
+    \hypo{t: set[T[Max=b]]}
+    \hypo{a < b}
+    \infer3{(s \cup t): set[T[Max=b]]}
+  \end{prooftree}
+  \\
+  \tag{Union with Empty keeps Traits}
+  \begin{prooftree}
+    \hypo{s: set[T, Empty]}
+    \hypo{t: set[T, x]}
+    \hypo{a < b}
+    \infer3{(s \cup t): set[T, x]}
+  \end{prooftree}
+  \\
+  \tag{Union with widest size}
+  \begin{prooftree}
+    \hypo{s: set[T, Size=x]}
+    \hypo{t: set[T, Size=y]}
+    \hypo{x < y}
+    \infer3{(s \cup t): set[T, Size=y]}
+  \end{prooftree}
+  \\
+  \tag{Union with Total stays}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{t: set[T,Total]}
+    \infer2{(s \cup t): set[T, Total]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Intersection}
+\subparagraph{Difference}
+\subparagraph{Symmetric difference}
+\subparagraph{Cartesian product}
+\begin{gather}
+  \tag{Cartesian Product}
+  \begin{prooftree}
+    \hypo{s: set[T[Domain=x]]}
+    \hypo{t: set[V[Domain=y]]}
+    \infer2{(s \times t): set[tuple[T, V, Domain=x \times y]]}
+  \end{prooftree}
+  \\
+  \tag{Total Cartesian Product}
+  \begin{prooftree}
+    \hypo{s: set[T, Total]}
+    \hypo{t: set[V, Total]}
+    \infer2{(s \times t): set[tuple[T, V, Total]]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Disjoint} % What operator is this?
+\subparagraph{Subset}
+\begin{gather}
+  \tag{Subset with min-max}
+  \begin{prooftree}
+    \hypo{s: set[T, Min=w, Max=x]}
+    \hypo{t: set[T, Min=y, Max=z]}
+    \hypo{w > y}
+    \hypo{x < z}
+    % Then we should only consider values within w and x range? Assuming they are ordered...
+    \infer4{(s \subset t: set[T, Min=w, Max=x]): Bool}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Subset equals}
+\subparagraph{Superset}
+\subparagraph{Superset equals}
+\subparagraph{Not subset}
+\subparagraph{Not subset equals}
+\subparagraph{Not superset}
+\subparagraph{Not superset equals}
+\paragraph{Relation}
+\subparagraph{Inverse}
+\begin{gather}
+  % NOTE: These are in addition to the relation-specific traits in the above section!
+  \tag{Inverse swaps Domain}
+  \begin{prooftree}
+    \hypo{r: relation[T[Domain=x], V[Domain=y]]}
+    \infer1{r^{-1}: relation[V[Domain=y], T[Domain=x]]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Composition}
+\begin{gather}
+   % NOTE: These are in addition to the relation-specific traits in the above section!
+  \tag{Empty Composition}
+  \begin{prooftree}
+    \hypo{s: relation[T, V, Empty]}
+    \hypo{t: relation[V, U]} % this one may be empty too
+    \infer2{s \circ t: relation[T, U, Empty]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Function call}
+\subparagraph{Image}
+\begin{gather}
+  % NOTE: These are in addition to the relation-specific traits in the above section!
+  \tag{Image with Empty Arg}
+  \begin{prooftree}
+    \hypo{r: relation[T, V]}
+    \hypo{s: set[T, Empty]}
+    \infer2{r[s]: set[V, Empty]}
+  \end{prooftree}
+  \\
+  % NOTE: These are in addition to the relation-specific traits in the above section!
+  \tag{Image with Empty Relation}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, Empty]}
+    \hypo{s: set[T]}
+    \infer2{r[s]: set[V, Empty]}
+  \end{prooftree}
+  % TODO more can be determined to be empty by using max/min/domain
+  \\
+  % NOTE: These are in addition to the relation-specific traits in the above section!
+  \tag{Image with ManyToOne}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, TotalOnDomain]}
+    \hypo{s: set[T, Domain=domain(r), Size > 0]}
+    \infer2{r[s]: set[V, Size > 0]}
+  \end{prooftree}
+  \\
+  % NOTE: These are in addition to the relation-specific traits in the above section!
+  \tag{Image with ManyToOne}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, ManyToOne]}
+    \hypo{s: set[T, Size = n]}
+    \infer2{r[s]: set[V, Size = n]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Overriding}
+\subparagraph{Domain}
+\begin{gather}
+  \tag{Total domain}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, TotalOnDomain]}
+    \infer1{domain(r): set[T, Total]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Range}
+\begin{gather}
+  \tag{Total range}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, TotalOnRange]}
+    \infer1{range(r): set[V, Total]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Domain restriction}
+\subparagraph{Domain subtraction}
+\subparagraph{Range restriction}
+\subparagraph{Range subtraction}
+\subparagraph{Bag Image}
+\subparagraph{Comprehension}
+\paragraph{Bag}
+\subparagraph{Bag union}
+\subparagraph{Bag intersection}
+\subparagraph{Bag add}
+\subparagraph{Bag difference}
+\subparagraph{Comprehension}
+\subparagraph{Size}
+\paragraph{Sequence}
+\subparagraph{Concat}
+\begin{gather}
+  \tag{Concat with Size}
+  \begin{prooftree}
+    \hypo{s: sequence[T, Size=x]}
+    \hypo{t: sequence[T, Size=y]}
+    \infer2{s \concat t: sequence[T, Size=x+y]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Comprehension}
+\paragraph{Procedure}
+\subparagraph{Call}
+    % Procedure call? need to propagate traits from return value type - should be done at procedure definition time?
+\paragraph{Quantification Body}
+\subparagraph{Min}
+\subparagraph{Max}
+\subparagraph{Forall}
+\subparagraph{Exists}
+\subparagraph{Union all}
+\subparagraph{Intersection all}
+\subparagraph{Comprehension}
+\subparagraph{Sum}
+\subparagraph{Product}
+\subparagraph{Map}
+\subparagraph{Map min}
+\subparagraph{Map max}
+\subparagraph{Iter}
+\subparagraph{Fold}
 
-% TODO add in semantics for "with"-clause interactions
+% \begin{gather}
+%     \tag{Generics with set ops}
+%     \begin{prooftree}
+%         \hypo{s: set[T[GenericBound=x]]}
+%         \hypo{t: set[T[GenericBound=y]]}
+%         \infer2{(s \oplus t): set[T[GenericBound=x \cap y]]}
+%     \end{prooftree}
+%     % Intersection and difference, much of the same but take minimum, order matters for difference (eg difference from empty set), precompute literals, set operations takes the minimum of bound types for generics
+% \end{gather}
+
+% TODO add a section for value-trait interactions (eg. errors/undefinedness, literal assignment, etc.)
 
 \subsection{Definedness}
 % Operators that can be undefined:
@@ -2718,7 +2901,8 @@ The dense nature of sequence domains, along with knowledge of sequence sizes, ma
 \subsection{Optimization Backends}
 
 \section{AST Lowering and Optimization Rules}
-Below is a list of rewrite rules for key abstract data types, syntactic sugar, and some builtin functions. Phases are intended to be executed in order; the post-condition of one phase serves as the pre-condition for the next.
+Below is a list of rewrite rules for key abstract data types, syntactic sugar, and some builtin functions. Phases are intended to be executed in order; the post-condition of one phase serves as the pre-condition for the next. Standard functions (like map, flatten, length, etc.) are written as a library in Simile rather than baked-in optimizations.
+
 
 \subsection{Syntactic Sugar for Bags}
 \begin{align}
@@ -2728,17 +2912,17 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   R^{-1} \circ B
   \\
   \tag{Bag Predicates - Union}
-  S \cup T &\leadsto \bag{x}{x \in dom(S) \cup dom(T) \land n = max(S[x] \cup T[x])}{x \mapsto n}
+  S \cup T &\leadsto \bag{x \in dom(S) \cup dom(T)}{n = max(S[x] \cup T[x])}{x \mapsto n}
   \\
   \tag{Bag Predicates - Intersection}
-  S \cap T &\leadsto \bag{x}{x \in dom(S) \cap dom(T) \land n = min(S[x] \cup T[x]) \land n > 0}{x \mapsto n}
+  S \cap T &\leadsto \bag{x \in dom(S)}{x \in dom(T) \land n = min(S[x] \cup T[x]) \land n > 0}{x \mapsto n}
   \\
   \tag{Bag Predicates - Sum}
-  S + T &\leadsto \bag{x}{x \in dom(S) \cup dom(T) \land n = sum(S[x] \cup T[x])}{x \mapsto n}
+  S + T &\leadsto \bag{x \in dom(S) \cup dom(T)}{n = sum(S[x] \cup T[x])}{x \mapsto n}
   \\
   \tag{Bag Predicates - Difference}
   % S - T &\leadsto \bag{x}{x \in dom(S) \land pop(S[x]) - popDefault(T[x], 0) \land n > 0}{x \mapsto n}
-  S - T &\leadsto \bag{x}{x \in dom(S) \land n = S(x) - (T \cup \llbracket x \mapsto 0\rrbracket)(x) \land n > 0}{x \mapsto n}
+  S - T &\leadsto \bag{x \in dom(S)}{n = S(x) - (T \cup \llbracket x \mapsto 0\rrbracket)(x) \land n > 0}{x \mapsto n}
 \end{align}
 
 \subsection{Syntactic Sugar for Sequences}
@@ -2746,45 +2930,10 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
     \tag{Concatenation}
     L \concat M
     &\leadsto
-    L \cup \bSet{x \mapsto y}{x \mapsto y \in M }{x + max(dom(L)) \mapsto y}
-    \\
-    \tag{Flatten}
-    flatten(X)
-    &\leadsto
-    foldL(\concat, [], X)
-    \\
-    \tag{Fold Left Associative}
-    foldL(f, e, X)
-    &\leadsto
-    foldL(f, f(e, first(X)), tail(X))
-    \\
-    \tag{Fold Left Associative - Empty}
-    foldL(f, e, [])
-    &\leadsto
-    e
-    \\
-    \tag{First}
-    first(X)
-    &\leadsto
-    X(0)
-    \\
-    \tag{Tail}
-    tail(X)
-    &\leadsto
-    \bSet{i \mapsto x}{i \mapsto x \in X \land i \neq 0}{i-1 \mapsto x}
-    \\
-    \tag{Append}
-    append(X, y)
-    &\leadsto
-    X \cup \{max(dom(X)) \mapsto y\}
-    \\
-    \tag{Prepend}
-    prepend(X, y)
-    &\leadsto
-    \bSet{i \mapsto x}{i \mapsto x \in X}{i+1 \mapsto x} \cup {0 \mapsto y}
+    L \cup \Set{x \mapsto y \in M }{x + max(dom(L)) \mapsto y}
 \end{align}
-\subsection{Builtin Functions}
 
+\subsection{Syntactic Sugar for Relations}
 \noindent\begin{minipage}{\linewidth}
 \begin{align}
   \tag{Functional Override}
@@ -2792,38 +2941,20 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   &\leadsto
   f := f \oplus \{x \mapsto E\}
   \\
-  \tag{Cardinality}
-  card(S)
-  &\leadsto
-  \sum x \cdot x \in S \mid 1
-  \\
-  \tag{Domain}
-  dom(R)
-  &\leadsto
-  \bSet{x \mapsto y}{x \mapsto y \in R}{x}
-  \\
-  \tag{Range}
-  ran(R)
-  &\leadsto
-  \bSet{x \mapsto y}{x \mapsto y \in R}{y}
-  \\
   \tag{Override}
   R \oplus Q &\leadsto Q \cup (dom(Q) \domsub R)
   \\
   \tag{Domain Restriction}
-  S \triangleleft R &\leadsto \bSet{x\mapsto y}{x \mapsto y \in R \land x \in S}{x \mapsto y}
+  S \triangleleft R &\leadsto \bSet{x \mapsto y \in R}{x \in S}{x \mapsto y}
   \\
   \tag{Domain Subtraction}
-  S \domsub R &\leadsto \bSet{x\mapsto y}{x \mapsto y \in R \land x \notin S}{x \mapsto y}
+  S \domsub R &\leadsto \bSet{x \mapsto y \in R}{x \notin S}{x \mapsto y}
   \\
   \tag{Range Restriction}
-  R \triangleright S &\leadsto \bSet{x\mapsto y}{x \mapsto y \in R \land y \in S}{x \mapsto y}
+  R \triangleright S &\leadsto \bSet{x \mapsto y \in R}{y \in S}{x \mapsto y}
   \\
   \tag{Range Subtraction}
-  R \ransub S &\leadsto \bSet{x\mapsto y}{x \mapsto y \in R \land y \notin S}{x \mapsto y}
-   \\
-  \tag{Bag Size}
-  size(S) &\leadsto \sum x \mapsto n \in S \cdot n
+  R \ransub S &\leadsto \bSet{x \mapsto y \in R}{y \notin S}{x \mapsto y}
 \end{align}
 \end{minipage}
 
@@ -2844,7 +2975,7 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   \\ % dont use pop - random choice but pop(S) == pop(S). Python op is completely nondeterministic so it may not return the same one R(x) = small epsilon y . y in R[{x}]
   % if R[{x}] is empty, you return "an arbitrary element of range of R", not None
   \tag{Image}
-  R[S] &\leadsto \bSet{x \mapsto y}{x \mapsto y \in R \land x \in S}{y}
+  R[S] &\leadsto \bSet{x \mapsto y \in R}{x \in S}{y}
   \\
   \tag{Product}
   x \mapsto y \in S \times T &\leadsto x \in S \land y \in T
@@ -2864,17 +2995,17 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   \tag{Predicate Operations - Union}
   S \cup T
   &\leadsto
-  \bSetT{x}{x \in S \lor x \in T}
+  \setOne{(x \in S \mid x) ` (x \in T \cdot x \notin S \mid x)}
   \\
   \tag{Predicate Operations - Intersection}
   S \cap T
   &\leadsto
-  \bSetT{x}{x \in S \land x \in T}
+  \Set{x \in S}{x \in T}
   \\
   \tag{Predicate Operations - Difference}
   S \setminus T
   &\leadsto
-  \bSetT{x}{x \in S \land x \notin T}
+  \Set{x \in S}{x \notin T}
   % \\
   % \tag{Singleton Membership \footnote{Currently unused. We need to be careful to handle the case where $x$ is a free variable.}}
   % x \in \{e\}
@@ -2886,6 +3017,11 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   x \in \oplus(E \mid P)
   &\leadsto
   P \land x = E
+  \\
+  \tag{Set Membership}
+  e \in S
+  &\leadsto
+  \exists{x \in S \mid e = x}
 \end{align}
 \end{minipage}
 
