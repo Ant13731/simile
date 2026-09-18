@@ -2450,14 +2450,16 @@ General notes:
   \begin{prooftree}
     \hypo{a: Int[min=x]}
     \hypo{b: Int[literal=y]}
-    \infer2{(a \text{ div } b): T[min=(\lfloor x / y \rfloor)]}
+    \hypo{x \geq 0}
+    \infer3{(a \text{ div } b): T[min=(\lfloor x / y \rfloor)]}
   \end{prooftree}
   \\
   \tag{Max and literal}
   \begin{prooftree}
     \hypo{a: Int[max=x]}
     \hypo{b: Int[literal=y]}
-    \infer2{(a \text{ div } b): T[max=(\lfloor x / y \rfloor)]}
+    \hypo{x \geq 0}
+    \infer3{(a \text{ div } b): T[max=(\lfloor x / y \rfloor)]}
   \end{prooftree}
   \\
   \tag{Literal and min}
@@ -2622,7 +2624,135 @@ General notes:
   \end{prooftree}
 \end{gather}
 \subparagraph{Divide}
-\subparagraph{Multiply}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a / b): T[literal=(x / y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal zero}
+  \begin{prooftree}
+    \hypo{a: Int[literal=0]}
+    \hypo{b: Int[0 \not\in domain \lor max < 0 \lor min > 0]}
+    \hypo{x \geq 0}
+    \infer3{(a / b): T[literal=0]}
+  \end{prooftree}
+  \\
+  \tag{Min and literal}
+  \begin{prooftree}
+    \hypo{a: Int[min=x]}
+    \hypo{b: Int[literal=y]}
+    \hypo{x \geq 0}
+    \infer3{(a / b): T[min=(x / y)]}
+  \end{prooftree}
+  \\
+  \tag{Max and literal}
+  \begin{prooftree}
+    \hypo{a: Int[max=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a / b): T[max=(x / y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and min}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[min=y]}
+    \hypo{x > 0}
+    \hypo{y > 0}
+    \infer4{(a / b): T[max=(x / y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and max}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[max=y]}
+    \hypo{x > 0}
+    \hypo{y < 0}
+    \infer4{(a / b): T[min=(x / y)]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal and min}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[min=y]}
+    \hypo{x < 0}
+    \hypo{y > 0}
+    \infer4{(a / b): T[min=(x / y)]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal and max}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[max=y]}
+    \hypo{x < 0}
+    \hypo{y < 0}
+    \infer4{(a / b): T[max=(x / y)]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Multiply} And commutative versions.
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[literal=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a \times b): T[literal=(x \times y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal zero}
+  \begin{prooftree}
+    \hypo{a: T[literal=0]}
+    \hypo{b: T}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a \times b): T[literal=0]}
+  \end{prooftree}
+  \\
+  \tag{Positive literal and min}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[min=y]}
+    \hypo{T \in \{Int, Float\}}
+    \hypo{x > 0}
+    \infer4{(a \times b): T[min=(x \times y)]}
+  \end{prooftree}
+  \\
+  \tag{Positive literal and max}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[max=y]}
+    \hypo{T \in \{Int, Float\}}
+    \hypo{x > 0}
+    \infer4{(a \times b): T[max=(x \times y)]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal and min}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[min=y]}
+    \hypo{T \in \{Int, Float\}}
+    \hypo{x < 0}
+    \infer4{(a \times b): T[max=(x \times y)]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal and max}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[max=y]}
+    \hypo{T \in \{Int, Float\}}
+    \hypo{x < 0}
+    \infer4{(a \times b): T[max=(x \times y)]}
+  \end{prooftree}
+  \\
+  \tag{Domain widens}
+  \begin{prooftree}
+    \hypo{a: T[domain=m]}
+    \hypo{b: T[domain=n]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a \times b): T[domain=map(product, m \times n)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Power}
 \subparagraph{Upto}
 \begin{gather}
