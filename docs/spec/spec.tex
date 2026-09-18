@@ -2754,14 +2754,77 @@ General notes:
   \end{prooftree}
 \end{gather}
 \subparagraph{Power}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[literal=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a^b): T[literal=(x^y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal zero}
+  \begin{prooftree}
+    \hypo{a: T[literal=0]}
+    \hypo{b: T[literal != 0]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a^b): T[literal=0]}
+  \end{prooftree}
+  \\
+  \tag{Literal zero}
+  \begin{prooftree}
+    \hypo{a: T}
+    \hypo{b: T[literal=0]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a^b): T[literal=1]}
+  \end{prooftree}
+  \\
+  \tag{Literal and min}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[min=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a^b): T[min=(x^y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and max}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[max=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a^b): T[max=(x^y)]}
+  \end{prooftree}
+  \\
+  \tag{Domain widens}
+  \begin{prooftree}
+    \hypo{a: T[domain=m]}
+    \hypo{b: T[domain=n]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a^b): T[domain=map(\lambda (x,y):x^y, m \times n)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Upto}
 \begin{gather}
   \tag{Upto literal}
   \begin{prooftree}
-    \hypo{a: Int[Literal]}
-    \hypo{b: Int[Literal]}
-    \infer2{(a \upto b): set[Int[Min=a, Max=b], Literal=\{a, a+1, ..., b\}, Total]}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a \upto b): set[min=x, max=y, literal=\{x, x+1, ..., y\}, total]}
   \end{prooftree} % If only one of these are literals, we should still try to get either a max or min value
+  \\
+  \tag{Upto literal}
+  \begin{prooftree}
+    \hypo{a: Int[min=x]}
+    \hypo{b: Int}
+    \infer2{(a \upto b): set[min=x]}
+  \end{prooftree}
+  \\
+  \tag{Upto literal}
+  \begin{prooftree}
+    \hypo{a: Int}
+    \hypo{b: Int[max=x]}
+    \infer2{(a \upto b): set[max=x]}
+  \end{prooftree}
 \end{gather}
 % \paragraph{String}
 \paragraph{Tuple}
