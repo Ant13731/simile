@@ -2244,55 +2244,258 @@ Operations on \textit{Literal} traits will always produce a \textit{Literal} whe
 \end{algorithmic}
 % Which has yet to be written formally...
 
+General notes:
+\begin{itemize}
+  \item Any operation with an undefined value will have an undefined result.
+  \item Any operations with immutable inputs will have an immutable output. If multi-arg operations have at least one mutable input, the output will also be mutable (unless immutability appears in the traits below).
+\end{itemize}
+
 \paragraph{Base}
-\subparagraph{Equals}
-\subparagraph{Not equals}
+\subparagraph{Equals} Not equals is just not applied to equals.
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: X[literal=x]}
+    \hypo{b: Y[literal=y]}
+    \infer2{(a = b): Bool[literal=(X=Y \land x=y)]}
+  \end{prooftree}
+\end{gather}
 \paragraph{Bool}
 \subparagraph{Not}
-\subparagraph{Equivalent}
-\subparagraph{Not equivalent}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{p: Bool[literal=x]}
+    \infer1{(\lnot p): Bool[literal=(\lnot x)]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Equivalent} Not equivalent is just not applied to the equivalence operation.
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Bool[literal=x]}
+    \hypo{b: Bool[literal=y]}
+    \infer2{(a \equiv b): Bool[literal=(x=y)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Implies}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Bool[literal=x]}
+    \hypo{b: Bool[literal=y]}
+    \infer2{(a \implies b): Bool[literal=(x \implies y)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{And}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Bool[literal=x]}
+    \hypo{b: Bool[literal=y]}
+    \infer2{(a \land b): Bool[literal=(x \land y)]}
+  \end{prooftree}
+  \\
+  \tag{Undefined with false}
+  \begin{prooftree}
+    \hypo{a: Bool[undefined]}
+    \hypo{b: Bool[literal=false]}
+    \infer2{(a \land b): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Undefined with true}
+  \begin{prooftree}
+    \hypo{a: Bool[undefined]}
+    \hypo{b: Bool[literal=true]}
+    \infer2{(a \land b): Bool[undefined]}
+  \end{prooftree}
+  \\
+  \tag{Undefined is not guaranteed}
+  \begin{prooftree}
+    \hypo{a: Bool[undefined]}
+    \hypo{b: Bool}
+    \infer2{(a \land b): Bool}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Or}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Bool[literal=x]}
+    \hypo{b: Bool[literal=y]}
+    \infer2{(a \lor b): Bool[literal=(x \lor y)]}
+  \end{prooftree}
+  \\
+  \tag{Undefined with false}
+  \begin{prooftree}
+    \hypo{a: Bool[undefined]}
+    \hypo{b: Bool[literal=false]}
+    \infer2{(a \lor b): Bool[undefined]}
+  \end{prooftree}
+  \\
+  \tag{Undefined with true}
+  \begin{prooftree}
+    \hypo{a: Bool[undefined]}
+    \hypo{b: Bool[literal=true]}
+    \infer2{(a \lor b): Bool[literal=true]}
+  \end{prooftree}
+  \\
+  \tag{Undefined is not guaranteed}
+  \begin{prooftree}
+    \hypo{a: Bool[undefined]}
+    \hypo{b: Bool}
+    \infer2{(a \lor b): Bool}
+  \end{prooftree}
+\end{gather}
 \paragraph{Arithmetic}
 \subparagraph{Less than} Opposite for greater than.
 \begin{gather}
-  \tag{Less than with max-min}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{a: T[Max=x]}
-    \hypo{b : T[Min=y]}
+    \hypo{a: T[literal=x, orderable]}
+    \hypo{b: T[literal=y, orderable]}
     \hypo{x < y}
-    \infer3{(a < b): Bool[Literal=true]}
+    \infer3{(a < b): Bool[literal=(x < y)]}
   \end{prooftree}
   \\
-  \tag{Less than with min-max}
+  \tag{Max-min literal true}
   \begin{prooftree}
-    \hypo{a: T[Min=x]}
-    \hypo{b : T[Max=y]}
-    \hypo{x > y}
-    \infer3{(a < b): Bool[Literal=false]}
+    \hypo{a: T[max=x]}
+    \hypo{b: T[min=y]}
+    \hypo{x < y}
+    \infer3{(a < b): Bool[literal=true]}
+  \end{prooftree}
+  \\
+  \tag{Max-min literal false}
+  \begin{prooftree}
+    \hypo{a: T[min=x]}
+    \hypo{b: T[max=y]}
+    \hypo{x \geq y}
+    \infer3{(a < b): Bool[literal=false]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Less than or equals} Opposite for greater than or equals.
 \begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: T[literal=x, orderable]}
+    \hypo{b: T[literal=y, orderable]}
+    \hypo{x \leq y}
+    \infer3{(a \leq b): Bool[literal=(x \leq y)]}
+  \end{prooftree}
+  \\
   \tag{Less than or equal with max-min}
   \begin{prooftree}
-    \hypo{a: T[Max=x]}
-    \hypo{b : T[Min=y]}
+    \hypo{a: T[max=x]}
+    \hypo{b: T[min=y]}
     \hypo{x \leq y}
-    \infer3{(a \leq b): Bool[Literal=true]}
+    \infer3{(a \leq b): Bool[literal=true]}
   \end{prooftree}
   \\
   \tag{Less than or equal with min-max}
   \begin{prooftree}
-    \hypo{a: T[Min=x]}
-    \hypo{b : T[Max=y]}
+    \hypo{a: T[min=x]}
+    \hypo{b: T[max=y]}
     \hypo{x > y}
-    \infer3{(a \leq b): Bool[Literal=false]}
+    \infer3{(a \leq b): Bool[literal=false]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Negate}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{p: T[literal=x]}
+    \hypo{T \in \{Int, Float\}}
+    \infer2{(- p): T[literal=(- x)]}
+  \end{prooftree}
+  \\
+  \tag{Min}
+  \begin{prooftree}
+    \hypo{p: T[min=x]}
+    \hypo{T \in \{Int, Float\}}
+    \infer2{(- p): T[max=(- x)]}
+  \end{prooftree}
+  \\
+  \tag{Max}
+  \begin{prooftree}
+    \hypo{p: T[max=x]}
+    \hypo{T \in \{Int, Float\}}
+    \infer2{(- p): T[min=(- x)]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{p: T[domain=s]}
+    \hypo{T \in \{Int, Float\}}
+    \infer2{(- p): T[domain=\bSetT{x in s}{-x}]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Int divide}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a \text{ div } b): T[literal=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+  \\
+  \tag{Literal zero}
+  \begin{prooftree}
+    \hypo{a: Int[literal=0]}
+    \hypo{b: Int[0 \not\in domain \lor max < 0 \lor min > 0]}
+    \infer2{(a \text{ div } b): T[literal=0]}
+  \end{prooftree}
+  \\
+  \tag{Min and literal}
+  \begin{prooftree}
+    \hypo{a: Int[min=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a \text{ div } b): T[min=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+  \\
+  \tag{Max and literal}
+  \begin{prooftree}
+    \hypo{a: Int[max=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a \text{ div } b): T[max=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and min}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[min=y]}
+    \hypo{x > 0}
+    \hypo{y > 0}
+    \infer4{(a \text{ div } b): T[max=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and max}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[max=y]}
+    \hypo{x > 0}
+    \hypo{y < 0}
+    \infer4{(a \text{ div } b): T[min=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal and min}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[min=y]}
+    \hypo{x < 0}
+    \hypo{y > 0}
+    \infer4{(a \text{ div } b): T[min=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal and max}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[max=y]}
+    \hypo{x < 0}
+    \hypo{y < 0}
+    \infer4{(a \text{ div } b): T[max=(\lfloor x / y \rfloor)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Modulo}
 \subparagraph{Add}
 \subparagraph{Subtract}
