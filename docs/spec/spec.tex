@@ -2497,7 +2497,80 @@ General notes:
   \end{prooftree}
 \end{gather}
 \subparagraph{Modulo}
-\subparagraph{Add}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: Int[literal=x]}
+    \hypo{b: Int[literal=y]}
+    \infer2{(a \text{ mod } b): T[literal=(x \text{ mod } y)]}
+  \end{prooftree}
+  \\
+  \tag{Positive literal}
+  \begin{prooftree}
+    \hypo{a: Int}
+    \hypo{b: Int[max=x]}
+    \hypo{x > 0}
+    \infer3{(a \text{ mod } b): T[max=x, min=0]}
+  \end{prooftree}
+  \\
+  \tag{Negative literal}
+  \begin{prooftree}
+    \hypo{a: Int}
+    \hypo{b: Int[min=x]}
+    \hypo{x < 0}
+    \infer3{(a \text{ mod } b): T[min=x, max=0]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Add} And commutative versions.
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[literal=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a + b): T[literal=(x + y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and min}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[min=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a + b): T[min=(x + y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and max}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[max=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a + b): T[max=(x + y)]}
+  \end{prooftree}
+  \\
+  \tag{Min}
+  \begin{prooftree}
+    \hypo{a: T}
+    \hypo{b: T[min=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a + b): T[min=y]}
+  \end{prooftree}
+  \\
+  \tag{Max}
+  \begin{prooftree}
+    \hypo{a: T}
+    \hypo{b: T[max=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a + b): T[max=y]}
+  \end{prooftree}
+  \\
+  \tag{Domain widens}
+  \begin{prooftree}
+    \hypo{a: T[domain=m]}
+    \hypo{b: T[domain=n]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a + b): T[domain=map(sum, m \times n)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Subtract}
 \subparagraph{Divide}
 \subparagraph{Multiply}
