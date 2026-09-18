@@ -2829,9 +2829,23 @@ General notes:
 % \paragraph{String}
 \paragraph{Tuple}
 \subparagraph{Enumeration}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a_1: T_1, a_2: T_2, ..., a_n: T_n}
+    \infer1{(a_1, a_2, ..., a_n): tuple[T_1, T_2, ..., T_n, size=n]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Maplet}
-\paragraph{Record}
-\subparagraph{Access}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a_1: T_1, b: T_2}
+    \infer1{(a \mapsto b): tuple[T_1, T_2, size=2]}
+  \end{prooftree}
+\end{gather}
+% \paragraph{Record}
+% \subparagraph{Access}
 \paragraph{Set}
 \subparagraph{Enumeration}
 \begin{gather}
