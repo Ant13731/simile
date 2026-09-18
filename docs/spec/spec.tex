@@ -2572,6 +2572,55 @@ General notes:
   \end{prooftree}
 \end{gather}
 \subparagraph{Subtract}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[literal=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a - b): T[literal=(x - y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and min}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[min=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a - b): T[max=(x - y)]}
+  \end{prooftree}
+  \\
+  \tag{Literal and max}
+  \begin{prooftree}
+    \hypo{a: T[literal=x]}
+    \hypo{b: T[max=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a - b): T[min=(x - y)]}
+  \end{prooftree}
+  \\
+  \tag{Min and literal}
+  \begin{prooftree}
+    \hypo{a: T[min=x]}
+    \hypo{b: T[literal=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a - b): T[min=(x-y)]}
+  \end{prooftree}
+  \\
+  \tag{Max and literal}
+  \begin{prooftree}
+    \hypo{a: T[max=x]}
+    \hypo{b: T[literal=y]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a - b): T[max=(x-y)]}
+  \end{prooftree}
+  \\
+  \tag{Domain widens}
+  \begin{prooftree}
+    \hypo{a: T[domain=m]}
+    \hypo{b: T[domain=n]}
+    \hypo{T \in \{Int, Float\}}
+    \infer3{(a - b): T[domain=map(sum, m \times map(-, n))]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Divide}
 \subparagraph{Multiply}
 \subparagraph{Power}
