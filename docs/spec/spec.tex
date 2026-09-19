@@ -14,7 +14,6 @@
 \usepackage[noend]{algpseudocode}
 \usepackage{algorithm}
 \usepackage{mathtools}
-\usepackage{xcolor}
 \usepackage{subcaption}
 \usepackage{wrapfig}
 \usepackage{hhline}
@@ -22,7 +21,6 @@
 \usepackage{longtable}
 \usepackage{syntax}
 \usepackage{ebproof}
-\usepackage{xcolor}
 \usepackage{minted}
 \usepackage[left=1.5cm, right=1.5cm]{geometry}
 \usepackage{pifont}% http://ctan.org/pkg/pifont
@@ -121,7 +119,7 @@
 \allowdisplaybreaks
 \graphicspath{{./images/}}
 % NOTE: need to run `biber <name>` to ensure up-to-date references
-\addbibresource{citation.bib}
+\addbibresource{../ref.bib}
 
 \title{Complete Specification and Design for Simile}
 \author{Anthony Hunt}
@@ -162,7 +160,7 @@ In high level programming languages, users often reach for abstract constructs l
 
 Low-level languages share an adjacent problem: programmers may trust primitive data type operations to be fast, but they must also tune every piece of their code to fit the type's implementation. Formally simple and powerful operations like list concatenation force the user to consider implementation details like memory allocation and ownership for both inputs and outputs. For example, in $A := S \concat T$, does the specific implementation create a new list for $A$ containing a shallow copy of the contents of $S$ and $T$? Or perhaps $A$ and $S$ will reference the same object, where the data in $T$ is moved to the pointed-to value of $S$. Programmers must track every byte of data for straightforward operations, causing mental overhead, distractions from program correctness, and the risk of implementation errors.
 
-Abstract data types are semantically powerful and have been implemented by hundreds of languages across thousands of libraries. Further, they can be represented by a variety of concrete types, with wildly varying levels of efficiency and effectiveness for different use cases. For example, a set of integers can be implemented by a HashSet, a bitset, an array, a tree set, or even a trie. HashSets are advantageous for element lookups, but may not be able to compare to a dense bitset in terms of memory efficiency. An array could be effective for a set that may need to be sorted, but doesnt have direct element lookups. With a little metadata-help from the programmer, the compiler should be intelligent enough to make decisions on the concrete type and optimize expressions tailored to the concrete type while completely following the abstract type's semantics.
+Abstract data types are semantically powerful and have been implemented by hundreds of languages across thousands of libraries. Further, they can be represented by a variety of concrete types, with wildly varying levels of efficiency and effectiveness for different use cases. For example, a set of integers can be implemented by a HashSet, a bitset, an array, a tree set, or even a trie. HashSets are advantageous for element lookups, but may not be able to compare to a dense bitset in terms of memory efficiency. An array could be effective for a set that may need to be sorted, but doesn't have direct element lookups. With a little metadata-help from the programmer, the compiler should be intelligent enough to make decisions on the concrete type and optimize expressions tailored to the concrete type while completely following the abstract type's semantics.
 
 \paragraph{Motivating Example: A Visitor Information System}
 Let's turn towards an example for specification-focused programming: a group of conference administrators create a program to track resourcing for a week's worth of workshops. They already have a list of visitors, available rooms, and planned workshops for each room. A specification would model these records via carrier sets (i.e., enumerated sets):
@@ -1948,7 +1946,7 @@ Given the power and danger of using traits, programs without traits by default s
 \subsubsection{Available Traits}
 The following paragraphs list and categorize identified traits.
 
-For parameterized types that accept type arguments, traits will be propagated to the "parent" type as much as possible. For example, a $set[int]$ restricting the range of the underlying integers should have that trait specified on the outer $set$ type rather than the underlying $int$ type.
+For parameterized types that accept type arguments, traits will be propagated to the ``parent'' type as much as possible. For example, a $set[int]$ restricting the range of the underlying integers should have that trait specified on the outer $set$ type rather than the underlying $int$ type.
 % For parameterized types that accept type arguments (like set, relation, sequence, tuple, ...), some traits may apply to the type argument when sensible. For example, a $set[int]$ restricting the range of the underlying integers should have that trait specified on the underlying $int$ type rather than the outer $set$ type (although we may loosen this with syntactic sugar). Like Event-B, $set$ types are really powersets of the underlying element type, whereas primitive types represent values chosen from a \textit{set} of primitive values.
 
 \paragraph{Base Traits} Applicable to almost every object
@@ -2846,7 +2844,7 @@ General notes:
 \end{gather}
 % \paragraph{Record}
 % \subparagraph{Access}
-\paragraph{Set}
+\paragraph{Set} Test
 \subparagraph{Enumeration}
 \begin{gather}
   \tag{Enumeration}
