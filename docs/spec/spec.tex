@@ -3777,9 +3777,69 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \end{prooftree}
 \end{gather}
 \subparagraph{Domain restriction}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T_1, literal=l_1]}
+    \hypo{r: relation[T_1, T_2, literal=l_2]}
+    \infer2{(s \domres r): relation[T_1, T_2, literal=l_1 \domres l_2]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T_1, domain=d]}
+    \hypo{r: relation[T_1, T_2]}
+    \infer2{(s \domres r): relation[T_1, T_2, domain=d]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Domain subtraction}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T_1, literal=l_1]}
+    \hypo{r: relation[T_1, T_2, literal=l_2]}
+    \infer2{(s \domsub r): relation[T_1, T_2, literal=l_1 \domsub l_2]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T_1, domain=d_1]}
+    \hypo{r: relation[T_1, T_2, relationalDomain=d_2]}
+    \infer2{(s \domsub r): relation[T_1, T_2, relationalDomain=d_2 \setminus d_1]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Range restriction}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T_2, literal=l_1]}
+    \hypo{r: relation[T_1, T_2, literal=l_2]}
+    \infer2{(r \ranres s): relation[T_1, T_2, literal=l_2 \ranres l_1]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T_2, domain=d]}
+    \hypo{r: relation[T_1, T_2]}
+    \infer2{(r \ranres s): relation[T_1, T_2, relationalRange=d]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Range subtraction}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T_2, literal=l_1]}
+    \hypo{r: relation[T_1, T_2, literal=l_2]}
+    \infer2{(r \ransub s): relation[T_1, T_2, literal=l_2 \ransub l_1]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T_2, domain=d]}
+    \hypo{r: relation[T_1, T_2, relationalRange=r]}
+    \infer2{(r \ransub s): relation[T_1, T_2, relationalRange=r \setminus d]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Bag Image}
 \subparagraph{Comprehension}
 \paragraph{Bag}
