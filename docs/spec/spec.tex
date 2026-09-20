@@ -2390,7 +2390,7 @@ General notes:
   \begin{prooftree}
     \hypo{p: T[domain=s]}
     \hypo{T \in \{Int, Float\}}
-    \infer2{(- p): T[domain=\bSetT{x in s}{-x}]}
+    \infer2{(- p): T[domain=\bSetT{x \in s}{-x}]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Int divide}
@@ -3333,6 +3333,37 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
     \hypo{t: set[T, literal=l_2]}
     \infer2{(s \subset t): Bool[literal=l_1 \subset l_2]}
   \end{prooftree}
+  \\
+  \tag{Domains do not overlap}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1]}
+    \hypo{t: set[T, domain=d_2]}
+    \hypo{d_1 \cap d_2 = \emptyset}
+    \infer3{(s \subset t): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Min above Max}
+  \begin{prooftree}
+    \hypo{s: set[T, min=m_1]}
+    \hypo{t: set[T, max=m_2]}
+    \hypo{m_1 > m_2}
+    \infer3{(s \subset t): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Max below Min}
+  \begin{prooftree}
+    \hypo{s: set[T, max=m_1]}
+    \hypo{t: set[T, min=m_2]}
+    \hypo{m_1 < m_2}
+    \infer3{(s \subset t): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Empty is subset of nonempty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{t: set[T, \lnot empty]}
+    \infer2{(s \subset t): Bool[literal=true]}
+  \end{prooftree}
 \end{gather}
 \subparagraph{Subset equals} And negation/superset variant.
 \begin{gather}
@@ -3341,6 +3372,37 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
     \hypo{s: set[T, literal=l_1]}
     \hypo{t: set[T, literal=l_2]}
     \infer2{(s \subseteq t): Bool[literal=l_1 \subseteq l_2]}
+  \end{prooftree}
+  \\
+  \tag{Nonempty Domains do not overlap}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1, \lnot empty]}
+    \hypo{t: set[T, domain=d_2]}
+    \hypo{d_1 \cap d_2 = \emptyset}
+    \infer3{(s \subset t): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Nonempty Min above Max}
+  \begin{prooftree}
+    \hypo{s: set[T, min=m_1, \lnot empty]}
+    \hypo{t: set[T, max=m_2]}
+    \hypo{m_1 > m_2}
+    \infer3{(s \subset t): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Nonempty Max below Min}
+  \begin{prooftree}
+    \hypo{s: set[T, max=m_1, \lnot empty]}
+    \hypo{t: set[T, min=m_2]}
+    \hypo{m_1 < m_2}
+    \infer3{(s \subset t): Bool[literal=false]}
+  \end{prooftree}
+  \\
+  \tag{Empty is subset-equals of all}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{t: set[T]}
+    \infer2{(s \subset t): Bool[literal=true]}
   \end{prooftree}
 \end{gather}
 % \subparagraph{Superset}
@@ -3407,8 +3469,8 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Relational Domain}
   \begin{prooftree}
-    \hypo{r: relation[T_1, T_2, relational\_domain=d, relational\_range=r]}
-    \infer1{r^{-1}: relation[T_2, T_1, relational\_domain=r, relational\_range=d]}
+    \hypo{r: relation[T_1, T_2, relationalDomain=d, relationalRange=r]}
+    \infer1{r^{-1}: relation[T_2, T_1, relationalDomain=r, relationalRange=d]}
   \end{prooftree}
   \\
   \tag{Size}
@@ -3425,26 +3487,26 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Relational Domain min swap}
   \begin{prooftree}
-    \hypo{r: relation[T_1, T_2, relational\_domain\_min=m]}
-    \infer1{r^{-1}: relation[T_2, T_1, relational\_domain\_max=m]}
+    \hypo{r: relation[T_1, T_2, relationalDomainMin=m]}
+    \infer1{r^{-1}: relation[T_2, T_1, relationalDomainMax=m]}
   \end{prooftree}
   \\
   \tag{Relational Domain max swap}
   \begin{prooftree}
-    \hypo{r: relation[T_1, T_2, relational\_domain\_max=m]}
-    \infer1{r^{-1}: relation[T_2, T_1, relational\_domain\_min=m]}
+    \hypo{r: relation[T_1, T_2, relationalDomainMax=m]}
+    \infer1{r^{-1}: relation[T_2, T_1, relationalDomainMin=m]}
   \end{prooftree}
   \\
   \tag{Relational Range min swap}
   \begin{prooftree}
-    \hypo{r: relation[T_1, T_2, relational\_range\_max=m]}
-    \infer1{r^{-1}: relation[T_2, T_1, relational\_range\_min=m]}
+    \hypo{r: relation[T_1, T_2, relationalRangeMax=m]}
+    \infer1{r^{-1}: relation[T_2, T_1, relationalRangeMin=m]}
   \end{prooftree}
   \\
   \tag{Relational Range max swap}
   \begin{prooftree}
-    \hypo{r: relation[T_1, T_2, relational\_range\_max=m]}
-    \infer1{r^{-1}: relation[T_2, T_1, relational\_range\_min=m]}
+    \hypo{r: relation[T_1, T_2, relationalRangeMax=m]}
+    \infer1{r^{-1}: relation[T_2, T_1, relationalRangeMin=m]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Composition}
@@ -3458,9 +3520,9 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Domain}
   \begin{prooftree}
-    \hypo{s: relation[T, V, relational\_domain=d]}
-    \hypo{t: relation[V, U, relational\_range=r]}
-    \infer2{s \circ t: relation[T, U, relational\_domain=d, relational\_range=r]}
+    \hypo{s: relation[T, V, relationalDomain=d]}
+    \hypo{t: relation[V, U, relationalRange=r]}
+    \infer2{s \circ t: relation[T, U, relationalDomain=d, relationalRange=r]}
   \end{prooftree}
   \\
   \tag{Empty}
@@ -3488,7 +3550,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \begin{prooftree}
     \hypo{s: relation[T, V, extremum=m]}
     \hypo{t: relation[V, U]}
-    \hypo{extreumum \in \{relational\_domain\_min, relational\_domain\_min\}}
+    \hypo{extremum \in \{relationalDomainMin, relationalDomainMin\}}
     \infer3{s \circ t: relation[T, U, extremum=m]}
   \end{prooftree}
   \\
@@ -3496,7 +3558,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \begin{prooftree}
     \hypo{s: relation[T, V]}
     \hypo{t: relation[V, U, extremum=m]}
-    \hypo{extreumum \in \{relational\_range\_min, relational\_range\_min\}}
+    \hypo{extremum \in \{relationalRangeMin, relationalRangeMin\}}
     \infer3{s \circ t: relation[T, U, extremum=m]}
   \end{prooftree}
 \end{gather}
@@ -3512,7 +3574,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Domain does not contain literal}
   \begin{prooftree}
-    \hypo{r: relation[T, V, relational\_domain=d]}
+    \hypo{r: relation[T, V, relationalDomain=d]}
     \hypo{s: set[T, literal=l]}
     \hypo{l \not\subseteq d}
     \infer3{r[s]: set[V, empty]}
@@ -3520,7 +3582,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Domain does not contain domain}
   \begin{prooftree}
-    \hypo{r: relation[T, V, relational\_domain=d_1]}
+    \hypo{r: relation[T, V, relationalDomain=d_1]}
     \hypo{s: set[T, domain=d_2]}
     \hypo{d_2 \not\subseteq d_1}
     \infer3{r[s]: set[V, empty]}
@@ -3528,7 +3590,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Total nonempty domains}
   \begin{prooftree}
-    \hypo{r: relation[T, V, relational\_domain=d_1, TotalOnDomain]}
+    \hypo{r: relation[T, V, relationalDomain=d_1, TotalOnDomain]}
     \hypo{s: set[T, domain=d_2, size > 0]}
     \hypo{d_2 \subseteq d_1}
     \infer3{r[s]: set[V, size > 0]}
@@ -3536,7 +3598,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Arg min above relational max}
   \begin{prooftree}
-    \hypo{r: relation[T, V, relational\_domain\_max=m_1]}
+    \hypo{r: relation[T, V, relationalDomainMax=m_1]}
     \hypo{s: set[T, min=m_2]}
     \hypo{m_1 < m_2}
     \infer3{r[s]: set[V, empty]}
@@ -3544,7 +3606,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \\
   \tag{Arg max below relational min}
   \begin{prooftree}
-    \hypo{r: relation[T, V, relational\_domain\_min=m_1]}
+    \hypo{r: relation[T, V, relationalDomainMin=m_1]}
     \hypo{s: set[T, max=m_2]}
     \hypo{m_2 < m_1}
     \infer3{r[s]: set[V, empty]}
