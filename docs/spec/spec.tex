@@ -3138,60 +3138,126 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
 \end{gather}
 \subparagraph{Union}
 \begin{gather}
-  \tag{Union Literal}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{s: set[T, Literal=a]}
-    \hypo{t: set[T, Literal=b]}
-    \infer2{(s \cup t): set[T, Literal=a \cup b]}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{t: set[T, literal=l_2]}
+    \infer2{(s \cup t): set[T, literal=(l_1 \cup l_2)]}
   \end{prooftree}
   \\
-  \tag{Union with widest Domain}
+  \tag{Domain}
   \begin{prooftree}
-    \hypo{s: set[T[Domain=a]]}
-    \hypo{t: set[T[Domain=b]]}
-    \infer2{(s \cup t): set[T[Domain=a \cup b]]}
+    \hypo{s: set[T, domain=d_1]}
+    \hypo{t: set[T, domain=d_2]}
+    \infer2{(s \cup t): set[T, domain=(d_1 \cup d_2)]}
   \end{prooftree}
   \\
-  \tag{Union with lowest Min}
+  \tag{Domain and Literal}
   \begin{prooftree}
-    \hypo{s: set[T[Min=a]]}
-    \hypo{t: set[T[Min=b]]}
-    \hypo{a < b}
-    \infer3{(s \cup t): set[T[Min=a]]}
+    \hypo{s: set[T, domain=d]}
+    \hypo{t: set[T, literal=l]}
+    \infer2{(s \cup t): set[T, domain=(d \cup l)]}
   \end{prooftree}
   \\
-  \tag{Union with highest Max}
+  \tag{Lowest Min}
   \begin{prooftree}
-    \hypo{s: set[T[Max=a]]}
-    \hypo{t: set[T[Max=b]]}
-    \hypo{a < b}
-    \infer3{(s \cup t): set[T[Max=b]]}
+    \hypo{s: set[T, min=m_1]}
+    \hypo{t: set[T, min=m_2]}
+    \hypo{m_1 < m_2}
+    \infer3{(s \cup t): set[T, min=m_1]}
+  \end{prooftree}
+  \\
+  \tag{Highest Max}
+  \begin{prooftree}
+    \hypo{s: set[T, max=m_1]}
+    \hypo{t: set[T, max=m_2]}
+    \hypo{m_1 < m_2}
+    \infer3{(s \cup t): set[T, max=m_2]}
   \end{prooftree}
   \\
   \tag{Union with Empty keeps Traits}
   \begin{prooftree}
-    \hypo{s: set[T, Empty]}
-    \hypo{t: set[T, x]}
-    \hypo{a < b}
-    \infer3{(s \cup t): set[T, x]}
+    \hypo{s: set[T, empty]}
+    \hypo{t: set[T, traits]}
+    \infer2{(s \cup t): set[T, traits]}
   \end{prooftree}
   \\
-  \tag{Union with widest size}
+  \tag{Size overestimates}
   \begin{prooftree}
-    \hypo{s: set[T, Size=x]}
-    \hypo{t: set[T, Size=y]}
-    \hypo{x < y}
-    \infer3{(s \cup t): set[T, Size=y]}
+    \hypo{s: set[T, size=x]}
+    \hypo{t: set[T, size=y]}
+    \infer2{(s \cup t): set[T, size=(x+y)]}
   \end{prooftree}
   \\
-  \tag{Union with Total stays}
+  \tag{Total Domain}
   \begin{prooftree}
-    \hypo{s: set[T]}
-    \hypo{t: set[T,Total]}
-    \infer2{(s \cup t): set[T, Total]}
+    \hypo{s: set[T, domain=d_1]}
+    \hypo{t: set[T, domain=d_2, total]}
+    \hypo{d_1 \subseteq d_2}
+    \infer3{(s \cup t): set[T, domain=d_2, total]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Intersection}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{t: set[T, literal=l_2]}
+    \infer2{(s \cap t): set[T, literal=(l_1 \cap l_2)]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1]}
+    \hypo{t: set[T, domain=d_2]}
+    \infer2{(s \cap t): set[T, domain=(d_1 \cap d_2)]}
+  \end{prooftree}
+  \\
+  \tag{Domain and Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{t: set[T, literal=l]}
+    \infer2{(s \cap t): set[T, domain=(d \cap l)]}
+  \end{prooftree}
+  \\
+  \tag{Highest Min}
+  \begin{prooftree}
+    \hypo{s: set[T, min=m_1]}
+    \hypo{t: set[T, min=m_2]}
+    \hypo{m_1 < m_2}
+    \infer3{(s \cap t): set[T, min=m_2]}
+  \end{prooftree}
+  \\
+  \tag{Lowest Max}
+  \begin{prooftree}
+    \hypo{s: set[T, max=m_1]}
+    \hypo{t: set[T, max=m_2]}
+    \hypo{m_1 < m_2}
+    \infer3{(s \cap t): set[T, max=m_1]}
+  \end{prooftree}
+  \\
+  \tag{Intersection with Empty is Empty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{t: set[T]}
+    \infer2{(s \cap t): set[T, empty]}
+  \end{prooftree}
+  \\
+  \tag{Size does not increase}
+  \begin{prooftree}
+    \hypo{s: set[T, size=x]}
+    \hypo{t: set[T, size=y]}
+    \infer2{(s \cap t): set[T, size=max(x,y)]}
+  \end{prooftree}
+  \\
+  \tag{Total Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1]}
+    \hypo{t: set[T, domain=d_2, total]}
+    \hypo{d_1 \subseteq d_2}
+    \infer3{(s \cup t): set[T, domain=d_1]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Difference}
 \subparagraph{Symmetric difference}
 \subparagraph{Cartesian product}
