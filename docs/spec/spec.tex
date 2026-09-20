@@ -3369,25 +3369,30 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \end{prooftree}
 \end{gather}
 % \subparagraph{Disjoint} % What operator is this?
-\subparagraph{Subset}
+\subparagraph{Subset} And negation/superset variant.
 \begin{gather}
-  \tag{Subset with min-max}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{s: set[T, Min=w, Max=x]}
-    \hypo{t: set[T, Min=y, Max=z]}
-    \hypo{w > y}
-    \hypo{x < z}
-    % Then we should only consider values within w and x range? Assuming they are ordered...
-    \infer4{(s \subset t: set[T, Min=w, Max=x]): Bool}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{t: set[T, literal=l_2]}
+    \infer2{(s \subset t): Bool[literal=l_1 \subset l_2]}
   \end{prooftree}
 \end{gather}
-\subparagraph{Subset equals}
-\subparagraph{Superset}
-\subparagraph{Superset equals}
-\subparagraph{Not subset}
-\subparagraph{Not subset equals}
-\subparagraph{Not superset}
-\subparagraph{Not superset equals}
+\subparagraph{Subset equals} And negation/superset variant.
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{t: set[T, literal=l_2]}
+    \infer2{(s \subseteq t): Bool[literal=l_1 \subseteq l_2]}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Superset}
+% \subparagraph{Superset equals}
+% \subparagraph{Not subset}
+% \subparagraph{Not subset equals}
+% \subparagraph{Not superset}
+% \subparagraph{Not superset equals}
 \paragraph{Relation}
 \subparagraph{Inverse}
 \begin{gather}
