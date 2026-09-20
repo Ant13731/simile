@@ -3259,24 +3259,116 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \end{prooftree}
 \end{gather}
 \subparagraph{Difference}
-\subparagraph{Symmetric difference}
-\subparagraph{Cartesian product}
 \begin{gather}
-  \tag{Cartesian Product}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{s: set[T[Domain=x]]}
-    \hypo{t: set[V[Domain=y]]}
-    \infer2{(s \times t): set[tuple[T, V, Domain=x \times y]]}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{t: set[T, literal=l_2]}
+    \infer2{(s \setminus t): set[T, literal=(l_1 \setminus l_2)]}
   \end{prooftree}
   \\
-  \tag{Total Cartesian Product}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{s: set[T, Total]}
-    \hypo{t: set[V, Total]}
-    \infer2{(s \times t): set[tuple[T, V, Total]]}
+    \hypo{s: set[T, literal=l]}
+    \hypo{t: set[T]}
+    \infer2{(s \setminus t): set[T, domain=l]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{t: set[T]}
+    \infer2{(s \setminus t): set[T, domain=d]}
+  \end{prooftree}
+  \\
+  \tag{Domain and Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{t: set[T, literal=l]}
+    \infer2{(s \setminus t): set[T, domain=(d \setminus l)]}
+  \end{prooftree}
+  \\
+  \tag{Difference with Empty keeps traits}
+  \begin{prooftree}
+    \hypo{s: set[T, traits]}
+    \hypo{t: set[T, empty]}
+    \infer2{(s \setminus t): set[T, traits]}
+  \end{prooftree}
+  \\
+  \tag{Empty difference}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{t: set[T]}
+    \infer2{(s \setminus t): set[T, empty]}
+  \end{prooftree}
+  \\
+  \tag{Size does not increase}
+  \begin{prooftree}
+    \hypo{s: set[T, size=x]}
+    \hypo{t: set[T]}
+    \infer2{(s \setminus t): set[T, size=x]}
   \end{prooftree}
 \end{gather}
-\subparagraph{Disjoint} % What operator is this?
+% \subparagraph{Symmetric difference}
+\subparagraph{Cartesian product}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{t: set[V, literal=l_2]}
+    \infer2{(s \times t): relation[T, V, literal=l_1 \times l_2]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1]}
+    \hypo{t: set[V, domain=d_2]}
+    \infer2{(s \times t): relation[T, V, domain=d_1 \times d_2]}
+  \end{prooftree}
+  \\
+  \tag{Domain and Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{t: set[V, literal=l]}
+    \infer2{(s \times t): relation[T, V, domain=d \times l]}
+  \end{prooftree}
+  \\
+  \tag{Literal and Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \hypo{t: set[V, domain=d]}
+    \infer2{(s \times t): relation[T, V, literal=l \times d]}
+  \end{prooftree}
+  \\
+  \tag{Total}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1, total]}
+    \hypo{t: set[V, domain=d_2, total]}
+    \infer2{(s \times t): relation[T, V, domain=d_1 \times d_2, total]}
+  \end{prooftree}
+  \\
+  \tag{Size}
+  \begin{prooftree}
+    \hypo{s: set[T, size=x]}
+    \hypo{t: set[V, size=y]}
+    \infer2{(s \times t): relation[T, V, size=x \times y]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{t: set[V]}
+    \infer2{(s \times t): relation[T, V, empty]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{t: set[V, empty]}
+    \infer2{(s \times t): relation[T, V, empty]}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Disjoint} % What operator is this?
 \subparagraph{Subset}
 \begin{gather}
   \tag{Subset with min-max}
