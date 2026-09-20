@@ -2123,11 +2123,20 @@ Most traits are simple flags, as in, ``does this type have this property?''. In 
     \infer1{\lnot Domain}
   \end{prooftree}
   \\
-  \tag{Literal implies a Domain}
+  \tag{Literal implies a Domain (under primitive)}
   \begin{prooftree}
     \hypo{Literal}
+    \hypo{Literal.type \in \{bool, int, float, string, none, tuple\}}
     \hypo{\lnot Domain}
-    \infer2{Domain := \{Literal\}}
+    \infer3{Domain := \{Literal\}}
+  \end{prooftree}
+  \\
+  \tag{Literal implies a Domain (under collection)}
+  \begin{prooftree}
+    \hypo{Literal}
+    \hypo{Literal.type \in \{set, relation, bag, sequence\}}
+    \hypo{\lnot Domain}
+    \infer3{Domain := Literal}
   \end{prooftree}
   \\
   \tag{Literal within Domain}
@@ -2831,144 +2840,300 @@ General notes:
   \tag{Literal}
   \begin{prooftree}
     \hypo{a_1: T_1, a_2: T_2, ..., a_n: T_n}
-    \infer1{(a_1, a_2, ..., a_n): tuple[T_1, T_2, ..., T_n, size=n]}
+    \infer1{(a_1, a_2, ..., a_n): tuple[T_1, T_2, ..., T_n, literal=(a_1, a_2, ..., a_n), size=n]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Maplet}
 \begin{gather}
   \tag{Literal}
   \begin{prooftree}
-    \hypo{a_1: T_1, b: T_2}
-    \infer1{(a \mapsto b): tuple[T_1, T_2, size=2]}
+    \hypo{a_1: T_1, a_2: T_2}
+    \infer1{(a_1 \mapsto a_2): tuple[T_1, T_2, literal=(a_1, a_2), size=2]}
   \end{prooftree}
 \end{gather}
 % \paragraph{Record}
 % \subparagraph{Access}
-\paragraph{Set} Test
+\paragraph{Set}
+Note: the domain trait on sets is not the same as that of primitive types. A primitive value selects one out of the domain, whereas collection types choose from a subset of the domain. For example, let $x: int[domain=\{1,2,3\}]$. Then $x \in \{1,2,3\}$. However, if $y: set[int, domain=\{1,2,3\}]$, then $y \subset \{1,2,3\}$ (that is, $y \in \mathbb{P}\{1,2,3\}$).
 \subparagraph{Enumeration}
 \begin{gather}
-  \tag{Enumeration}
+  \tag{Literal}
   \begin{prooftree}
     \hypo{a_1, a_2, ..., a_n: T}
-    \infer1{\{a_1, a_2, ..., a_n\}: set[T, Size=n]}
+    \infer1{\{a_1, a_2, ..., a_n\}: set[T, literal=\{a_1, a_2, ..., a_n\}, size=n]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Clear}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \infer1{clear(s): set[T, literal=\{\}, empty]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Is empty}
 \begin{gather}
-  \tag{Is Empty}
+  \tag{Literal}
   \begin{prooftree}
     \hypo{s: set[Empty]}
-    \infer1{(s = \{\}): Bool[Literal=true]}
+    \infer1{(s = \{\}): Bool[literal=true]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Add}
 \begin{gather}
-  \tag{Set add}
+  \tag{Size may increase}
   \begin{prooftree}
     \hypo{s: set[T, Size=x]}
     \hypo{a: T}
     \infer2{(s \cup \{a\}): set[T, Size=x+1]} % Can check literals to see if the size will actually increase. For now, best overestimation guess
   \end{prooftree}
   \\
-  \tag{Set add with Total}
+  \tag{Total size stays the same}
   \begin{prooftree}
     \hypo{s: set[T, Size=x, Total]}
     \hypo{a: T}
     \infer2{(s \cup \{a\}): set[T, Size=x, Total]}
   \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{a: T[literal=l_2]}
+    \infer2{(s \cup \{a\}): set[T, literal=(l_1 \cup \{l_2\})]}
+  \end{prooftree}
+  \\
+  \tag{Domain with literal}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{a: T[literal=l]}
+    \infer2{(s \cup \{a\}): set[T, domain=(d \cup \{l\})]}
+  \end{prooftree}
+  \\
+  \tag{Domain with domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{a: T[domain=l]}
+    \infer2{(s \cup \{a\}): set[T, literal=(d \cup l)]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{a: T}
+    \infer2{(s \cup \{a\}): set[T]}
+  \end{prooftree}
 \end{gather}
 \subparagraph{Remove}
 \begin{gather}
-  \tag{Set delete}
+  \tag{Size does not guarantee a decrease}
   \begin{prooftree}
-    \hypo{s: set[T, Size=x]}
+    \hypo{s: set[T, size=n]}
     \hypo{a: T}
-    \infer2{(s \setminus \{a\}): set[T, Size=x]}
+    \infer2{(s \setminus \{a\}): set[T, size=n]}
   \end{prooftree}
   \\
-  \tag{Set delete removes Total}
+  \tag{Removes Total guarantee}
   \begin{prooftree}
-    \hypo{s: set[T, Size=x, Total]}
+    \hypo{s: set[T, size=x, total]}
     \hypo{a: T}
-    \infer2{(s \setminus \{a\}): set[T, Size=x-1]}
+    \infer2{(s \setminus \{a\}): set[T, size=x-1]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{a: T[literal=l_2]}
+    \infer2{(s \setminus \{a\}): set[T, literal=(l_1 \setminus \{l_2\})]}
+  \end{prooftree}
+  \\
+  \tag{Domain with literal}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \hypo{a: T[literal=l]}
+    \infer2{(s \setminus \{a\}): set[T, domain=(d \setminus \{l\})]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \hypo{a: T}
+    \infer2{(s \setminus \{a\}): set[T, empty]}
   \end{prooftree}
 \end{gather}
-\subparagraph{In}
+\subparagraph{In} Not in is similar.
 \begin{gather}
-  \tag{Membership within domain}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{s: set[T[Domain=S]]}
-    \hypo{a: T[Literal=A]}
-    \infer2{(a \in s): Bool[Literal=A \in S]}
+    \hypo{s: set[T, literal=l_1]}
+    \hypo{a: T[literal=l_2]}
+    \infer2{(a \in s): Bool[literal=(l_2 \in l_1)]}
   \end{prooftree}
   \\
-  \tag{Membership within total domain}
+  \tag{Total domain with literal}
   \begin{prooftree}
-    \hypo{s: set[T, Total]}
+    \hypo{s: set[T, domain=d, total]}
+    \hypo{a: T[literal=l]}
+    \infer2{(a \in s): Bool[literal=(l \in d)]}
+  \end{prooftree}
+  \\
+  \tag{Total domain with domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d_1, total]}
+    \hypo{a: T[domain=d_2]}
+    \infer2{(a \in s): Bool[literal=(d_2 \subseteq d_1)]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
     \hypo{a: T}
-    \infer2{(a \in s): Bool[Literal=true]}
+    \infer2{(a \in s): Bool[literal=false]}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not in}
 \subparagraph{Cardinality}
 \begin{gather}
-  \tag{Cardinality}
+  \tag{Size overestimates}
   \begin{prooftree}
-    \hypo{s: set[T, Size=n]}
-    \infer1{card(s): Int[Max=n]}
+    \hypo{s: set[T, size=n]}
+    \infer1{card(s): Int[max=n]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \infer1{card(s): Int[literal=card(l)]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \infer1{card(s): Int[max=card(d)]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{s: set[T, empty]}
+    \infer1{card(s): Int[literal=0]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Powerset}
 \begin{gather}
-  \tag{Powerset}
+  \tag{Total size}
   \begin{prooftree}
-      \hypo{s: set[T, Size=n, Total]}
-      \infer1{powerset(s): set[set[T], Size=2^n, Total]}
+    \hypo{s: set[T, size=n, total]}
+    \infer1{powerset(s): set[set[T], size=2^n, total]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \infer1{powerset(s): set[set[T], literal=\mathbb{P}(l)]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \infer1{powerset(s): set[set[T], domain=\mathbb{P}(d)]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Choice}
 \begin{gather}
   \tag{Empty choice fails (statically)}
   \begin{prooftree}
-    \hypo{s: set[T, Empty]}
-    \infer1{choice(s): TypeError}
+    \hypo{s: set[T, empty]}
+    \infer1{choice(s): T[undefined]}
+  \end{prooftree}
+  \\
+  \tag{Single literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=\{l\}]}
+    \infer1{choice(s): T[literal=l]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \infer1{choice(s): T[domain=l]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Min}
 \begin{gather}
-  \tag{Min looks for Min}
+  \tag{Min}
   \begin{prooftree}
-    \hypo{s: set[T[Min=y]]}
-    \hypo{a: T[Literal=y]}
-    \hypo{a \in s}
-    \infer3{min(s): T[Literal=y]}
+    \hypo{s: set[T, min=m]}
+    \infer1{min(s): T[literal=m]}
+  \end{prooftree}
+  \\
+  \tag{Single literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=\{l\}]}
+    \infer1{min(s): T[literal=l]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \infer1{min(s): T[domain=l]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \infer1{min(s): T[domain=d]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Max}
 \begin{gather}
-  \tag{Max looks for Max}
+  \tag{Max}
   \begin{prooftree}
-    \hypo{s: set[T[Max=y]]}
-    \hypo{a: T[Literal=y]}
-    \hypo{a \in s}
-    \infer3{max(s): T[Literal=y]}
+    \hypo{s: set[T, max=m]}
+    \infer1{max(s): T[literal=m]}
+  \end{prooftree}
+  \\
+  \tag{Single literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=\{l\}]}
+    \infer1{max(s): T[literal=l]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \infer1{max(s): T[domain=l]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{s: set[T, domain=d]}
+    \infer1{max(s): T[domain=d]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Sum}
 \begin{gather}
   \tag{Sum bounds}
   \begin{prooftree}
-    \hypo{s: set[T[Max=y, Size=n]]}
-    \infer1{sum(s): T[Max=y\times n]}
+    \hypo{s: set[T, max=y, size=n]}
+    \infer1{sum(s): T[max=y\times n]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \infer1{sum(s): T[literal=sum(l)]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Product}
 \begin{gather}
   \tag{Product bounds}
   \begin{prooftree}
-    \hypo{s: set[T[Max=y, Size=n]]}
-    \infer1{sum(s): T[Max=y^n]}
+    \hypo{s: set[T, max=y, size=n]}
+    \infer1{product(s): T[max=y^n]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \infer1{product(s): T[literal=product(l)]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Union}
