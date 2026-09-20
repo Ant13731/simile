@@ -1301,7 +1301,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Generator nest}
 \begin{prooftree}
 \hypo{\Gamma \vdash G_i: Generator[T_i]}
-\infer1{\Gamma \vdash G_1, ... G_n : Generator[(T_1,..., T_n)]} % acts like a generator over the cartesian product
+\infer1{\Gamma \vdash G_1, ..., G_n : Generator[(T_1,..., T_n)]} % acts like a generator over the cartesian product
 \end{prooftree}
 \\
 \tag{Generator}
@@ -3965,31 +3965,118 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
 \paragraph{Sequence}
 \subparagraph{Concat}
 \begin{gather}
-  \tag{Concat with Size}
+  \tag{Literal}
   \begin{prooftree}
-    \hypo{s: sequence[T, Size=x]}
-    \hypo{t: sequence[T, Size=y]}
-    \infer2{s \concat t: sequence[T, Size=x+y]}
+    \hypo{s: sequence[T, literal=l_1]}
+    \hypo{t: sequence[T, literal=l_2]}
+    \infer2{(s \concat t): sequence[T, literal=l_1 \concat l_2]}
+  \end{prooftree}
+  \\
+  \tag{Size}
+  \begin{prooftree}
+    \hypo{s: sequence[T, size=x]}
+    \hypo{t: sequence[T, size=y]}
+    \infer2{(s \concat t): sequence[T, size=x+y]}
   \end{prooftree}
 \end{gather}
-\paragraph{Procedure}
-\subparagraph{Call}
+% \paragraph{Procedure}
+% \subparagraph{Call}
     % Procedure call? need to propagate traits from return value type - should be done at procedure definition time?
 \paragraph{Quantification Body}
-\subparagraph{Min}
-\subparagraph{Max}
-\subparagraph{Forall}
-\subparagraph{Exists}
-\subparagraph{Union all}
-\subparagraph{Intersection all}
+\subparagraph{Generator}
+\begin{gather}
+  \tag{Generator keeps traits}
+  \begin{prooftree}
+    \hypo{s: set[T, traits]}
+    \hypo{i: tupleIdentifier}
+    \infer2{(i \in s): Generator[T, traits]}
+  \end{prooftree}
+  \\
+  \tag{Generator keeps traits}
+  \begin{prooftree}
+    \hypo{s: set[T, traits, total]}
+    \hypo{i: tupleIdentifier}
+    \hypo{p: Bool}
+    \infer3{(i \in s \cdot p): Generator[T, traits]}
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{g_i: Generator[T, literal=l_i]}
+    \infer1{(g_1, ..., g_n): Generator[T, literal=l_1 \times ... \times l_n]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{g_i: Generator[T, domain=d_i]}
+    \infer1{(g_1, ..., g_n): Generator[T, domain=d_1 \times ... \times d_n]}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Quantifier}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{g: Generator[T, literal=l]}
+    \hypo{e: T \rightarrow E}
+    \infer2{(g \mid e): Quantifier[E, literal=e(g)]} % Apply the expression to the generator
+  \end{prooftree}
+  \\
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{q_i: Quantifier[T, literal=l_i]}
+    \infer1{(g_1` ...` g_n): Generator[T, literal=l_1 \cup ... \cup l_n]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{q_i: Quantifier[T, domain=d_i]}
+    \infer1{(q_1` ...` q_n): Generator[T, domain=d_1 \cup ... \cup d_n]}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Min}
+% \subparagraph{Max}
+% \subparagraph{Forall}
+% \subparagraph{Exists}
+% \subparagraph{Union all}
+% \subparagraph{Intersection all}
+% \subparagraph{Sum}
+% \subparagraph{Product}
 \subparagraph{Comprehension}
-\subparagraph{Sum}
-\subparagraph{Product}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{q: Quantifier[T, literal=l]}
+    \infer1{\{q\}: set[T, literal=l]}
+  \end{prooftree}
+  \\
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{q: Quantifier[T, domain=d]}
+    \infer1{\{q\}: set[T, domain=d]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Map}
-\subparagraph{Map min}
-\subparagraph{Map max}
-\subparagraph{Iter}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \hypo{f: T \rightarrow E}
+    \infer2{map(f, q): set[E, literal=map(f,l)]}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Map min}
+% \subparagraph{Map max}
 \subparagraph{Fold}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{s: set[T, literal=l]}
+    \hypo{f: T \times T \rightarrow T}
+    \hypo{i: T[literal=l_i]}
+    \infer3{fold(f, i, s): set[T, literal=fold(f, i, l)]}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Iter}
 
 % \begin{gather}
 %     \tag{Generics with set ops}
