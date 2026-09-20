@@ -3415,47 +3415,53 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
 Relations have 4 tightly-coupled flag-like trait refinements that influence one another and ultimately make up relational subtypes (like totality, surjectivity, injectivity, etc.). For conciseness, we will express the following operation-trait interactions as a boolean mask representing [with total ($t$), with total on range ($t_r$), with one-to-manyness ($1-$), with many-to-oneness ($1-_r$)]. Subtyping is done conservatively: we keep subtype properties only when they are guaranteed. See Section 5.1.3 for more on relational subtyping.
 
 \begin{gather}
-\tag{Relational Subtype - Domain Restriction}
-\begin{prooftree}
-\hypo{\Gamma \vdash s: set[T_1], r: (T_1 \rel T_2)[True, x, y, z]}
-\infer1{\Gamma \vdash (s \domres r): (T_1 \rel T_2)[False, x, y, z]}
-\end{prooftree}
-\\
-\tag{Relational Subtype - Domain Subtraction}
-\begin{prooftree}
-\hypo{\Gamma \vdash s: set[T_1], r: (T_1 \rel T_2)[True, x, y, z]}
-\infer1{\Gamma \vdash (s \domsub r): (T_1 \rel T_2)[False, x, y, z]}
-\end{prooftree}
-\\
-\tag{Relational Subtype - Range Restriction}
-\begin{prooftree}
-\hypo{\Gamma \vdash s: set[T_2], r: (T_1 \rel T_2)[x, True, y, z]}
-\infer1{\Gamma \vdash (r \ranres s): (T_1 \rel T_2)[x, False, y, z]}
-\end{prooftree}
-\\
-\tag{Relational Subtype - Range Subtraction}
-\begin{prooftree}
-\hypo{\Gamma \vdash s: set[T_2], r: (T_1 \rel T_2)[x, True, y, z]}
-\infer1{\Gamma \vdash (r \ransub s): (T_1 \rel T_2)[x, False, y, z]}
-\end{prooftree}
-\\
-\tag{Relational Subtype - Inverse}
-\begin{prooftree}
-\hypo{\Gamma \vdash r: (T_1 \rel T_2)[w, x, y, z]}
-\infer1{\Gamma \vdash r^{-1}: (T_1 \rel T_2)[x, w, z, y]}
-\end{prooftree}
-\\
-\tag{Relational Subtype - Overriding}
-\begin{prooftree}
-\hypo{\Gamma \vdash r: (T_1 \rel T_2)[a, b, c, d], t: (T_1 \rel T_2)[w, x, y, z]}
-\infer1{\Gamma \vdash (r \oplus t): (T_1 \rel T_2)[w, x, c \land y, d \land z]}
-\end{prooftree}
-\\
-\tag{Relational Subtype - Composition}
-\begin{prooftree}
-\hypo{\Gamma \vdash r: (T_1 \rel T_2)[a, b, c, d], t: (T_2 \rel T_3)[w, x, y, z]}
-\infer1{\Gamma \vdash (r \circ t): (T_1 \rel T_3)[a, b \land x, c \land y, d \land z]}
-\end{prooftree}
+  \tag{Relational Subtype - Domain Restriction}
+  \begin{prooftree}
+    \hypo{s: set[T_1]}
+    \hypo{r: relation[T_1, T_2, [True, x, y, z]]}
+    \infer2{(s \domres r): relation[T_1, T_2, [False, x, y, z]]}
+  \end{prooftree}
+  \\
+  \tag{Relational Subtype - Domain Subtraction}
+  \begin{prooftree}
+    \hypo{s: set[T_1]}
+    \hypo{r: relation[T_1, T_2, [True, x, y, z]]}
+    \infer2{(s \domsub r): relation[T_1, T_2, [False, x, y, z]]}
+  \end{prooftree}
+  \\
+  \tag{Relational Subtype - Range Restriction}
+  \begin{prooftree}
+    \hypo{s: set[T_2]}
+    \hypo{r: relation[T_1, T_2, [x, True, y, z]]}
+    \infer2{(r \ranres s): relation[T_1, T_2, [x, False, y, z]]}
+  \end{prooftree}
+  \\
+  \tag{Relational Subtype - Range Subtraction}
+  \begin{prooftree}
+    \hypo{s: set[T_2]}
+    \hypo{r: relation[T_1, T_2, [x, True, y, z]]}
+    \infer2{(r \ransub s): relation[T_1, T_2, [x, False, y, z]]}
+  \end{prooftree}
+  \\
+  \tag{Relational Subtype - Inverse}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2,[w, x, y, z]]}
+    \infer1{r^{-1}: relation[T_1, T_2, [x, w, z, y]]}
+  \end{prooftree}
+  \\
+  \tag{Relational Subtype - Overriding}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2,[a, b, c, d]]}
+    \hypo{t: relation[T_1, T_2,[w, x, y, z]]}
+    \infer2{(r \oplus t): relation[T_1, T_2, [w, x, c \land y, d \land z]]}
+  \end{prooftree}
+  \\
+  \tag{Relational Subtype - Composition}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2,[a, b, c, d]]}
+    \hypo{t: relation[T_2, T_3,[w, x, y, z]]}
+    \infer2{(r \circ t): relation[T_1, T_3, [a, b \land x, c \land y, d \land z]]}
+  \end{prooftree}
 \end{gather}
 
 \paragraph{Relation} This section covers additional traits aside from the above subtype mask section.
@@ -3635,20 +3641,139 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \end{prooftree}
 \end{gather}
 \subparagraph{Overriding}
+\begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, literal=l_1]}
+    \hypo{t: relation[T_1, T_2, literal=l_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, literal=l_1 \oplus l_2]}
+  \end{prooftree}
+  \\
+  \tag{Relational Domain}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, relationalDomain=d_1]}
+    \hypo{t: relation[T_1, T_2, relationalDomain=d_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, relationalDomain=d_1 \cup d_2]}
+  \end{prooftree}
+  \\
+  \tag{Relational Range}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, relationalRange=r_1]}
+    \hypo{t: relation[T_1, T_2, relationalRange=r_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, relationalRange=r_1 \cup r_2]}
+  \end{prooftree}
+  \\
+  \tag{Size overestimates}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, size=n_1]}
+    \hypo{t: relation[T_1, T_2, size=n_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, size=n_1+n_2]}
+  \end{prooftree}
+  \\
+  \tag{Empty overriding keeps traits (1)}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, empty]}
+    \hypo{t: relation[T_1, T_2, traits]}
+    \infer2{(r \oplus t): relation[T_1, T_2, traits]}
+  \end{prooftree}
+  \\
+  \tag{Empty overriding keeps traits (2)}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, traits]}
+    \hypo{t: relation[T_1, T_2, empty]}
+    \infer2{(r \oplus t): relation[T_1, T_2, traits]}
+  \end{prooftree}
+  \\
+  \tag{Relational domain min}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, relationalDomainMin=m_1]}
+    \hypo{t: relation[T_1, T_2, relationalDomainMin=m_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, relationalDomainMin=min(m_1, m_2)]}
+  \end{prooftree}
+  \\
+  \tag{Relational domain max}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, relationalDomainMax=m_1]}
+    \hypo{t: relation[T_1, T_2, relationalDomainMax=m_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, relationalDomainMax=max(m_1, m_2)]}
+  \end{prooftree}
+  \\
+  \tag{Relational range min}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, relationalRangeMin=m_1]}
+    \hypo{t: relation[T_1, T_2, relationalRangeMin=m_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, relationalRangeMin=min(m_1, m_2)]}
+  \end{prooftree}
+  \\
+  \tag{Relational range max}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2, relationalRangeMax=m_1]}
+    \hypo{t: relation[T_1, T_2, relationalRangeMax=m_2]}
+    \infer2{(r \oplus t): relation[T_1, T_2, relationalRangeMax=max(m_1, m_2)]}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Domain}
 \begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, literal=l]}
+    \infer1{dom(r): set[T, literal=dom(l)]}
+  \end{prooftree}
+  \\
+  \tag{Relational Domain}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, relationalDomain=d]}
+    \infer1{dom(r): set[T, domain=d]}
+  \end{prooftree}
+  \\
   \tag{Total domain}
   \begin{prooftree}
     \hypo{r: relation[T, V, TotalOnDomain]}
-    \infer1{domain(r): set[T, Total]}
+    \infer1{dom(r): set[T, Total]}
+  \end{prooftree}
+  \\
+  \tag{One-to-one maintains size}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, OneToMany, ManyToOne, size=n]}
+    \infer1{dom(r): set[T, size=n]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, empty]}
+    \infer1{dom(r): set[T, empty]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Range}
 \begin{gather}
+  \tag{Literal}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, literal=l]}
+    \infer1{ran(r): set[V, literal=ran(l)]}
+  \end{prooftree}
+  \\
+  \tag{Relational Range}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, relationalRange=r]}
+    \infer1{ran(r): set[V, range=r]}
+  \end{prooftree}
+  \\
   \tag{Total range}
   \begin{prooftree}
     \hypo{r: relation[T, V, TotalOnRange]}
-    \infer1{range(r): set[V, Total]}
+    \infer1{ran(r): set[V, Total]}
+  \end{prooftree}
+  \\
+  \tag{One-to-one maintains size}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, OneToMany, ManyToOne, size=n]}
+    \infer1{ran(r): set[V, size=n]}
+  \end{prooftree}
+  \\
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{r: relation[T, V, empty]}
+    \infer1{ran(r): set[V, empty]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Domain restriction}
