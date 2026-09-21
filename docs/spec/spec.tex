@@ -31,6 +31,9 @@
 
 \usemintedstyle{tango} %or tango, vs, xcode, solarized-light
 \setminted{bgcolor=gray!5, tabsize=4}
+\usetikzlibrary{calc,trees,positioning,arrows.meta,chains,shapes.geometric,  decorations.pathreplacing,decorations.pathmorphing,shapes,  matrix,shapes.symbols}
+
+
 % Commands
 % Simple set comprehension notation
 \newcommand{\Set}[2]{%
@@ -365,6 +368,52 @@ The TRS for this language primarily involves lowering collection data type expre
   \item By definition of generators in quantification notation, operations in $G$ must be statements of the form $x \in S$, where $x$ is used in the ``element'' portion of the set construction. Statements like $x \notin T$ or checking a property $p(x)$ must act like conditions since they do not produce any iterable elements.
   \item Any boolean expression for conditions may be rewritten as a combination of $\lnot, \lor$, and $\land$ expressions. Therefore, by converting all set notation down into boolean notation and then generating code based on set constructor booleans, we can accommodate any form of predicate function.
 \end{itemize}
+
+
+\begin{figure}
+  \centering
+  \begin{tikzpicture}[
+    node distance=0.75cm,
+    stage/.style={
+        rectangle,
+        rounded corners,
+        draw,
+        minimum width=7cm,
+        minimum height=0.8cm,
+        align=center,
+        font=\small
+    },
+    arrow/.style={
+        -{Stealth},
+        thick
+    }
+  ]
+
+  \node[stage] (source) {Source program};
+  \node[stage, below=of source] (ast) {AST (parse-only)};
+  \node[stage, below=of ast] (typed) {AST (post-static analysis) + Symbol Table};
+  \node[stage, below=of typed] (rewritten) {AST (post-optimization) + Symbol Table};
+  \node[stage, below=of rewritten, minimum height=1.0cm] (concrete) {AST (post-concretization) + concrete Symbol Table};
+  \node[stage, below=of concrete, minimum height=1.0cm] (concreteopt) {AST (post-concrete-optimization) + concrete Symbol Table};
+  \node[stage, below=of concreteopt] (ssa) {SSA};
+  \node[stage, below=of ssa] (llvm) {LLVM IR};
+  \node[stage, below=of llvm] (executable) {Executable code};
+
+  \draw[arrow] (source) -- node[right, align=left] {Parse} (ast);
+  \draw[arrow] (ast) -- node[right, align=left] {Static analysis} (typed);
+  \draw[arrow] (typed) -- node[right, align=left] {General rewrite optimizations} (rewritten);
+  \draw[arrow] (rewritten) -- node[right, align=left] {Abstract-to-concrete datatype selection} (concrete);
+  \draw[arrow] (concrete) -- node[right, align=left] {Concrete-datatype-specific rewrite optimizations} (concreteopt);
+  \draw[arrow] (concreteopt) -- node[right, align=left] {Braun's algorithm} (ssa);
+  \draw[arrow] (ssa) -- node[right, align=left] {LLVM lowering} (llvm);
+  \draw[arrow] (llvm) -- node[right, align=left] {Compiled by LLVM} (executable);
+
+  \end{tikzpicture}
+  \caption{Simile compilation pipeline from source code to LLVM-based executable}
+  \label{fig:pipeline}
+\end{figure}
+% TODO make a diagram for the internal structure of each component (ex. parser has a scanner and recursive-descent parser, static analysis has: symbol table + type synthesis + traits synthesis, optimizer has desugaring + simrw + library. Lets plan this out a bit more
+% Then we can create a tree diagram for our data structures - see drawio/convo for tikz format.
 
 % \subsection{Beyond the Language Core}
 % Design decisions:
@@ -1520,7 +1569,7 @@ Let $\otimes = \{\cup, \cap, \setminus \}$
 \tag{Numerical Range}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1, a_2: int}
-\infer1{\Gamma \vdash a_1 \upto a_2: set[int, \text{ with } min = a_1, \text{ with } max = a_2]}
+\infer1{\Gamma \vdash a_1 \upto a_2: set[int, min = a_1, max = a_2]}
 % Is max/min enough here? what if we union two ranges with dijoint max/mins
 \end{prooftree}
 \\
@@ -1935,6 +1984,10 @@ Represents the relational subtype properties (injectiveness, surjectiveness, etc
     \item \textit{TotalOnRange}: All elements of the range are within the mapping.
     \item \textit{RelationalDomain}: The set of elements that may populate the relation's domain. Replacement of \textit{Domain} for relations.
     \item \textit{RelationalRange}: The set of elements that may populate the relation's range.
+    \item \textit{RelationalDomainMin}: Minimum of the relation domain.
+    \item \textit{RelationalDomainMax}: Maximum of the relation domain.
+    \item \textit{RelationalRangeMin}: Minimum of the relation range.
+    \item \textit{RelationalRangeMax}: Maximum of the relation range.
 \end{itemize}
 
 \paragraph{Generics}
@@ -1976,15 +2029,15 @@ Some types are incompatible with some traits, and some types must have some trai
     Unique  & \xmark & \xmark & \xmark & \xmark & \xmark \\
     Empty  & \xmark & \xmark & \xmark & \xmark & \cmark \\
     Size  & \xmark & \xmark & \xmark & \xmark & \cmark \\
-    Total  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    OneToMany  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    ManyToOne  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    TotalOnDomain  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    TotalOnRange  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    RelationalDomain  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    RelationalRange  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    GenericBound  & \xmark & \xmark & \xmark & \xmark & \xmark \\
-    TreatAsExpr  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % Total  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % OneToMany  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % ManyToOne  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % TotalOnDomain  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % TotalOnRange  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % RelationalDomain  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % RelationalRange  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % GenericBound  & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    % TreatAsExpr  & \xmark & \xmark & \xmark & \xmark & \xmark \\
 \end{longtable}
 \end{center}
 
@@ -2045,6 +2098,10 @@ Some types are incompatible with some traits, and some types must have some trai
     TotalOnRange & \xmark & \xmark & \cmark \\ % Records are not guaranteed to have the same "range" type across all fields
     RelationalDomain & \ccmark (field names) & \xmark & \cmark \\
     RelationalRange & \xmark & \xmark & \cmark \\
+    RelationalDomainMin & \xmark & \xmark & \cmark \\
+    RelationalDomainMax & \xmark & \xmark & \cmark \\
+    RelationalRangeMin & \xmark & \xmark & \cmark \\
+    RelationalRangeMax & \xmark & \xmark & \cmark \\
     GenericBound & \xmark & \xmark & \cmark \\
     TreatAsExpr & \xmark & \cmark & \cmark \\ % Generics can be bound to procedures too...
 \end{longtable}
