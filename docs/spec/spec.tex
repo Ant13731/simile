@@ -24,6 +24,7 @@
 \usepackage{minted}
 \usepackage[left=1.5cm, right=1.5cm]{geometry}
 \usepackage{pifont}% http://ctan.org/pkg/pifont
+\usepackage[section]{placeins}
 \usepackage{hyperref}
 
 % NOTE:
@@ -31,7 +32,14 @@
 
 \usemintedstyle{tango} %or tango, vs, xcode, solarized-light
 \setminted{bgcolor=gray!5, tabsize=4}
-\usetikzlibrary{calc,trees,positioning,arrows.meta,chains,shapes.geometric,  decorations.pathreplacing,decorations.pathmorphing,shapes,  matrix,shapes.symbols}
+\usetikzlibrary{calc,trees,positioning,arrows.meta,chains,shapes.geometric,decorations.pathreplacing,decorations.pathmorphing,shapes,matrix,shapes.symbols}
+\tikzset{%
+  % for waterfall diagrams
+  previous/.style={below=1cm of #1},
+  % Normal tikz shapes
+  box/.style={draw, align=center, rounded corners},
+  arrow/.style={-{Stealth}}
+}
 
 
 % Commands
@@ -369,49 +377,153 @@ The TRS for this language primarily involves lowering collection data type expre
   \item Any boolean expression for conditions may be rewritten as a combination of $\lnot, \lor$, and $\land$ expressions. Therefore, by converting all set notation down into boolean notation and then generating code based on set constructor booleans, we can accommodate any form of predicate function.
 \end{itemize}
 
+% Figures that may be useful
 
-\begin{figure}
+\begin{figure}[h]
   \centering
-  \begin{tikzpicture}[
-    node distance=0.75cm,
-    stage/.style={
-        rectangle,
-        rounded corners,
-        draw,
-        minimum width=7cm,
-        minimum height=0.8cm,
-        align=center,
-        font=\small
-    },
-    arrow/.style={
-        -{Stealth},
-        thick
-    }
-  ]
+  \begin{tikzpicture}[]
+  \node[box] (source) {Source program};
+  \node[box, previous=source] (ast) {AST (parse-only)};
+  \node[box, previous=ast] (typed) {AST (post-static analysis) + Symbol Table};
+  \node[box, previous=typed] (rewritten) {AST (post-optimization) + Symbol Table};
+  \node[box, previous=rewritten] (concrete) {AST (post-concretization) + concrete Symbol Table};
+  \node[box, previous=concrete] (concreteopt) {AST (post-concrete-optimization) + concrete Symbol Table};
+  \node[box, previous=concreteopt] (ssa) {SSA};
+  \node[box, previous=ssa] (llvm) {LLVM IR};
+  \node[box, previous=llvm] (executable) {Executable code};
 
-  \node[stage] (source) {Source program};
-  \node[stage, below=of source] (ast) {AST (parse-only)};
-  \node[stage, below=of ast] (typed) {AST (post-static analysis) + Symbol Table};
-  \node[stage, below=of typed] (rewritten) {AST (post-optimization) + Symbol Table};
-  \node[stage, below=of rewritten, minimum height=1.0cm] (concrete) {AST (post-concretization) + concrete Symbol Table};
-  \node[stage, below=of concrete, minimum height=1.0cm] (concreteopt) {AST (post-concrete-optimization) + concrete Symbol Table};
-  \node[stage, below=of concreteopt] (ssa) {SSA};
-  \node[stage, below=of ssa] (llvm) {LLVM IR};
-  \node[stage, below=of llvm] (executable) {Executable code};
-
-  \draw[arrow] (source) -- node[right, align=left] {Parse} (ast);
-  \draw[arrow] (ast) -- node[right, align=left] {Static analysis} (typed);
-  \draw[arrow] (typed) -- node[right, align=left] {General rewrite optimizations} (rewritten);
-  \draw[arrow] (rewritten) -- node[right, align=left] {Abstract-to-concrete datatype selection} (concrete);
-  \draw[arrow] (concrete) -- node[right, align=left] {Concrete-datatype-specific rewrite optimizations} (concreteopt);
-  \draw[arrow] (concreteopt) -- node[right, align=left] {Braun's algorithm} (ssa);
-  \draw[arrow] (ssa) -- node[right, align=left] {LLVM lowering} (llvm);
-  \draw[arrow] (llvm) -- node[right, align=left] {Compiled by LLVM} (executable);
-
+  \draw[arrow] (source) -- node[right] {Parse} (ast);
+  \draw[arrow] (ast) -- node[right] {Static analysis} (typed);
+  \draw[arrow] (typed) -- node[right] {General rewrite optimizations} (rewritten);
+  \draw[arrow] (rewritten) -- node[right] {Abstract-to-concrete datatype selection} (concrete);
+  \draw[arrow] (concrete) -- node[right] {Concrete-datatype-specific rewrite optimizations} (concreteopt);
+  \draw[arrow] (concreteopt) -- node[right] {Braun's algorithm} (ssa);
+  \draw[arrow] (ssa) -- node[right] {LLVM lowering} (llvm);
+  \draw[arrow] (llvm) -- node[right] {Compiled by LLVM} (executable);
   \end{tikzpicture}
   \caption{Simile compilation pipeline from source code to LLVM-based executable}
   \label{fig:pipeline}
 \end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (source) {Plain text};
+  \node[box, previous=source] (tokens) {Tokens};
+  \node[box, previous=tokens] (ast) {AST};
+
+  \draw[arrow] (source) -- node[right] {Scan} (tokens);
+  \draw[arrow] (tokens) -- node[right] {Parse} (ast);
+  \end{tikzpicture}
+  \caption{Component Diagram: Parser}
+  \label{fig:componentParser}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (ast) {AST};
+  \node[box, previous=ast] (normalizedAST) {Normalized AST};
+  \node[box, previous=ast, xshift=4cm] (stdlibAST) {Standard Library AST};
+  \node[box, previous=normalizedAST] (symbol) {Symbol Table};
+  \node[box, previous=symbol] (type) {Type Synthesizer};
+  \node[box, previous=type] (output) {AST + Symbol Table + Type Synthesizer};
+  % \node[box, right=6cm of ast] (verifyKeyword) {Keywords verified};
+  % \node[box, previous=verifyKeyword] (verifyAST) {AST subtypes (normalization) verified};
+  % \node[box, below=2.45cm of verifyAST] (verifyType) {Types verified};
+
+  % \draw[arrow] (ast) -- node[above] {Reserved keyword check} (verifyKeyword);
+  % \draw[arrow] (normalizedAST) -- node[above] {Assert no parser-only nodes} (verifyAST);
+  % \draw[arrow] (type) -- node[above] {Bottom-up type checking} (verifyType);
+
+  \draw[arrow] (ast) -- node[right] {Reserved keyword check + Normalize AST} (normalizedAST);
+  \draw[arrow] (stdlibAST) -- ++(0cm,-1cm) |-(symbol.east);
+  \draw[arrow] (normalizedAST) -- node[right] {Make Symbol Table} (symbol);
+  \draw[arrow] (normalizedAST.west) -- ++(-0.4cm,0cm) |- (type.west);
+  \draw[arrow] (symbol) -- node[right] {Create Type Synthesizer} (type);
+  \draw[arrow] (normalizedAST.west) -- ++(-2.5cm,0cm) |- (output.west);
+  \draw[arrow] (symbol.west) -- ++(-2.5cm,0cm) |- (output.west);
+  \draw[arrow] (type) -- node[right] {Type check + Collect analysis artifacts} (output);
+  \end{tikzpicture}
+  \caption{Component Diagram: Static Analysis}
+  \label{fig:componentStaticAnalysis}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (simrwSrc) {SimRW rules source library};
+  \node[box, previous=simrwSrc] (simrwAST) {SimRW Rewrite Rules AST};
+  \node[box, previous=simrwAST] (simrwRule) {SimRW Rewrite Rules library};
+  \node[box, left=2.5cm of simrwAST, yshift=-0.5cm] (guard) {Guard condition library};
+  \node[box, previous=guard] (input) {AST + Symbol Table + Type Synthesizer};
+  \node[box, previous=simrwRule] (optInputs) {AST + Symbol Table + Type Synthesizer + Rewrite Rules};
+  \node[box, previous=optInputs] (output) {Optimized AST};
+
+  \draw[arrow] (simrwSrc) -- node[right] {Parse SimRW DSL} (simrwAST);
+  \draw[arrow] (simrwAST) -- node[right] {Convert to matchable rule} (simrwRule);
+  \draw[arrow] (guard) -- ++(0cm,-0.5cm) |- (simrwRule.west);
+  \draw[arrow] (simrwRule) -- node[right] {Collect optimizer inputs} (optInputs);
+  \draw[arrow] (input) -- ++(0cm,-0.5cm) |- (optInputs.west);
+  \draw[arrow] (optInputs) -- node[right] {Structurally match rewrite rules (in phases)} (output);
+  \draw[arrow] (output.east) -- ++(5.7cm,0cm) |- (optInputs.east);
+  \end{tikzpicture}
+  \caption{Component Diagram: General Rewrite Optimization}
+  \label{fig:componentGeneralRewrite}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (input) {AST + Symbol Table};
+  \node[box, previous=input] (opAnalysis) {AST + Symbol Table (with operator counts\footnotemark/analysis)};
+  \node[box, previous=opAnalysis] (concretePref) {AST + Symbol Table (with concrete preferences)};
+  \node[box, previous=concretePref] (output) {AST + Concrete Symbol Table};
+  \node[box, left=1cm of opAnalysis] (mapping) {Abstract $\leftrightarrow$ concrete mapping};
+
+  \draw[arrow] (input) -- node[right] {Abstract operation analysis} (opAnalysis);
+  \draw[arrow] (opAnalysis) -- node[right] {Weighted operation/trait concretization preference analysis} (concretePref);
+  \draw[arrow] (mapping) -- ++(0cm,-0.5cm) |- (concretePref);
+  \draw[arrow] (concretePref) -- node[right] {Demote\footnotemark and select top concrete type} (output);
+  \end{tikzpicture}
+  \caption{Component Diagram: Abstract Data Type Concretization}
+  \label{fig:componentAdtConcretization}
+\end{figure}
+\hypertarget{fn:fst}{\addtocounter{footnote}{-1}}
+\footnotetext{For example, the number of times a variable is used in a particular operation. We traverse the entire tree until that variable is out of scope (inefficient, but should give us somewhat-accurate counts). The most important info is probably which counts are zero, since we know we won't need that operation when concretizing.}
+\hypertarget{fn:snd}{\addtocounter{footnote}{1}}
+\footnotetext{A variable's preferences may be demoted based on other operand preferences, following the most conservative type.}
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (input) {AST + Symbol Table};
+  \node[box, previous=input] (output) {AST + Concrete Symbol Table};
+  \node[box, left=1.5cm of input] (mapping) {Abstract $\rightarrow$ concrete map};
+
+  \draw[arrow] (input) -- node[right] {Convert abstract to concrete types} (output);
+  \draw[arrow] (mapping) -- ++(0cm,-0.5cm) |- (output);
+  \end{tikzpicture}
+  \caption{Component Diagram: Abstract Data Type Concretization (Scrappy version)}
+  \label{fig:componentAdtConcretizationScrappy}
+\end{figure}
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (simrwRule) {SimRW Rewrite Rules library};
+  \node[box, left=2.5cm of simrwRule, yshift=-0.5cm] (incodeRule) {AST-based Rewrite Rule library};
+  \node[box, previous=simrwRule] (concrete) {Concrete Rewrite Rule library};
+  \node[box, previous=incodeRule] (input) {AST + Symbol Table + Type Synthesizer};
+  \node[box, previous=concrete] (optInputs) {AST + Symbol Table + Type Synthesizer + Concrete Rewrite Rules};
+  \node[box, previous=optInputs] (output) {Optimized AST};
+
+  \draw[arrow] (simrwRule) -- (concrete);
+  \draw[arrow] (incodeRule) -- ++(0cm,-0.5cm) |- (concrete.west);
+  \draw[arrow] (concrete) -- node[right] {Collect optimizer inputs} (optInputs);
+  \draw[arrow] (input) -- ++(0cm,-0.5cm) |- (optInputs.west);
+  \draw[arrow] (optInputs) -- node[right] {Structurally match rewrite rules (in phases)} (output);
+  \draw[arrow] (output.east) -- ++(5.7cm,0cm) |- (optInputs.east);
+  \end{tikzpicture}
+  \caption{Component Diagram: Concrete-specific Rewrite Optimizations}
+  \label{fig:componentConcreteRewrite}
+\end{figure}
+
 % TODO make a diagram for the internal structure of each component (ex. parser has a scanner and recursive-descent parser, static analysis has: symbol table + type synthesis + traits synthesis, optimizer has desugaring + simrw + library. Lets plan this out a bit more
 % Then we can create a tree diagram for our data structures - see drawio/convo for tikz format.
 
@@ -593,7 +705,7 @@ ASCII tokens will be provided as an alternative to unicode format where suitable
 \begin{longtable}{c c l}
     \textbf{Token} & \textbf{ASCII Token} & \textbf{Name} \\
     \endhead
-    \lexentry{\cdot}{.:}{Center Dot (Quantifier Separator) \footnote{Anywhere $\cdot$ is valid, $.$ is valid, except the parser may attempt to treat $.$ as a record field access instead of a quantifier separator (like $a.b$), so we prefer the use of $\cdot$ instead.}} % TODO should we not allow this, and instead just stick with .:?
+    \lexentry{\cdot}{.:}{Center Dot (Quantifier Separator) \footnote{Anywhere $\cdot$ is valid, $.$ is valid, except the parser may attempt to treat $.$ as a record field access instead of a quantifier separator (like $a.b$), so we prefer the use of $\cdot$ instead. NOTE: We plan to remove this in favour of $.:$}} % TODO remove
     \lexentry{.}{}{Dot}
     \lexentry{,}{iter\_and}{Comma}
     \lexentry{`}{iter\_or}{Comma}

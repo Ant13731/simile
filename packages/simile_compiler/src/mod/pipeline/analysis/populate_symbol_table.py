@@ -57,11 +57,11 @@ def make_symbol_table(ast: ast_.ASTNode) -> SymbolTable:
     if not isinstance(ast, ast_.Start):
         raise SymbolTableError("Cannot populate symbol table because AST is not a Start node")
 
-    # # Add in the standard library
-    # if isinstance(ast.body, ast_.Statements):
-    #     file_path = (STANDARD_LIBRARY_FOLDER / "standard_library.sim").resolve()
-    #     standard_library_import = ast_.Import(file_path, [], ast_.ImportOperator.ALL_NAMES)
-    #     ast.body.items.insert(0, standard_library_import)
+    # Add in the standard library
+    if isinstance(ast.body, ast_.Statements):
+        file_path = (STANDARD_LIBRARY_FOLDER / "standard_library.sim").resolve()
+        standard_library_import = ast_.Import(file_path, [], ast_.ImportOperator.ALL_NAMES)
+        ast.body.items.insert(0, standard_library_import)
 
     symbol_table = SymbolTable()
     symbol_table_populator = PopulateSymbolTable(symbol_table)
