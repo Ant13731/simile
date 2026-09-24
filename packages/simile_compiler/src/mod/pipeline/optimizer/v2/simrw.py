@@ -8,6 +8,7 @@ from loguru import logger
 from src.mod.data import ast_, traits, types
 from src.mod.data.helpers.dataclass import dataclass_traverse
 from src.mod.pipeline.analysis import TypeAnnotationResolver, make_symbol_table
+from src.mod.pipeline.analysis.trait_resolver import TraitResolver
 from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
 from src.mod.pipeline.parser import parse
 from src.mod.pipeline.optimizer.v2.simrw_parser import SimrwAST
@@ -110,13 +111,13 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
     var_asts = var_ast_combined.body.items
 
     ast_vars: dict[str, ast_.ASTNode] = {}
-    ast_var_traits: dict[str, traits.TraitCollection | None] = {}
+    ast_var_traits: dict[str, traits.Traits | None] = {}
     trait_only_base_symbol_table = make_symbol_table(ast_.Statements([]))
     for var_ast in var_asts:
         trait_collection = None
         if isinstance(var_ast, ast_.TraitApplication):
             trait_clauses = var_ast.traits
-            trait_collection = TypeAnnotationResolver.resolve_trait_collection(trait_clauses, trait_only_base_symbol_table)
+            trait_collection = TraitResolver.resolve_traits(trait_clauses, trait_only_base_symbol_table)
             var_ast = var_ast.target
 
         if not isinstance(var_ast, ast_.TypedName):
@@ -146,7 +147,7 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
         trait_collection = ast_var_traits.get(var_name)
         var_type = TypeAnnotationResolver.resolve_type_annotation(typed_name_ast, generic_symbol_table)
         if trait_collection:
-            var_type.trait_collection.merge(trait_collection)
+            var_type.traits = var_type.traits.merge_copy(trait_collection)
         typed_vars[var_name] = var_type
 
     return typed_vars

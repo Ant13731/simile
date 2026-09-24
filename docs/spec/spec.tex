@@ -25,6 +25,7 @@
 \usepackage[left=1.5cm, right=1.5cm]{geometry}
 \usepackage{pifont}% http://ctan.org/pkg/pifont
 \usepackage[section]{placeins}
+\usepackage{forest}
 \usepackage{hyperref}
 
 % NOTE:
@@ -338,48 +339,22 @@ High level specifications can make the intention of computation clearer and simp
 
 % Motivation? % Give examples, motivation, why we are taking this route, include steps for code generation, give intuition
 
-\subsection{Syntax}
-% Review the syntactic design of simile - scanner/parser arch
+\subsection{Requirements}
+The below requirements outline the driving features of Simile:
+\begin{description}
+  \item [R1] Syntax is that of a very high level language, inspired by formal languages but practical for imperative programming.
+  \item [R2] Set theory semantics remain consistent through any optimization. The semantic contract is defined by formalized behaviours, and the compiler must uphold these contracts.
+  \item [R3] Programmers think in abstract types; the compiler has the responsibility of concretization. Type system behaviours are formalized and explicit.
+  \item [R4] Programmers must be able to communicate with the compiler when needed (to direct optimizations), but they should never be forced to do so.
+  \item [R5] Optimizations are described through a term rewriting system, though we do not necessarily prove these formalizations. We lean on existing optimizers when appropriate (ex. LLVM as the last stage of compilation)
+  \item [R6] Output should be efficient in memory and runtime, competitive with optimized high-level languages like Java or CPython. The overall goal is to be competitive with low level languages like C and Rust.
+\end{description}
+% - Simile focuses on providing high level optimizations by joining formal semantics with imperative syntax.
 
-% Design decisions:
-% - Architecture
-% - Generators
-% - Iter/Fold
+\subsection{Pipeline Architecture}
+Like most compiled programming languages, Simile follows the usual workflow of parsing, analysis, optimization, and lowering. While the pipeline itself is not completely novel, the combination of Simile's semantics with verifiable components allow for aggressive, safe optimizations. Figure~\ref{fig:pipeline} shows the end-to-end flow of code through the compilation pipeline.
 
-\subsection{Semantics}
-% Review the semantic design of simile - how does semantic analysis work? How is it structured? alternatives considered?
-
-% Design decisions:
-% - Architecture
-% - hilberts choice
-% - short circuiting booleans
-
-\subsection{Optimization}
-% SimRw - TODO then add SimRW to the optimization specification below
-
-% Design decisions:
-% - Architecture
-% - SimRW
-% - ADT refinement
-% - TRS Optimizer + multiple frontends/backends
-% - Target? MLIR? LLVM?
-
-A basic strategy to optimize set and relational expressions is:
-\begin{enumerate}
-  \item Normalize the expression as a set comprehensions
-  \item Simplify and reorganize conjuncts of the set comprehension body
-\end{enumerate}
-
-The TRS for this language primarily involves lowering collection data type expressions into pointwise boolean quantifications. Breaking down each operation into set builder notation enables a few key actions:
-\begin{itemize}
-  \item Quantifications over sets ($\bSet{x}{G}{P}$) are naturally separated into generators ($G$) and (non-generating) predicates ($P$). For sets, at least one membership operator per top-level conjunction in $G$ will serve as a concrete element generator in generated code. Then, top level disjunctions will select one membership operation to act as a generator, relegating all others to the predicate level. For example, if the rewrite system observes an intersection of the form $\bSetT{x}{x \in S \land x \in T}$, the set construction operation must iterate over at least one of $S$ and $T$. Then, the other will act as a condition to check every iteration (becoming $\bSet{x}{x \in S}{x \in T}$).
-  \item By definition of generators in quantification notation, operations in $G$ must be statements of the form $x \in S$, where $x$ is used in the ``element'' portion of the set construction. Statements like $x \notin T$ or checking a property $p(x)$ must act like conditions since they do not produce any iterable elements.
-  \item Any boolean expression for conditions may be rewritten as a combination of $\lnot, \lor$, and $\land$ expressions. Therefore, by converting all set notation down into boolean notation and then generating code based on set constructor booleans, we can accommodate any form of predicate function.
-\end{itemize}
-
-% Figures that may be useful
-
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (source) {Source program};
@@ -404,7 +379,11 @@ The TRS for this language primarily involves lowering collection data type expre
   \caption{Simile compilation pipeline from source code to LLVM-based executable}
   \label{fig:pipeline}
 \end{figure}
-\begin{figure}[h]
+
+Below sections will discuss each component.
+
+\subsubsection{Parser}
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (source) {Plain text};
@@ -417,7 +396,9 @@ The TRS for this language primarily involves lowering collection data type expre
   \caption{Component Diagram: Parser}
   \label{fig:componentParser}
 \end{figure}
-\begin{figure}[h]
+
+\subsubsection{Static Analysis}
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (ast) {AST};
@@ -446,7 +427,9 @@ The TRS for this language primarily involves lowering collection data type expre
   \caption{Component Diagram: Static Analysis}
   \label{fig:componentStaticAnalysis}
 \end{figure}
-\begin{figure}[h]
+
+\subsubsection{General Rewrites}
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (simrwSrc) {SimRW rules source library};
@@ -468,7 +451,9 @@ The TRS for this language primarily involves lowering collection data type expre
   \caption{Component Diagram: General Rewrite Optimization}
   \label{fig:componentGeneralRewrite}
 \end{figure}
-\begin{figure}[h]
+
+\subsubsection{Concretization}
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (input) {AST + Symbol Table};
@@ -490,7 +475,7 @@ The TRS for this language primarily involves lowering collection data type expre
 \hypertarget{fn:snd}{\addtocounter{footnote}{1}}
 \footnotetext{A variable's preferences may be demoted based on other operand preferences, following the most conservative type.}
 
-\begin{figure}[h]
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (input) {AST + Symbol Table};
@@ -503,7 +488,9 @@ The TRS for this language primarily involves lowering collection data type expre
   \caption{Component Diagram: Abstract Data Type Concretization (Scrappy version)}
   \label{fig:componentAdtConcretizationScrappy}
 \end{figure}
-\begin{figure}[h]
+
+\subsubsection{Specialized Rewrites}
+\begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
   \node[box] (simrwRule) {SimRW Rewrite Rules library};
@@ -523,6 +510,45 @@ The TRS for this language primarily involves lowering collection data type expre
   \caption{Component Diagram: Concrete-specific Rewrite Optimizations}
   \label{fig:componentConcreteRewrite}
 \end{figure}
+\subsubsection{SSA Lowering}
+\subsubsection{LLVM Lowering}
+
+\subsection{Data Architecture}
+\subsubsection{Source}
+% - Generators
+% - Iter/Fold
+% - Parser, Symb Table, Optimizer-specific nodes
+\subsubsection{Symbol Table}
+\subsubsection{Abstract Types}
+
+\subsubsection{Traits}
+\subsubsection{Concrete Types}
+\subsubsection{SimRW}
+\subsubsection{SSA IR}
+
+
+\subsection{Semantics}
+% Review the semantic design of simile - how does semantic analysis work? How is it structured? alternatives considered?
+
+% Design decisions:
+% - Architecture
+% - hilberts choice
+% - short circuiting booleans
+
+
+A basic strategy to optimize set and relational expressions is:
+\begin{enumerate}
+  \item Normalize the expression as a set comprehensions
+  \item Simplify and reorganize conjuncts of the set comprehension body
+\end{enumerate}
+
+The TRS for this language primarily involves lowering collection data type expressions into pointwise boolean quantifications. Breaking down each operation into set builder notation enables a few key actions:
+\begin{itemize}
+  \item Quantifications over sets ($\bSet{x}{G}{P}$) are naturally separated into generators ($G$) and (non-generating) predicates ($P$). For sets, at least one membership operator per top-level conjunction in $G$ will serve as a concrete element generator in generated code. Then, top level disjunctions will select one membership operation to act as a generator, relegating all others to the predicate level. For example, if the rewrite system observes an intersection of the form $\bSetT{x}{x \in S \land x \in T}$, the set construction operation must iterate over at least one of $S$ and $T$. Then, the other will act as a condition to check every iteration (becoming $\bSet{x}{x \in S}{x \in T}$).
+  \item By definition of generators in quantification notation, operations in $G$ must be statements of the form $x \in S$, where $x$ is used in the ``element'' portion of the set construction. Statements like $x \notin T$ or checking a property $p(x)$ must act like conditions since they do not produce any iterable elements.
+  \item Any boolean expression for conditions may be rewritten as a combination of $\lnot, \lor$, and $\land$ expressions. Therefore, by converting all set notation down into boolean notation and then generating code based on set constructor booleans, we can accommodate any form of predicate function.
+\end{itemize}
+\subsection{Experiments}
 
 % TODO make a diagram for the internal structure of each component (ex. parser has a scanner and recursive-descent parser, static analysis has: symbol table + type synthesis + traits synthesis, optimizer has desugaring + simrw + library. Lets plan this out a bit more
 % Then we can create a tree diagram for our data structures - see drawio/convo for tikz format.
@@ -4259,21 +4285,157 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
 
 % TODO add a section for value-trait interactions (eg. errors/undefinedness, literal assignment, etc.)
 
-\subsection{Definedness}
-% Operators that can be undefined:
+\subsection{Operational Semantics}
+Let $\sigma$ represent the symbol table (data store) for assigned variables, defined types, and procedure definitions. Further, let $\bot$ represent an error state. The following sections define small-step semantics for Simile in the form of inference statements from $\langle$Simile code, $\sigma \rangle \to \langle$Derived simile code, $\sigma' \rangle$.
+
+% Need to write out small step semantics for each operator in simile... Built-in functions too?
+% Ex:
+% \begin{prooftree}
+%   \infer0{\langle n / 0, \sigma \rangle \to \bot}
+% \end{prooftree}
+%
+% Ex. Operators that can be undefined:
 % - division by 0
 % - function on an empty set, simplifies to choice of image
 % - all non-equality operations with undefined as an input is undefined
-% - complex numbers?
+% - dont allow complex numbers?
 % - 0^0?
 % the event b guide specifies short circuited ands for definedness, but they probably dont swap ands in optimization... we should try two different ways: either all and clauses must be defined or we attempt to recover from undefined clauses when seen
 % Functions that can be undefined:
 % - choice on empty set (undefined with a given type)
+%
+% Need to also tackle unique semantics here - described in the HLD, formalized here.
 
-\subsection{Language Examples} % Move to motivation?
-\section{Features and Behaviours}
+\paragraph{Base}
+% TODO What do we need to establish a base for these semantics? Error propagation?
+\subparagraph{Cast}
+\subparagraph{Equals}
+\subparagraph{Not equals}
+\paragraph{Bool}
+\subparagraph{Not}
+\subparagraph{Equivalent}
+\subparagraph{Not equivalent}
+\subparagraph{Implies}
+\subparagraph{And}
+\subparagraph{Or}
+\paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
+\subparagraph{Less than}
+\subparagraph{Greater than}
+\subparagraph{Less than or equals}
+\subparagraph{Greater than or equals}
+\subparagraph{Negate}
+\subparagraph{Int divide}
+\subparagraph{Modulo}
+\subparagraph{Add}
+\subparagraph{Subtract}
+\subparagraph{Divide}
+\subparagraph{Multiply}
+\subparagraph{Power}
+\subparagraph{Upto}
+\paragraph{String} % TODO define string operations? Leave out for now?
+\paragraph{Tuple}
+\subparagraph{Enumeration}
+\subparagraph{Maplet}
+\paragraph{Record}
+\subparagraph{Access}
+\paragraph{Set}
+\subparagraph{Enumeration}
+\subparagraph{Clear}
+\subparagraph{Is empty}
+\subparagraph{Add}
+\subparagraph{Remove}
+\subparagraph{In}
+\subparagraph{Not in}
+\subparagraph{Cardinality}
+\subparagraph{Choice}
+\subparagraph{Min}
+\subparagraph{Max}
+\subparagraph{Sum}
+\subparagraph{Product}
+\subparagraph{Union}
+\subparagraph{Intersection}
+\subparagraph{Difference}
+% \subparagraph{Symmetric difference} % TODO if we add this, make sure we add to the op-trait and type defs. Leaving out for now bc I dont think we have syntax for it. Same with SetType.is_disjoint
+\subparagraph{Cartesian product}
+\subparagraph{Subset}
+\subparagraph{Subset equals}
+\subparagraph{Superset}
+\subparagraph{Superset equals}
+\subparagraph{Not subset}
+\subparagraph{Not subset equals}
+\subparagraph{Not superset}
+\subparagraph{Not superset equals}
+\paragraph{Relation}
+\subparagraph{Inverse}
+\subparagraph{Function call}
+\subparagraph{Image}
+\subparagraph{Overriding}
+\subparagraph{Domain}
+\subparagraph{Range}
+\subparagraph{Domain restriction}
+\subparagraph{Domain subtraction}
+\subparagraph{Range restriction}
+\subparagraph{Range subtraction}
+\subparagraph{Bag Image}
+\subparagraph{Comprehension}
+\paragraph{Bag}
+\subparagraph{Bag union}
+\subparagraph{Bag intersection}
+\subparagraph{Bag add}
+\subparagraph{Bag difference}
+\subparagraph{Comprehension}
+\subparagraph{Size}
+\paragraph{Sequence}
+\subparagraph{Concat}
+\subparagraph{Comprehension}
+\paragraph{Procedure}
+\subparagraph{Call}
+    % Procedure call? need to propagate traits from return value type - should be done at procedure definition time?
+\paragraph{Quantifications}
+% TODO quantification body, multiple generators
+\subparagraph{Min}
+\subparagraph{Max}
+\subparagraph{Forall}
+\subparagraph{Exists}
+\subparagraph{Union all}
+\subparagraph{Intersection all}
+\subparagraph{Comprehension}
+\subparagraph{Sum}
+\subparagraph{Product}
+\subparagraph{Map}
+\subparagraph{Map min}
+\subparagraph{Map max}
+\subparagraph{Iter}
+\subparagraph{Fold}
+\subparagraph{Lambda}
+\paragraph{Simple Statements}
+\subparagraph{Assignment}
+\subparagraph{Type Assignment}
+\subparagraph{Trait Application}
+\subparagraph{Return}
+\subparagraph{Break} % TODO how will we even define these in context...
+\subparagraph{Continue}
+\subparagraph{Skip}
+\paragraph{Import Statmenets}
+\subparagraph{Module Import}
+\subparagraph{Unnamed Module Import}
+\subparagraph{Named Import}
+\paragraph{Compound Statements}
+\subparagraph{If}
+\subparagraph{Else-If}
+\subparagraph{Else}
+\subparagraph{For}
+\subparagraph{While}
+\subparagraph{Block}
+\paragraph{Definitions}
+\subparagraph{Record}
+\subparagraph{Procedure}
 
 
+
+
+% \subsection{Language Examples} % TODO move to HLD/motivation
+% \section{Features and Behaviours} % TODO move to HLD? This category is too broad
 
 \section{(Abstract) Data Types}
 
@@ -4325,16 +4487,8 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
 
 
 
-
-
-
-
-
-
-
-
-
 \section{User-Facing Specification}
+% TODO merge this with the abstract data types section above and the design?
 % Non-determinism, short circuiting
 
 \subsection{(Abstract) Data Types}
@@ -4490,12 +4644,13 @@ The dense nature of sequence domains, along with knowledge of sequence sizes, ma
 \subsubsection{Bags}
 \subsubsection{Sequences}
 
-\section{Implementation Specification}
-\subsection{Abstract Data Types}
-\subsection{Atomic Operations}
-\subsection{Optimization Frontend}
-\subsection{Optimization Backends}
+% \section{Low Level Design} % TODO see if this is still needed, or if it should be incorporated into other sections
+% \subsection{Abstract Data Types}
+% \subsection{Atomic Operations}
+% \subsection{Optimization Frontend}
+% \subsection{Optimization Backends}
 
+% TODO this should go in the specification. Split the abstract rewrites from the concrete ones with a concrete data type lowering section
 \section{AST Lowering and Optimization Rules}
 Below is a list of rewrite rules for key abstract data types, syntactic sugar, and some builtin functions. Phases are intended to be executed in order; the post-condition of one phase serves as the pre-condition for the next. Standard functions (like map, flatten, length, etc.) are written as a library in Simile rather than baked-in optimizations.
 
