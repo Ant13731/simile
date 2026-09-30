@@ -4286,7 +4286,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
 % TODO add a section for value-trait interactions (eg. errors/undefinedness, literal assignment, etc.)
 
 \subsection{Operational Semantics}
-Let $\sigma$ represent the symbol table (data store) for assigned variables, defined types, and procedure definitions. Further, let $\bot$ represent an error state. The following sections define small-step semantics for Simile in the form of inference statements from $\langle$Simile code, $\sigma \rangle \to \langle$Derived simile code, $\sigma' \rangle$.
+Let $\sigma$ represent the symbol table (data store) for assigned variables, defined types, and procedure definitions. Further, let $\bot$ represent an error state; any operations that do not explicitly handle the error state are expected to propagate the error. The following sections define small-step semantics for Simile in the form of inference statements from $\langle$Simile code, $\sigma \rangle \to \langle$Derived simile code, $\sigma' \rangle$. When $\sigma$ does not change between steps, it is excluded for brevity.
 
 % Need to write out small step semantics for each operator in simile... Built-in functions too?
 % Ex:
@@ -4307,8 +4307,68 @@ Let $\sigma$ represent the symbol table (data store) for assigned variables, def
 % Need to also tackle unique semantics here - described in the HLD, formalized here.
 
 \paragraph{Base}
-% TODO What do we need to establish a base for these semantics? Error propagation?
 \subparagraph{Cast}
+\begin{gather}
+  \tag{Self typecast}
+  \begin{prooftree}
+    \hypo{a: T}
+    \hypo{T: type}
+    \infer2{cast(a,T) \to a}
+  \end{prooftree}
+  % \\
+  % \tag{Numeric typecast}
+  % \tag{String typecast}
+  % \tag{Boolean typecast}
+  % ... TODO how can we show every type cast to every other type. We have:
+  % - self-to-self
+  % - int n to:
+  %    - float: n
+  %    - str: "n"
+  %    - bool: 0 -> false, anything else -> true
+  % - float n to:
+  %    - int: floor(n)
+  %    - str: "n", up to max decimal places
+  %    - bool: 0 -> false, anything else -> true
+  % - str s to:
+  %    - int: cast(cast(n, float), int)
+  %    - float: n within [0-9]+\.[0-9]*
+  %    - bool: "true" -> true, "false" -> false
+  %    - sequence[str]: s.split()
+  %    - tuple[str]: cast(cast(s, sequence), list)
+  % - tuple t to:
+  %    - str: (x in t | str(x)) as a string
+  %    - set: {x in t | x}
+  %    - sequence: [x in t | x]
+  %    - bag: cast(cast(t, s), bag)
+  %    - record: (size(t) == size(record) and forall i in 0..size(t) | t[i].type == record[i].type) ==> record(t)   --- use the record constructor and pass in args
+  % - set s to:
+  %    - str: {x in t | str(x)} as a string
+  %    - sequence: [x in t | x] --- arbitrary order
+  %    - tuple: cast(cast(s, sequence), tuple)
+  %    - bag: {x in t | x |-> 1}
+  %    - relation: {(x,y) in t | x |-> y}
+  % - relation r to:
+  %    - str: {x |-> y in t | str(x) |-> str(y)} as a string
+  %    - set: {x |-> y in t | (x,y)}
+  %    - sequence: [x |-> y in t | (x,y)] --- arbitrary order
+  %    - tuple: cast(cast(s, sequence), tuple)
+  % - bag b to:
+  %    - str: {x |-> y in t | str(x) |-> str(y)} as a string
+  %    - set: {x |-> y in t | (x,y)}
+  %    - sequence: flatten([x |-> y in t | [i in 0..y | x]]) --- arbitrary order
+  %    - tuple: cast(cast(s, sequence), tuple)
+  % - sequence s to:
+  %    - str: [x in t | x] as a string
+  %    - set: {x |-> y in t | y}
+  %    - relation: {x |-> y in t | x |-> y}
+  %    - tuple: (x |-> y in t | y)
+  % - record r to:
+  %    - str: record_name(field1: r.field1, field2: r.field2, ...)
+  %    - relation: {x in r.field_names | x |-> r.x}
+  %    - set: cast(cast(r, relation), set)
+  %    - sequence: cast(cast(r, relation), sequence)
+  %    - tuple: cast(cast(r, relation), tuple)
+\end{gather}
 \subparagraph{Equals}
 \subparagraph{Not equals}
 \paragraph{Bool}
