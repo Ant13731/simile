@@ -31,6 +31,7 @@
 % NOTE:
 % File has moved to overleaf for collaboration!!!
 
+% Tikz settings
 \usemintedstyle{tango} %or tango, vs, xcode, solarized-light
 \setminted{bgcolor=gray!5, tabsize=4}
 \usetikzlibrary{calc,trees,positioning,arrows.meta,chains,shapes.geometric,decorations.pathreplacing,decorations.pathmorphing,shapes,matrix,shapes.symbols}
@@ -93,18 +94,23 @@
 \makeatother
 
 % List comprehension notation
-\newcommand{\List}[3]{%
-  [\, #1 \cdot #2 \mid #3 \, ]%
+\makeatletter
+\newcommand{\List}[1]{%
+  \@ifnextchar\bgroup
+    {\List@check{#1}}
+    {[\,#1\,]}%
 }
-\newcommand{\ListT}[2]{%
-  [\, #1 \cdot #2 \, ]%
+\def\List@check#1#2{%
+  \@ifnextchar\bgroup
+    {\List@three{#1}{#2}}
+    {[\,#1 \mid #2\,]}%
 }
-\newcommand{\ListG}[2]{%
-  [\, #1 \mid #2 \, ]%
+\def\List@three#1#2#3{%
+  [\,#1 \cdot #2 \mid #3\,]%
 }
-\newcommand{\listOne}[1]{%
-  [\, #1 \, ]%
-}
+\makeatother
+
+
 % List concatenation
 \newcommand{\concat}{%
   \mathbin{{+}\mspace{-8mu}{+}}%
@@ -116,12 +122,14 @@
   \ensuremath{#1} & \texttt{#2} & #3\\%
 }
 
+% For traits table
 \newcommand{\cmark}{\ding{51}}%
 \newcommand{\xmark}{\ding{55}}%
 \newcommand{\ccmark}{%
     \cmark\kern-0.4em\cmark%
 }
 
+% For footnotes within equations
 % From https://tex.stackexchange.com/questions/82782/footnote-in-align-environment
 \makeatletter
 \let\original@footnote\footnote
@@ -138,7 +146,7 @@
 \pretocmd{\start@align}{\let\footnote\align@footnote}{}{}
 \makeatother
 
-% Modify appearance of nonterminals
+% Modify appearance of nonterminals in {grammar} environments
 % Enables italics for nonterminals
 % \renewcommand{\syntleft}{\itshape}
 \renewcommand{\syntleft}{}
@@ -687,8 +695,8 @@ The TRS for this language primarily involves lowering collection data type expre
 %         Concatenate & $[s_1, ..., s_n] \concat [t_1, ..., t_n] = [s_1, ..., s_n, t_1, ... t_n]$ \\ %& $\concat: list[T] \times list[T] \rightarrow list[T]$ &
 %         Length & $\#S = \sum 1 \cdot x \texttt{ in } S$ \\ %& $\#: list[T] \rightarrow int$ &
 %         \hline
-%         List Mapping & $f * S = \listT{f(x)}{x \texttt{ in } S}$\\ %& $*: (T \rightarrow T') \times list[T] \rightarrow list[T']$ &
-%         List Filter & $p \triangleleft S = \list{f(x)}{x \texttt{ in } S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool) \times list[T] \rightarrow list[T]$ &
+%         List Mapping & $f * S = \List{f(x)}{x \texttt{ in } S}$\\ %& $*: (T \rightarrow T') \times list[T] \rightarrow list[T']$ &
+%         List Filter & $p \triangleleft S = \List{f(x)}{x \texttt{ in } S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool) \times list[T] \rightarrow list[T]$ &
 %         Associative Reduction & $\oplus / [s_1, s_2, ..., s_n] = s_1 \oplus s_2 \oplus ... \oplus s_n$\\ %& $/:(T\times T \rightarrow T) \times list[T] \rightarrow T$ &
 %         Right Fold & $\texttt{foldr}(f, e, [s_1, s_2, ..., s_n]) = f(s_1 ,f(s_2 , f(..., f(s_n, e))))$\\ %& $\texttt{foldr}:(T\times V \rightarrow V) \times V \times list[T] \rightarrow V$ &
 %         Left Fold & $\texttt{foldl}(f, e, [s_1, s_2, ..., s_n]) = f(f(f(f(e, s_1), s_2), ...), s_n)$\\ %& $\texttt{foldl}:(T\times T \rightarrow T) \times list[T] \rightarrow T$ &
@@ -1572,7 +1580,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Sequence Comprehension}
 \begin{prooftree}
 \hypo{\Gamma \vdash Q: Quantifier[A]}
-\infer1{\Gamma \vdash \listOne{Q}: sequence[A]}
+\infer1{\Gamma \vdash \List{Q}: sequence[A]}
 \end{prooftree}
 \\
 \tag{Fold}
@@ -4523,7 +4531,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
   % \tag{Tuple-to-sequence typecast}
   % \begin{prooftree}
   %   \hypo{t: (T, ...)}
-  %   \hypo{S: sequence[T] = \ListT{v \in t}{v}}
+  %   \hypo{S: sequence[T] = \List{v \in t}{v}}
   %   \infer2{\texttt{cast(t, sequence)} \to \texttt{S}}
   % \end{prooftree}
   % \\
