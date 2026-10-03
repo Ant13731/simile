@@ -44,24 +44,38 @@
 
 
 % Commands
-% Simple set comprehension notation
-\newcommand{\Set}[2]{%
-  \{\, #1 \mid #2 \, \}%
+% First attempt at a multi-arg overloaded set command, hung the compiler tho
+% \makeatletter
+% \newcommand{\Set}[1]{%
+%   \@ifnextchar\bgroup{\Set@two{#1}}{\Set{\,#1\,}}%
+% }
+% \newcommand{\Set@two}[2]{%
+%   \@ifnextchar\bgroup
+%     {\Set@three{#1}{#2}}
+%     {\Set{\,#1 \mid #2\,}}%
+% }
+% \newcommand{\Set@three}[3]{%
+%   \Set{\,#1 \cdot #2 \mid #3\,}%
+% }
+% \makeatother
+% Second attampt at a set command
+\makeatletter
+\newcommand{\Set}[1]{%
+  \@ifnextchar\bgroup
+    {\Set@check{#1}}
+    {\{\,#1\,\}}%
 }
-% Event-B-like set notation
-\newcommand{\bSet}[3]{%
-  \{\, #1 \cdot #2 \mid #3 \, \}%
+\def\Set@check#1#2{%
+  \@ifnextchar\bgroup
+    {\Set@three{#1}{#2}}
+    {\{\,#1 \mid #2\,\}}%
 }
-\newcommand{\bSetT}[2]{%
-  \{\, #1 \cdot #2 \,\}%
+\def\Set@three#1#2#3{%
+  \{\,#1 \cdot #2 \mid #3\,\}%
 }
-\newcommand{\setOne}[1]{%
-  \{\, #1 \,\}%
-}
+\makeatother
 
 % Bag notation
-% \newcommand{\lbbar}{\{\kern-0.5ex|}
-% \newcommand{\rbbar}{|\kern-0.5ex\}}
 \newcommand{\bag}[3]{%
   \llbracket \, #1 \cdot #2 \mid #3 \, \rrbracket%
 }
@@ -146,7 +160,7 @@
 This document serves as a living specification and design record of the very-high-level programming language Simile. Simile is founded on the union between formal specification languages and efficiency-focused programming languages, with the belief that a language can be both highly performant and highly abstract. We focus on providing a python-like/specification-language-like programming experience with a compiler strong enough to compete with hand-optimized C code. Where possible, we aim to formalize Simile's compilation process to ensure that aggressively optimized programs remain correct by construction.
 
 % TODO dont talk about event b so much here - prime real estate to introduce Simile
-Simile takes its syntactic and semantic roots in that of Event-B, a set-theory-first language used to formalize safety-oriented software specifications. Event-B notation often leans on set comprehensions (of the form $\bSet{x}{x \in S}{E}$) and set operations (like $S \cup T$), with progressive specification refinement at the core of the development process. Like object-oriented programs, Event-B programs tend to operate at multiple refinement levels simultaneously, especially when proving program correctness. Each atomic action must be proved correct, then proofs may be composed to prove larger programs, and so on. With Event-B as inspiration, Simile's syntax and semantics is intended to be proof-friendly in the same way, by following discrete mathematics notation.
+Simile takes its syntactic and semantic roots in that of Event-B, a set-theory-first language used to formalize safety-oriented software specifications. Event-B notation often leans on set comprehensions (of the form $\Set{x \in S}{E}$) and set operations (like $S \cup T$), with progressive specification refinement at the core of the development process. Like object-oriented programs, Event-B programs tend to operate at multiple refinement levels simultaneously, especially when proving program correctness. Each atomic action must be proved correct, then proofs may be composed to prove larger programs, and so on. With Event-B as inspiration, Simile's syntax and semantics is intended to be proof-friendly in the same way, by following discrete mathematics notation.
 
 At the same time, Simile attempts to use the semantic information available at high-level programs to aggressively optimize the executable value. For example, $X \cap T = T$ may require evaluation of $X \cap T$ in a normal programming language, but Simile attempts to match known theorems against expressions to determine that $X \cap T = T$ is only true when $X \supseteq T$. By avoiding the difficult reasoning paths of traditional imperative languages (involving side effects or mutable objects) to perform an action, set theory semantics affords an entire class of optimizations not available to other programming languages.
 
@@ -177,9 +191,9 @@ Abstract data types are semantically powerful and have been implemented by hundr
 \paragraph{Motivating Example: A Visitor Information System}
 Let's turn towards an example for specification-focused programming: a group of conference administrators create a program to track resourcing for a week's worth of workshops. They already have a list of visitors, available rooms, and planned workshops for each room. A specification would model these records via carrier sets (i.e., enumerated sets):
 \begin{gather*}
-    Visitor = \{Ryan, Adrian, Kevin, Charlie, Michael, ...\}\\
-    Room = \{100, 101, 201, ...\}\\
-    Workshop = \{ESOP, FASE, FoSSaCS\}
+    Visitor = \Set{Ryan, Adrian, Kevin, Charlie, Michael, ...}\\
+    Room = \Set{100, 101, 201, ...}\\
+    Workshop = \Set{ESOP, FASE, FoSSaCS}
 \end{gather*}
 To make this model more useful, we express relationships between these sets. For example, every workshop must occur in a room and visitors will attend workshops. Further, we can place restrictions on each relation concisely through specification language notation. If we know workshops occur in a room, it would be safe to tighten our observation that \textit{all} workshops must occur in one room \textit{at a time}. So, we can explicitly refine the relationship to an injective (one-to-one) function that is total on the domain (the carrier set $Workshop$). In formal notation, we write concisely:
 \begin{gather*}
@@ -191,7 +205,7 @@ We can further refine another relationship: visitors can attend workshops, but v
 \end{gather*}
 With these relations, we can query for interesting information concisely. Let's say we want to throw a surprise dinner for all attendees in a specific room. We can compose the $attends$ relation with the $location$ relation to find the number of people expected in a specific room. For a specific $room$, we write:
 \begin{gather*}
-    card((location^{-1} \circ attends^{-1})[\{room\}]
+    card((location^{-1} \circ attends^{-1})[\Set{room}]
 \end{gather*}
 A HashMap would be the first concrete data structure of choice for most programmers, but without knowledge of the refined relationships, we cannot guarantee that the relational inverse operation is guaranteed to work. We set aside HashMaps for now for the sole reason that they are limited in their representation capabilities; we cannot model a many-to-many relationship using the convential definition of the type.
 
@@ -212,7 +226,7 @@ With a library of concrete functions:
 \begin{algorithmic}
     \Function{Inverse}{$r: HashSet[(X, Y)]$}
         \Comment{Runtime: $O(n)$. Memory use: $O(n)$}
-        \State $r': HashSet[(Y, X)] := \{\}$
+        \State $r': HashSet[(Y, X)] := \Set{}$
         \For{$x,y \in r$}
             \State $r'.add((y,x))$ \Comment{$s.add$ is a primitive HashSet operation mutating $s$}
         \EndFor
@@ -220,7 +234,7 @@ With a library of concrete functions:
     \EndFunction
     \Function{Compose}{$r_1: HashSet[(X, Y)], r_2: HashSet[(Y, Z)]$}
         \Comment{Runtime: $O(n^2)$. Memory use: $O(n)$}
-        \State $r': HashSet[(X,Z)] := \{\}$
+        \State $r': HashSet[(X,Z)] := \Set{}$
         \For{$x,y_1 \in r_1$}
             \For{$y_2,z \in r_2$}
                 \If{$y_1 = y_2$}
@@ -232,7 +246,7 @@ With a library of concrete functions:
     \EndFunction
     \Function{Lookup}{$searchFor: X, r: HashSet[(X,Y)]$}
         \Comment{Runtime: $O(n)$. Memory use: $O(n)$}
-        \State $r': HashSet[Y] := \{\}$
+        \State $r': HashSet[Y] := \Set{}$
         \For{$x,y \in r$}
             \If{$searchFor = x$}
                 \State $r'.add(y)$
@@ -544,7 +558,7 @@ A basic strategy to optimize set and relational expressions is:
 
 The TRS for this language primarily involves lowering collection data type expressions into pointwise boolean quantifications. Breaking down each operation into set builder notation enables a few key actions:
 \begin{itemize}
-  \item Quantifications over sets ($\bSet{x}{G}{P}$) are naturally separated into generators ($G$) and (non-generating) predicates ($P$). For sets, at least one membership operator per top-level conjunction in $G$ will serve as a concrete element generator in generated code. Then, top level disjunctions will select one membership operation to act as a generator, relegating all others to the predicate level. For example, if the rewrite system observes an intersection of the form $\bSetT{x}{x \in S \land x \in T}$, the set construction operation must iterate over at least one of $S$ and $T$. Then, the other will act as a condition to check every iteration (becoming $\bSet{x}{x \in S}{x \in T}$).
+  \item Quantifications over sets ($\Set{G}{P}{E}$) are naturally separated into generators ($G$), (non-generating) predicates ($P$), and expressions ($E$). For sets, at least one membership operator per top-level conjunction in $G$ will serve as a concrete element generator in generated code. Then, top level disjunctions will select one membership operation to act as a generator, relegating all others to the predicate level. For example, if the rewrite system observes an intersection of the form $\Set{x \in S \land x \in T}{x}$, the set construction operation must iterate over at least one of $S$ and $T$. Then, the other will act as a condition to check every iteration (becoming $\Set{x \in S}{x \in T}{x}$).
   \item By definition of generators in quantification notation, operations in $G$ must be statements of the form $x \in S$, where $x$ is used in the ``element'' portion of the set construction. Statements like $x \notin T$ or checking a property $p(x)$ must act like conditions since they do not produce any iterable elements.
   \item Any boolean expression for conditions may be rewritten as a combination of $\lnot, \lor$, and $\land$ expressions. Therefore, by converting all set notation down into boolean notation and then generating code based on set constructor booleans, we can accommodate any form of predicate function.
 \end{itemize}
@@ -562,7 +576,7 @@ The TRS for this language primarily involves lowering collection data type expre
 % \begin{description}
 %   \item[Set Comprehension Construction] Break down all qualifying sets into comprehension forms, collapsing and simplifying where needed.
 %   \item[DNF Predicates] Revise comprehension predicates to top-level disjunctive normal form. Each or-clause should have at least one feasible generator. Each clause should record a list of candidate generators
-%   \item[Predicate Simplification] Remove superfluous dummy variables, group or-clauses that use the exact same generator (ex. $\bSetT{x}{x \in S \land x \neq 0 \lor x \in S \land x = 0} \rightarrow \bSetT{x}{x \in S \land (x \neq 0 \lor x = 0)}$). Clauses should be group-able based on DNF, and generators should be selected and recorded.
+%   \item[Predicate Simplification] Remove superfluous dummy variables, group or-clauses that use the exact same generator (ex. $\Set{x}{x \in S \land x \neq 0 \lor x \in S \land x = 0} \rightarrow \Set{x}{x \in S \land (x \neq 0 \lor x = 0)}$). Clauses should be group-able based on DNF, and generators should be selected and recorded.
 %   \item[Set Code Generation] Converts quantifiers into for-loops and if-statements.
 % \end{description}
 
@@ -579,8 +593,8 @@ The TRS for this language primarily involves lowering collection data type expre
 %     $set(T)$ & Unordered, unique collection             & $S \pfun T$ & Partial function \\
 %     $S \leftrightarrow T$ & Relation, $set(S\times T)$  & $S \tinj T$& Total injection\\
 %     $\emptyset$ & Empty set                             & $a \mapsto b$ & Pair (relational element) \\
-%     $\{a,b,...\}$ & Set enumeration                     & $dom(S)$ & Domain\\
-%     $\bSet{x}{x \in S}{P}$ & Set comprehension          & $ran(S)$ & Range\\
+%     $\Set{a,b,...}$ & Set enumeration                     & $dom(S)$ & Domain\\
+%     $\Set{x}{x \in S}{P}$ & Set comprehension          & $ran(S)$ & Range\\
 %     $S \cup T$ & Union                                  & $R[S]$ & Relational image\\
 %     $S \cap T$ & Intersection                           & $R \ovl Q$ & Relational overriding\\
 %     $S \setminus T$ & Difference                        & $R \circ Q$ & Relational composition\\
@@ -599,23 +613,23 @@ The TRS for this language primarily involves lowering collection data type expre
 %         Name & Definition \\ %& Type &
 %         \hline
 %         Empty Set & Creates a set with no elements.\\ %& $\emptyset: set[]$ &
-%         Set Enumeration & Literal collection of elements to create a set.\\ %& $\{x, y, ...\}: set[T]$ &
+%         Set Enumeration & Literal collection of elements to create a set.\\ %& $\Set{x, y, ...}: set[T]$ &
 %         Set Membership & The term $x \in S$ is True if $x$ can be found somewhere in $S$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
 %         \hline
-%         Union & $S \cup T = \bSetT{x}{x \in S \lor x \in T}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
-%         Intersection & $S \cap T = \bSetT{x}{x \in S \land x \in T}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
-%         Difference & $S \setminus T = \bSet{x}{x \in S}{x \notin T}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
-%         Cartesian Product & $S \times T = \bSetT{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
+%         Union & $S \cup T = \Set{x}{x \in S \lor x \in T}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
+%         Intersection & $S \cap T = \Set{x}{x \in S \land x \in T}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
+%         Difference & $S \setminus T = \Set{x}{x \in S}{x \notin T}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
+%         Cartesian Product & $S \times T = \Set{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
 %         \hline
-%         Powerset & $\mathbb{P}(S) = \bSetT{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
+%         Powerset & $\mathbb{P}(S) = \Set{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
 %         Magnitude & $\#S = \sum_{x \in S} 1$\\ %& $\#:set[T] \rightarrow int$ &
 %         Subset & $S \subseteq T \equiv \forall x \in S: s \in T$ \\ %& $\subseteq: set[T] \times set[T] \rightarrow bool$ &
 %         Strict Subset & $S \subset T \equiv S \subseteq T \land S \neq T$ \\ %& $\subset: set[T] \times set[T] \rightarrow bool$ &
 %         Superset & $S \supseteq T \equiv \forall x \in T: s \in S$ \\ %& $\supseteq: set[T] \times set[T] \rightarrow bool$ &
 %         Strict Superset & $S \supset T \equiv S \supseteq T \land S \neq T$ \\ %& $\supset: set[T] \times set[T] \rightarrow bool$ &
 %         \hline
-%         Set Mapping & $f * S = \bSetT{f(x)}{x \in S}$\\ %& $*: (T \rightarrow T') \times set[T] \rightarrow set[T']$ &
-%         Set Filter & $p \triangleleft S = \bSet{x}{x \in S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool) \times set[T] \rightarrow set[T]$ &
+%         Set Mapping & $f * S = \Set{f(x)}{x \in S}$\\ %& $*: (T \rightarrow T') \times set[T] \rightarrow set[T']$ &
+%         Set Filter & $p \triangleleft S = \Set{x}{x \in S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool) \times set[T] \rightarrow set[T]$ &
 %         % Reduction & $f / S = $ %& $/:(T\times T \rightarrow T) \times set[T] \rightarrow T$ &
 %         Set Quantification (Folding) & $\oplus x \cdot x \in S \mid P$\\
 %         Cardinality & $card(S) = \sum 1 \cdot x \in S$\\
@@ -631,15 +645,15 @@ The TRS for this language primarily involves lowering collection data type expre
 %         Name & Definition \\ %& Type &
 %         \hline
 %         Empty Set & Creates a set with no elements.\\ %& $\emptyset: set[]$ &
-%         Bag Enumeration & Literal collection of elements to create a set \\ & (for now, stored as a tuple of elements and number of occurrences).\\ %& $\{x, y, ...\}: set[T]$ &
+%         Bag Enumeration & Literal collection of elements to create a set \\ & (for now, stored as a tuple of elements and number of occurrences).\\ %& $\Set{x, y, ...}: set[T]$ &
 %         Bag Membership & The term $x \in S$ is True if $S$ contains one or more occurrences of $x$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
 %         \hline
 %         Union & $S \cup T = \bag{(x, a+b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
 %         Intersection & $S \cap T = \bag{(x, min(a,b))}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
 %         Difference & $S - T = \bag{(x, a-b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0 \land a-b > 0}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
-%         % Cartesian Product & $S \times T = \bSetT{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
+%         % Cartesian Product & $S \times T = \Set{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
 %         % \hline
-%         % Powerset & $\mathbb{P}(S) = \bSetT{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
+%         % Powerset & $\mathbb{P}(S) = \Set{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
 %         % Magnitude & $\#S = \sum_{x \in S} 1$\\ %& $\#:set[T] \rightarrow int$ &
 %         % Subset & $S \subseteq T \equiv \forall x \in S: s \in T$ \\ %& $\subseteq: set[T] \times set[T] \rightarrow bool$ &
 %         % Strict Subset & $S \subset T \equiv S \subseteq T \land S \neq T$ \\ %& $\subset: set[T] \times set[T] \rightarrow bool$ &
@@ -686,21 +700,21 @@ The TRS for this language primarily involves lowering collection data type expre
 %         \hline
 %         Name & Definition \\ %& Type &
 %         \hline
-%         Empty Relation & Creates a relation with no elements.\\ %& $\{\}:relation[]$ &
-%         Relation Enumeration & Literal collection of elements to create a relation.\\ %& $\{x \mapsto y, a \mapsto b,...\}: relation[T, V]$ &
-%         Identity & $id(S)= \bSetT{x \mapsto x}{x \in S}$\\ %& $id: set[T] \rightarrow relation[T,T]$ &
-%         Domain & $dom(R) = \bSetT{x}{x \mapsto y \in R}$\\ %& $dom: relation[T,V] \rightarrow set[T]$ &
-%         Range & $ran(R) = \bSetT{y}{x \mapsto y \in R}$\\ %& $ran: relation[T,V] \rightarrow set[V]$ &
+%         Empty Relation & Creates a relation with no elements.\\ %& $\Set{}:relation[]$ &
+%         Relation Enumeration & Literal collection of elements to create a relation.\\ %& $\Set{x \mapsto y, a \mapsto b,...}: relation[T, V]$ &
+%         Identity & $id(S)= \Set{x \mapsto x}{x \in S}$\\ %& $id: set[T] \rightarrow relation[T,T]$ &
+%         Domain & $dom(R) = \Set{x}{x \mapsto y \in R}$\\ %& $dom: relation[T,V] \rightarrow set[T]$ &
+%         Range & $ran(R) = \Set{y}{x \mapsto y \in R}$\\ %& $ran: relation[T,V] \rightarrow set[V]$ &
 %         \hline
-%         Relational Image & $R[S] = \bSet{y}{x \mapsto y \in R}{x \in S}$ \\ %& $([]): relation[T,V] \times set[T] \rightarrow set[V]$ &
+%         Relational Image & $R[S] = \Set{y}{x \mapsto y \in R}{x \in S}$ \\ %& $([]): relation[T,V] \times set[T] \rightarrow set[V]$ &
 %         Overriding & $R \ovl Q = Q \cup (dom(Q) \domsub R)$\\ %\Set{x \mapsto y}{x\mapsto y \in Q \lor (x \mapsto y \in R \land x \notin dom(Q))}$ \\ %& $\ovl: relation[T,V] \times relation[T,V] \rightarrow relation[T,V]$ &
-%         (Forward) Composition & $Q \circ R = \bSetT{x \mapsto z}{x \mapsto y \in R \land y \mapsto z \in Q}$\\ %& $\circ: relation[V,W] \times relation[T,V] \rightarrow relation[T,W]$ &
-%         Inverse & $R^{-1} = \bSetT{y \mapsto x}{x \mapsto y \in R}$ \\ %& $(^{-1}): relation[T,V] \rightarrow relation[V,T]$ &
+%         (Forward) Composition & $Q \circ R = \Set{x \mapsto z}{x \mapsto y \in R \land y \mapsto z \in Q}$\\ %& $\circ: relation[V,W] \times relation[T,V] \rightarrow relation[T,W]$ &
+%         Inverse & $R^{-1} = \Set{y \mapsto x}{x \mapsto y \in R}$ \\ %& $(^{-1}): relation[T,V] \rightarrow relation[V,T]$ &
 %         \hline
-%         Domain Restriction & $S \triangleleft R = \bSet{x \mapsto y}{x \mapsto y \in R}{x \in S}$\\ %& $\triangleleft: set[T] \times relation[T,V] \rightarrow relation[T,V]$ &
-%         Domain Subtraction & $S \domsub R = \bSet{x \mapsto y}{x \mapsto y \in R}{x \notin S}$\\ %& $\domsub: set[T] \times relation[T,V] \rightarrow relation[T,V]$ &
-%         Range Restriction & $R \triangleright S = \bSet{x \mapsto y}{x \mapsto y \in R}{y \in S}$\\ %& $\triangleright: set[V] \times relation[T,V] \rightarrow relation[T,V]$ &
-%         Range Subtraction & $R \ransub S = \bSet{x \mapsto y}{x \mapsto y \in R}{y \notin S}$\\ %& $\ransub: set[V] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Domain Restriction & $S \triangleleft R = \Set{x \mapsto y}{x \mapsto y \in R}{x \in S}$\\ %& $\triangleleft: set[T] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Domain Subtraction & $S \domsub R = \Set{x \mapsto y}{x \mapsto y \in R}{x \notin S}$\\ %& $\domsub: set[T] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Range Restriction & $R \triangleright S = \Set{x \mapsto y}{x \mapsto y \in R}{y \in S}$\\ %& $\triangleright: set[V] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Range Subtraction & $R \ransub S = \Set{x \mapsto y}{x \mapsto y \in R}{y \notin S}$\\ %& $\ransub: set[V] \times relation[T,V] \rightarrow relation[T,V]$ &
 %         % \hline % Do we need to include tests for total, surjective, injective, etc.?
 %         % Eventually add closures
 %         \hline
@@ -1218,7 +1232,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Set Enumeration}
 \begin{prooftree}
 \hypo{\Gamma \vdash e_1, ..., e_n: A}
-\infer1{\Gamma \vdash \{e_1, ..., e_n\}: set[A]}
+\infer1{\Gamma \vdash \Set{e_1, ..., e_n}: set[A]}
 \end{prooftree}
 \end{gather}
 
@@ -1324,7 +1338,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Enum from static set}
 \begin{prooftree}
 \hypo{\Gamma \vdash s_1, ..., s_n : str}
-\hypo{A = \{s_1, ..., s_n\} }
+\hypo{A = \Set{s_1, ..., s_n} }
 \hypo{immutable(A)}
 \infer3{\Gamma \vdash enum[A] \leq set[A, \text{with } immutable]}
 \end{prooftree}
@@ -1543,7 +1557,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Set Comprehension}
 \begin{prooftree}
 \hypo{\Gamma \vdash Q: Quantifier[A]}
-\infer1{\Gamma \vdash \setOne{Q}: set[A]}
+\infer1{\Gamma \vdash \Set{Q}: set[A]}
 \end{prooftree}
 \\
 \tag{Bag Comprehension}
@@ -1586,7 +1600,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \end{prooftree}
 \end{gather}
 
-Let $\otimes = \{ \bigcup, \bigcap \}$
+Let $\otimes = \Set{ \bigcup, \bigcap }$
 
 \begin{gather}
 \tag{General Quantifiers}
@@ -1596,7 +1610,7 @@ Let $\otimes = \{ \bigcup, \bigcap \}$
 \end{prooftree}
 \end{gather}
 
-Let $\otimes = \{ \forall, \exists \}$
+Let $\otimes = \Set{ \forall, \exists }$
 
 \begin{gather}
 \tag{Bool Quantifiers}
@@ -1606,13 +1620,13 @@ Let $\otimes = \{ \forall, \exists \}$
 \end{prooftree}
 \end{gather}
 
-Let $\otimes = \{ \sum, \prod \}$
+Let $\otimes = \Set{ \sum, \prod }$
 
 \begin{gather}
 \tag{Numeric Quantifiers}
 \begin{prooftree}
 \hypo{\Gamma \vdash Q: Quantifier[T]}
-\hypo{\Gamma \vdash T \in \{int, nat, float\}}
+\hypo{\Gamma \vdash T \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash (\otimes Q): T}
 \end{prooftree}
 \end{gather}
@@ -1620,7 +1634,7 @@ Let $\otimes = \{ \sum, \prod \}$
 \subsubsection{Boolean Operations}
 \paragraph{Includes:} Common predicate logic operations (equivalence, implication, and, or, etc.).
 
-Let $\otimes = \{\equiv, \not\equiv, \implies, \land, \lor \}$
+Let $\otimes = \Set{\equiv, \not\equiv, \implies, \land, \lor }$
 
 \begin{gather}
 \tag{Binary Boolean Operations}
@@ -1639,7 +1653,7 @@ Let $\otimes = \{\equiv, \not\equiv, \implies, \land, \lor \}$
 \subsubsection{Equality and Membership}
 \paragraph{Includes:} Equality and ordering comparisons, set membership.
 
-Let $\otimes = \{=, \neq\}$
+Let $\otimes = \Set{=, \neq}$
 
 \begin{gather}
 \tag{Equals}
@@ -1649,18 +1663,18 @@ Let $\otimes = \{=, \neq\}$
 \end{prooftree}
 \end{gather}
 
-Let $\otimes = \{<, \leq, >, \geq \}$
+Let $\otimes = \Set{<, \leq, >, \geq }$
 
 \begin{gather}
 \tag{Ordering Operators}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1, a_2: T}
-\hypo{T \in \{int, float, nat\}}
+\hypo{T \in \Set{int, float, nat}}
 \infer2{\Gamma \vdash a_1 \otimes a_2 : bool}
 \end{prooftree}
 \end{gather}
 
-Let $\otimes = \{\in, \not\in \}$
+Let $\otimes = \Set{\in, \not\in }$
 
 \begin{gather}
 \tag{Set Membership}
@@ -1673,7 +1687,7 @@ Let $\otimes = \{\in, \not\in \}$
 \subsubsection{Set Operations}
 \paragraph{Includes:} Subset comparisons, union, intersection, cartesian product, etc. Also includes Maplet and Range.
 
-Let $\otimes = \{\subset, \subseteq, \supset, \supseteq, \not\subset, \not\subseteq, \not\supset, \not\supseteq \}$
+Let $\otimes = \Set{\subset, \subseteq, \supset, \supseteq, \not\subset, \not\subseteq, \not\supset, \not\supseteq }$
 
 \begin{gather}
 \tag{Set Ordering Operations}
@@ -1683,7 +1697,7 @@ Let $\otimes = \{\subset, \subseteq, \supset, \supseteq, \not\subset, \not\subse
 \end{prooftree}
 \end{gather}
 
-Let $\otimes = \{\cup, \cap, \setminus \}$
+Let $\otimes = \Set{\cup, \cap, \setminus }$
 
 \begin{gather}
 \tag{Set Operations}
@@ -1721,7 +1735,7 @@ Let $\otimes = \{\cup, \cap, \setminus \}$
 \subsubsection{Bag Operations}
 \paragraph{Includes:} Bag union, bag intersection, etc.
 
-Let $\otimes = \{\cup, \cap, +, -\}$
+Let $\otimes = \Set{\cup, \cap, +, -}$
 \begin{gather}
 \tag{Bag Operations}
 \begin{prooftree}
@@ -1807,56 +1821,56 @@ Let $\otimes = \{\cup, \cap, +, -\}$
 \tag{Integer Operations - Division}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat\}}
+\hypo{T_i \in \Set{int, nat}}
 \infer2{\Gamma \vdash a_1 \text{ div } a_2: max(T_1, T_2)}
 \end{prooftree}
 \\
 \tag{Integer Operations - Modulo}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat\}}
+\hypo{T_i \in \Set{int, nat}}
 \infer2{\Gamma \vdash a_1 \text{ mod } a_2: max(T_1, T_2)}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Addition}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat, float\}}
+\hypo{T_i \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash a_1 + a_2: max(T_1, T_2)}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Subtraction}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat, float\}}
+\hypo{T_i \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash a_1 - a_2: max(T_1, T_2, int)}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Floating Division}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat, float\}}
+\hypo{T_i \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash a_1 * a_2: float}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Multiplication}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat, float\}}
+\hypo{T_i \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash a_1 \text{ div } a_2: max(T_1, T_2)}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Negation}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T}
-\hypo{T \in \{int, nat, float\}}
+\hypo{T \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash -a_1: max(int, T)}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Exponentiation}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
-\hypo{T_i \in \{int, nat, float\}}
+\hypo{T_i \in \Set{int, nat, float}}
 \infer2{\Gamma \vdash a_1 \text{ \^{} } a_2: max(T_1, T_2)}
 \end{prooftree}
 \end{gather}
@@ -2034,7 +2048,7 @@ Let $\otimes = \{\cup, \cap, +, -\}$
 \tag{Built-in - Sum}
 \begin{prooftree}
 \hypo{\Gamma \vdash T}
-\hypo{T \in \{int, float, nat\}}
+\hypo{T \in \Set{int, float, nat}}
 \infer2{\Gamma \vdash sum: set[T] \rightarrow T}
 \end{prooftree}
 \\
@@ -2058,11 +2072,11 @@ Traits extend Simile's type system by giving programmers the ability to provide 
 
 For example, consider a variable defining a relation:
 \begin{algorithmic}
-  \State $r: relation[int, int] := \{\}$
+  \State $r: relation[int, int] := \Set{}$
 \end{algorithmic}
 Without insight into the use of the variable $r$, we may be forced to concretize the abstract type conservatively. The compiler may choose the safest option: straightforward array of tuples or a bidirectional hashmap, with both concrete structures giving up time complexity or memory efficiency respectively. However, if we as domain experts know that this relation is one-to-one, we can provide such insights to the compiler directly:
 \begin{algorithmic}
-  \State $r: relation[int, int] := \{\}$
+  \State $r: relation[int, int] := \Set{}$
   \State \quad trait $many\_to\_one$
   \State \quad trait $one\_to\_many$
 \end{algorithmic}
@@ -2092,7 +2106,7 @@ For parameterized types that accept type arguments, traits will be propagated to
 \begin{itemize}
     \item \textit{Literal}: A trait containing a single literal value. If a type has this trait, it is guaranteed to be of this value.
     \item \textit{Domain}: A looser form of \textit{Literal} that carries a set of possible values. When applied, the type is restricted to (one of) the values from this $Domain$. Relations use a different definition of domain.
-    \item \textit{Undefined}: Intended for use by compiler analysis. Used when a value \textit{may} be undefined. Ex. $choice(\{\})$.
+    \item \textit{Undefined}: Intended for use by compiler analysis. Used when a value \textit{may} be undefined. Ex. $choice(\Set{})$.
     % \item Leave out for now: $UnknownElementInDomain$: Loosens the $Domain$ guarantee so that values in the domain are only likely to appear, but not guaranteed? We would need to see if this opens up any optimizations...
     \item \textit{Immutable}: Represents values that cannot be reassigned/modified. %Should we instead assume immutability and have a Mutable trait?
 \end{itemize}
@@ -2144,7 +2158,7 @@ Represents the relational subtype properties (injectiveness, surjectiveness, etc
     \begin{algorithmic}
       \State procedure $add(s: set[T], e: T) -> set[T]:$
       \State \quad trait $treat\_as\_expr$
-      \State \quad return $s \cup \{e\}$
+      \State \quad return $s \cup \Set{e}$
     \end{algorithmic}
 \end{itemize}
 
@@ -2162,7 +2176,7 @@ Some types are incompatible with some traits, and some types must have some trai
     Orderable  & \xmark & \xmark & \ccmark & \ccmark & \ccmark \\ % str uses lexicographic ordering
     Min  & \xmark & \xmark & \cmark & \cmark & \cmark \\
     Max  & \xmark & \xmark & \cmark & \cmark & \cmark \\
-    Domain  & \{None\} & \{True, False\} & \cmark & \cmark & \cmark \\
+    Domain  & \Set{None} & \Set{True, False} & \cmark & \cmark & \cmark \\
     Iterable  & \xmark & \xmark & \xmark & \xmark & \ccmark \\
     Unique  & \xmark & \xmark & \xmark & \xmark & \xmark \\
     Empty  & \xmark & \xmark & \xmark & \xmark & \cmark \\
@@ -2264,28 +2278,28 @@ Most traits are simple flags, as in, ``does this type have this property?''. In 
 \begin{gather}
   % \tag{Literal Empty}
   % \begin{prooftree}
-  %   \hypo{Literals = \{\}}
+  %   \hypo{Literals = \Set{}}
   %   \infer1{\lnot Literals}
   % \end{prooftree}
   % \\
   \tag{Domain Empty}
   \begin{prooftree}
-    \hypo{Domain = \{\}}
+    \hypo{Domain = \Set{}}
     \infer1{\lnot Domain}
   \end{prooftree}
   \\
   \tag{Literal implies a Domain (under primitive)}
   \begin{prooftree}
     \hypo{Literal}
-    \hypo{Literal.type \in \{bool, int, float, string, none, tuple\}}
+    \hypo{Literal.type \in \Set{bool, int, float, string, none, tuple}}
     \hypo{\lnot Domain}
-    \infer3{Domain := \{Literal\}}
+    \infer3{Domain := \Set{Literal}}
   \end{prooftree}
   \\
   \tag{Literal implies a Domain (under collection)}
   \begin{prooftree}
     \hypo{Literal}
-    \hypo{Literal.type \in \{set, relation, bag, sequence\}}
+    \hypo{Literal.type \in \Set{set, relation, bag, sequence}}
     \hypo{\lnot Domain}
     \infer3{Domain := Literal}
   \end{prooftree}
@@ -2563,29 +2577,29 @@ General notes:
   \tag{Literal}
   \begin{prooftree}
     \hypo{p: T[literal=x]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer2{(- p): T[literal=(- x)]}
   \end{prooftree}
   \\
   \tag{Min}
   \begin{prooftree}
     \hypo{p: T[min=x]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer2{(- p): T[max=(- x)]}
   \end{prooftree}
   \\
   \tag{Max}
   \begin{prooftree}
     \hypo{p: T[max=x]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer2{(- p): T[min=(- x)]}
   \end{prooftree}
   \\
   \tag{Domain}
   \begin{prooftree}
     \hypo{p: T[domain=s]}
-    \hypo{T \in \{Int, Float\}}
-    \infer2{(- p): T[domain=\bSetT{x \in s}{-x}]}
+    \hypo{T \in \Set{Int, Float}}
+    \infer2{(- p): T[domain=\Set{x \in s}{-x}]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Int divide}
@@ -2687,7 +2701,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[literal=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a + b): T[literal=(x + y)]}
   \end{prooftree}
   \\
@@ -2695,7 +2709,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[min=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a + b): T[min=(x + y)]}
   \end{prooftree}
   \\
@@ -2703,7 +2717,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[max=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a + b): T[max=(x + y)]}
   \end{prooftree}
   \\
@@ -2711,7 +2725,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T}
     \hypo{b: T[min=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a + b): T[min=y]}
   \end{prooftree}
   \\
@@ -2719,7 +2733,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T}
     \hypo{b: T[max=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a + b): T[max=y]}
   \end{prooftree}
   \\
@@ -2727,7 +2741,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[domain=m]}
     \hypo{b: T[domain=n]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a + b): T[domain=map(sum, m \times n)]}
   \end{prooftree}
 \end{gather}
@@ -2737,7 +2751,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[literal=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a - b): T[literal=(x - y)]}
   \end{prooftree}
   \\
@@ -2745,7 +2759,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[min=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a - b): T[max=(x - y)]}
   \end{prooftree}
   \\
@@ -2753,7 +2767,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[max=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a - b): T[min=(x - y)]}
   \end{prooftree}
   \\
@@ -2761,7 +2775,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[min=x]}
     \hypo{b: T[literal=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a - b): T[min=(x-y)]}
   \end{prooftree}
   \\
@@ -2769,7 +2783,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[max=x]}
     \hypo{b: T[literal=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a - b): T[max=(x-y)]}
   \end{prooftree}
   \\
@@ -2777,7 +2791,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[domain=m]}
     \hypo{b: T[domain=n]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a - b): T[domain=map(sum, m \times map(-, n))]}
   \end{prooftree}
 \end{gather}
@@ -2855,7 +2869,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[literal=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a \times b): T[literal=(x \times y)]}
   \end{prooftree}
   \\
@@ -2863,7 +2877,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=0]}
     \hypo{b: T}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a \times b): T[literal=0]}
   \end{prooftree}
   \\
@@ -2871,7 +2885,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[min=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \hypo{x > 0}
     \infer4{(a \times b): T[min=(x \times y)]}
   \end{prooftree}
@@ -2880,7 +2894,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[max=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \hypo{x > 0}
     \infer4{(a \times b): T[max=(x \times y)]}
   \end{prooftree}
@@ -2889,7 +2903,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[min=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \hypo{x < 0}
     \infer4{(a \times b): T[max=(x \times y)]}
   \end{prooftree}
@@ -2898,7 +2912,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[max=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \hypo{x < 0}
     \infer4{(a \times b): T[max=(x \times y)]}
   \end{prooftree}
@@ -2907,7 +2921,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[domain=m]}
     \hypo{b: T[domain=n]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a \times b): T[domain=map(product, m \times n)]}
   \end{prooftree}
 \end{gather}
@@ -2917,7 +2931,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[literal=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a^b): T[literal=(x^y)]}
   \end{prooftree}
   \\
@@ -2925,7 +2939,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=0]}
     \hypo{b: T[literal != 0]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a^b): T[literal=0]}
   \end{prooftree}
   \\
@@ -2933,7 +2947,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T}
     \hypo{b: T[literal=0]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a^b): T[literal=1]}
   \end{prooftree}
   \\
@@ -2941,7 +2955,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[min=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a^b): T[min=(x^y)]}
   \end{prooftree}
   \\
@@ -2949,7 +2963,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[literal=x]}
     \hypo{b: T[max=y]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a^b): T[max=(x^y)]}
   \end{prooftree}
   \\
@@ -2957,7 +2971,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: T[domain=m]}
     \hypo{b: T[domain=n]}
-    \hypo{T \in \{Int, Float\}}
+    \hypo{T \in \Set{Int, Float}}
     \infer3{(a^b): T[domain=map(\lambda (x,y):x^y, m \times n)]}
   \end{prooftree}
 \end{gather}
@@ -2967,7 +2981,7 @@ General notes:
   \begin{prooftree}
     \hypo{a: Int[literal=x]}
     \hypo{b: Int[literal=y]}
-    \infer2{(a \upto b): set[min=x, max=y, literal=\{x, x+1, ..., y\}, total]}
+    \infer2{(a \upto b): set[min=x, max=y, literal=\Set{x, x+1, ..., y}, total]}
   \end{prooftree} % If only one of these are literals, we should still try to get either a max or min value
   \\
   \tag{Upto literal}
@@ -3005,13 +3019,13 @@ General notes:
 % \paragraph{Record}
 % \subparagraph{Access}
 \paragraph{Set}
-Note: the domain trait on sets is not the same as that of primitive types. A primitive value selects one out of the domain, whereas collection types choose from a subset of the domain. For example, let $x: int[domain=\{1,2,3\}]$. Then $x \in \{1,2,3\}$. However, if $y: set[int, domain=\{1,2,3\}]$, then $y \subset \{1,2,3\}$ (that is, $y \in \mathbb{P}\{1,2,3\}$).
+Note: the domain trait on sets is not the same as that of primitive types. A primitive value selects one out of the domain, whereas collection types choose from a subset of the domain. For example, let $x: int[domain=\Set{1,2,3}]$. Then $x \in \Set{1,2,3}$. However, if $y: set[int, domain=\Set{1,2,3}]$, then $y \subset \Set{1,2,3}$ (that is, $y \in \mathbb{P}\Set{1,2,3}$).
 \subparagraph{Enumeration}
 \begin{gather}
   \tag{Literal}
   \begin{prooftree}
     \hypo{a_1, a_2, ..., a_n: T}
-    \infer1{\{a_1, a_2, ..., a_n\}: set[T, literal=\{a_1, a_2, ..., a_n\}, size=n]}
+    \infer1{\Set{a_1, a_2, ..., a_n}: set[T, literal=\Set{a_1, a_2, ..., a_n}, size=n]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Clear}
@@ -3019,7 +3033,7 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \tag{Literal}
   \begin{prooftree}
     \hypo{s: set[T]}
-    \infer1{clear(s): set[T, literal=\{\}, empty]}
+    \infer1{clear(s): set[T, literal=\Set{}, empty]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Is empty}
@@ -3027,7 +3041,7 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \tag{Literal}
   \begin{prooftree}
     \hypo{s: set[Empty]}
-    \infer1{(s = \{\}): Bool[literal=true]}
+    \infer1{(s = \Set{}): Bool[literal=true]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Add}
@@ -3036,42 +3050,42 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \begin{prooftree}
     \hypo{s: set[T, Size=x]}
     \hypo{a: T}
-    \infer2{(s \cup \{a\}): set[T, Size=x+1]} % Can check literals to see if the size will actually increase. For now, best overestimation guess
+    \infer2{(s \cup \Set{a}): set[T, Size=x+1]} % Can check literals to see if the size will actually increase. For now, best overestimation guess
   \end{prooftree}
   \\
   \tag{Total size stays the same}
   \begin{prooftree}
     \hypo{s: set[T, Size=x, Total]}
     \hypo{a: T}
-    \infer2{(s \cup \{a\}): set[T, Size=x, Total]}
+    \infer2{(s \cup \Set{a}): set[T, Size=x, Total]}
   \end{prooftree}
   \\
   \tag{Literal}
   \begin{prooftree}
     \hypo{s: set[T, literal=l_1]}
     \hypo{a: T[literal=l_2]}
-    \infer2{(s \cup \{a\}): set[T, literal=(l_1 \cup \{l_2\})]}
+    \infer2{(s \cup \Set{a}): set[T, literal=(l_1 \cup \Set{l_2})]}
   \end{prooftree}
   \\
   \tag{Domain with literal}
   \begin{prooftree}
     \hypo{s: set[T, domain=d]}
     \hypo{a: T[literal=l]}
-    \infer2{(s \cup \{a\}): set[T, domain=(d \cup \{l\})]}
+    \infer2{(s \cup \Set{a}): set[T, domain=(d \cup \Set{l})]}
   \end{prooftree}
   \\
   \tag{Domain with domain}
   \begin{prooftree}
     \hypo{s: set[T, domain=d]}
     \hypo{a: T[domain=l]}
-    \infer2{(s \cup \{a\}): set[T, literal=(d \cup l)]}
+    \infer2{(s \cup \Set{a}): set[T, literal=(d \cup l)]}
   \end{prooftree}
   \\
   \tag{Empty}
   \begin{prooftree}
     \hypo{s: set[T, empty]}
     \hypo{a: T}
-    \infer2{(s \cup \{a\}): set[T]}
+    \infer2{(s \cup \Set{a}): set[T]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Remove}
@@ -3080,35 +3094,35 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \begin{prooftree}
     \hypo{s: set[T, size=n]}
     \hypo{a: T}
-    \infer2{(s \setminus \{a\}): set[T, size=n]}
+    \infer2{(s \setminus \Set{a}): set[T, size=n]}
   \end{prooftree}
   \\
   \tag{Removes Total guarantee}
   \begin{prooftree}
     \hypo{s: set[T, size=x, total]}
     \hypo{a: T}
-    \infer2{(s \setminus \{a\}): set[T, size=x-1]}
+    \infer2{(s \setminus \Set{a}): set[T, size=x-1]}
   \end{prooftree}
   \\
   \tag{Literal}
   \begin{prooftree}
     \hypo{s: set[T, literal=l_1]}
     \hypo{a: T[literal=l_2]}
-    \infer2{(s \setminus \{a\}): set[T, literal=(l_1 \setminus \{l_2\})]}
+    \infer2{(s \setminus \Set{a}): set[T, literal=(l_1 \setminus \Set{l_2})]}
   \end{prooftree}
   \\
   \tag{Domain with literal}
   \begin{prooftree}
     \hypo{s: set[T, domain=d]}
     \hypo{a: T[literal=l]}
-    \infer2{(s \setminus \{a\}): set[T, domain=(d \setminus \{l\})]}
+    \infer2{(s \setminus \Set{a}): set[T, domain=(d \setminus \Set{l})]}
   \end{prooftree}
   \\
   \tag{Empty}
   \begin{prooftree}
     \hypo{s: set[T, empty]}
     \hypo{a: T}
-    \infer2{(s \setminus \{a\}): set[T, empty]}
+    \infer2{(s \setminus \Set{a}): set[T, empty]}
   \end{prooftree}
 \end{gather}
 \subparagraph{In} Not in is similar.
@@ -3197,7 +3211,7 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \\
   \tag{Single literal}
   \begin{prooftree}
-    \hypo{s: set[T, literal=\{l\}]}
+    \hypo{s: set[T, literal=\Set{l}]}
     \infer1{choice(s): T[literal=l]}
   \end{prooftree}
   \\
@@ -3217,7 +3231,7 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \\
   \tag{Single literal}
   \begin{prooftree}
-    \hypo{s: set[T, literal=\{l\}]}
+    \hypo{s: set[T, literal=\Set{l}]}
     \infer1{min(s): T[literal=l]}
   \end{prooftree}
   \\
@@ -3243,7 +3257,7 @@ Note: the domain trait on sets is not the same as that of primitive types. A pri
   \\
   \tag{Single literal}
   \begin{prooftree}
-    \hypo{s: set[T, literal=\{l\}]}
+    \hypo{s: set[T, literal=\Set{l}]}
     \infer1{max(s): T[literal=l]}
   \end{prooftree}
   \\
@@ -3751,7 +3765,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \begin{prooftree}
     \hypo{s: relation[T, V, extremum=m]}
     \hypo{t: relation[V, U]}
-    \hypo{extremum \in \{relationalDomainMin, relationalDomainMin\}}
+    \hypo{extremum \in \Set{relationalDomainMin, relationalDomainMin}}
     \infer3{s \circ t: relation[T, U, extremum=m]}
   \end{prooftree}
   \\
@@ -3759,7 +3773,7 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \begin{prooftree}
     \hypo{s: relation[T, V]}
     \hypo{t: relation[V, U, extremum=m]}
-    \hypo{extremum \in \{relationalRangeMin, relationalRangeMin\}}
+    \hypo{extremum \in \Set{relationalRangeMin, relationalRangeMin}}
     \infer3{s \circ t: relation[T, U, extremum=m]}
   \end{prooftree}
 \end{gather}
@@ -4241,13 +4255,13 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \tag{Literal}
   \begin{prooftree}
     \hypo{q: Quantifier[T, literal=l]}
-    \infer1{\{q\}: set[T, literal=l]}
+    \infer1{\Set{q}: set[T, literal=l]}
   \end{prooftree}
   \\
   \tag{Domain}
   \begin{prooftree}
     \hypo{q: Quantifier[T, domain=d]}
-    \infer1{\{q\}: set[T, domain=d]}
+    \infer1{\Set{q}: set[T, domain=d]}
   \end{prooftree}
 \end{gather}
 \subparagraph{Map}
@@ -4418,6 +4432,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
     \hypo{i: int = \lfloor f \rfloor}
     \infer2{\texttt{cast(f, int)} \to \texttt{i}}
   \end{prooftree}
+  \\
   %    - str: "n", up to 4 decimal places
   \tag{Float-to-string typecast}
   \begin{prooftree}
@@ -4482,7 +4497,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
     \hypo{q: str}
     \infer1{\texttt{cast(q, tuple)} \to \texttt{cast(cast(q, sequence), tuple)}}
   \end{prooftree}
-  \\
+  % \\
   % % - tuple t to:
   % %    - str: (x in t | str(x)) as a string
   % \tag{Tuple-to-string typecast}
@@ -4497,7 +4512,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
   % \tag{Tuple-to-set typecast}
   % \begin{prooftree}
   %   \hypo{t: (T, ...)}
-  %   \hypo{s: set[T] = \bSetT{v \in t}{v}}
+  %   \hypo{s: set[T] = \Set{v \in t}{v}}
   %   \infer2{\texttt{cast(t, set)} \to \texttt{s}}
   % \end{prooftree}
   % \\
@@ -4746,7 +4761,7 @@ In the forthcoming sections, we explicitly state the design of these set-theory-
 \subsubsection{Primitives}
 With consideration to execution efficiency and the extensive amount of existing optimization in modern languages, Simile makes use of the following basic types:
 \begin{description}
-    \item[Booleans] As the cornerstone of logical reasoning, booleans deserve an explicit type with reserved identifiers: $\mathbb{B} = \{True, False\}$. Further, Simile provides a healthy supply of common operations beyond $\land$ and $\lor$: $\implies, \equiv, \impliedby, \forall, \exists,$ etc.
+    \item[Booleans] As the cornerstone of logical reasoning, booleans deserve an explicit type with reserved identifiers: $\mathbb{B} = \Set{True, False}$. Further, Simile provides a healthy supply of common operations beyond $\land$ and $\lor$: $\implies, \equiv, \impliedby, \forall, \exists,$ etc.
     \item[Integers] While integers are a very mature type in the world of computing, trade-offs between arbitrary-precision and fixed-point arithmetic may require testing and careful review.
     \\
     If Simile chooses to represent numbers through conventional fixed point arithmetic, struggles with overflow and extremely large numbers are compounded by the innate non-determinism within Simile. For example, calculating the sum of a set of very large numbers can be done in arbitrary order, according to the semantics of mathematics (and Simile). But in fixed-point arithmetic, the resulting value can very well differ based on the order of operations. In other words, commutative math operations are no longer commutative under fixed precision. At some point in the computation pipeline, Simile will need to decide the order in which to evaluate the set, which may cause hard-to-spot bugs and unexpected runtime failures.
@@ -4763,8 +4778,8 @@ Foundational Simile type: an unordered, unique collection of objects.
 
 Sets may be used in two ways:
 \begin{enumerate}
-    \item Enumerations by way of $\{x,y,z\}$ (read: The set of elements $x,y$, and $z$)
-    \item Comprehensions of the form $\bSet{x}{x \in S}{f(x)}$ (read: The set of function $f$ applied to all elements in $S$). A small effort is made to accommodate a shorthand form, wherein $\bSet{x}{x \in S}{x}$ may be written as $\bSetT{x}{x \in S}$, but this syntax easily confuses bound/unbound variables and is not recommended for complex comprehension expressions.
+    \item Enumerations by way of $\Set{x,y,z}$ (read: The set of elements $x,y$, and $z$)
+    \item Comprehensions of the form $\Set{x \in S}{p(x)}{f(x)}$ (read: The set of function $f$ applied to all elements in $S$ satisfying predicate $p(x)$). A small effort is made to accommodate a shorthand form, wherein $\Set{x \in S}{true}{x}$ may be written as $\Set{x \in S}{x}$.
 \end{enumerate}
 
 Sets, as mathematical objects with only two major restrictions, lend themselves well to a variety of computational implementations. Arrays, ordered arrays, hash maps, bit sets, roaring bit sets, path maps, and tries can all be used to satisfy the uniqueness property and hide an internally ordered representation from users.
@@ -4861,8 +4876,8 @@ Range Totality:
 %
 Domain One-to-manyness:
 \begin{itemize}
-  \item $R(\{e\})$ is deterministic
-  \item $|R[\{e\}]| = 1$
+  \item $R(\Set{e})$ is deterministic
+  \item $|R[\Set{e}]| = 1$
   \item $|R[S]| \leq |S|$
   \item $|R| \leq dom(R)$
 \end{itemize}
@@ -4937,22 +4952,22 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   \tag{Functional Override}
   f(x) := E
   &\leadsto
-  f := f \oplus \{x \mapsto E\}
+  f := f \oplus \Set{x \mapsto E}
   \\
   \tag{Override}
   R \oplus Q &\leadsto Q \cup (dom(Q) \domsub R)
   \\
   \tag{Domain Restriction}
-  S \triangleleft R &\leadsto \bSet{x \mapsto y \in R}{x \in S}{x \mapsto y}
+  S \triangleleft R &\leadsto \Set{x \mapsto y \in R}{x \in S}{x \mapsto y}
   \\
   \tag{Domain Subtraction}
-  S \domsub R &\leadsto \bSet{x \mapsto y \in R}{x \notin S}{x \mapsto y}
+  S \domsub R &\leadsto \Set{x \mapsto y \in R}{x \notin S}{x \mapsto y}
   \\
   \tag{Range Restriction}
-  R \triangleright S &\leadsto \bSet{x \mapsto y \in R}{y \in S}{x \mapsto y}
+  R \triangleright S &\leadsto \Set{x \mapsto y \in R}{y \in S}{x \mapsto y}
   \\
   \tag{Range Subtraction}
-  R \ransub S &\leadsto \bSet{x \mapsto y \in R}{y \notin S}{x \mapsto y}
+  R \ransub S &\leadsto \Set{x \mapsto y \in R}{y \notin S}{x \mapsto y}
 \end{align}
 \end{minipage}
 
@@ -4973,7 +4988,7 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   \\ % dont use pop - random choice but pop(S) == pop(S). Python op is completely nondeterministic so it may not return the same one R(x) = small epsilon y . y in R[{x}]
   % if R[{x}] is empty, you return "an arbitrary element of range of R", not None
   \tag{Image}
-  R[S] &\leadsto \bSet{x \mapsto y \in R}{x \in S}{y}
+  R[S] &\leadsto \Set{x \mapsto y \in R}{x \in S}{y}
   \\
   \tag{Product}
   x \mapsto y \in S \times T &\leadsto x \in S \land y \in T
@@ -4993,7 +5008,7 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   \tag{Predicate Operations - Union}
   S \cup T
   &\leadsto
-  \setOne{(x \in S \mid x) ` (x \in T \cdot x \notin S \mid x)}
+  \Set{(x \in S \mid x) ` (x \in T \cdot x \notin S \mid x)}
   \\
   \tag{Predicate Operations - Intersection}
   S \cap T
@@ -5006,7 +5021,7 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   \Set{x \in S}{x \notin T}
   % \\
   % \tag{Singleton Membership \footnote{Currently unused. We need to be careful to handle the case where $x$ is a free variable.}}
-  % x \in \{e\}
+  % x \in \Set{e}
   % &\leadsto
   % x = e
   \\
@@ -5083,9 +5098,9 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
 \noindent\begin{minipage}{\linewidth}
 \begin{align}
   \tag{Or-wrapping \footnote{To simplify the matching process later on, we wrap every top-level AND statement (which is guaranteed to be a ListOp by the dataclass field type definition) with an OR.}}
-  \bSetT{E}{\bigwedge P_i}
+  \Set{E}{\bigwedge P_i}
   &\leadsto
-  \bSetT{E}{\bigvee \bigwedge P_i}
+  \Set{E}{\bigvee \bigwedge P_i}
 \end{align}
 \end{minipage}
 
@@ -5437,7 +5452,7 @@ No change from previous, but the number of loop structures should not increase.
   \tag{Singleton Membership Elimination}
   \begin{minipage}[]{0.5\textwidth}
   \begin{algorithmic}
-    \Loop\ $SingleGSP(x \in \{y\}, P)$
+    \Loop\ $SingleGSP(x \in \Set{y}, P)$
       \State body
     \EndLoop
   \end{algorithmic}
