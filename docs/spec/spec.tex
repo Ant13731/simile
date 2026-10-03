@@ -76,18 +76,21 @@
 \makeatother
 
 % Bag notation
-\newcommand{\bag}[3]{%
-  \llbracket \, #1 \cdot #2 \mid #3 \, \rrbracket%
+\makeatletter
+\newcommand{\Bag}[1]{%
+  \@ifnextchar\bgroup
+    {\Bag@check{#1}}
+    {\llbracket\,#1\,\rrbracket}%
 }
-\newcommand{\bagT}[2]{%
-  \llbracket \, #1 \cdot #2 \,\rrbracket%
+\def\Bag@check#1#2{%
+  \@ifnextchar\bgroup
+    {\Bag@three{#1}{#2}}
+    {\llbracket\,#1 \mid #2\,\rrbracket}%
 }
-\newcommand{\Bag}[2]{%
-  \llbracket \, #1 \mid #2 \, \rrbracket%
+\def\Bag@three#1#2#3{%
+  \llbracket\,#1 \cdot #2 \mid #3\,\rrbracket%
 }
-\newcommand{\bagOne}[1]{%
-  \llbracket \, #1 \, \rrbracket%
-}
+\makeatother
 
 % List comprehension notation
 \newcommand{\List}[3]{%
@@ -648,9 +651,9 @@ The TRS for this language primarily involves lowering collection data type expre
 %         Bag Enumeration & Literal collection of elements to create a set \\ & (for now, stored as a tuple of elements and number of occurrences).\\ %& $\Set{x, y, ...}: set[T]$ &
 %         Bag Membership & The term $x \in S$ is True if $S$ contains one or more occurrences of $x$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
 %         \hline
-%         Union & $S \cup T = \bag{(x, a+b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
-%         Intersection & $S \cap T = \bag{(x, min(a,b))}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
-%         Difference & $S - T = \bag{(x, a-b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0 \land a-b > 0}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
+%         Union & $S \cup T = \Bag{(x, a+b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
+%         Intersection & $S \cap T = \Bag{(x, min(a,b))}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
+%         Difference & $S - T = \Bag{(x, a-b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0 \land a-b > 0}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
 %         % Cartesian Product & $S \times T = \Set{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
 %         % \hline
 %         % Powerset & $\mathbb{P}(S) = \Set{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
@@ -660,8 +663,8 @@ The TRS for this language primarily involves lowering collection data type expre
 %         % Superset & $S \supseteq T \equiv \forall x \in T: s \in S$ \\ %& $\supseteq: set[T] \times set[T] \rightarrow bool$ &
 %         % Strict Superset & $S \supset T \equiv S \supseteq T \land S \neq T$ \\ %& $\supset: set[T] \times set[T] \rightarrow bool$ &
 %         % \hline
-%         Bag Mapping & $f * S = \bagT{(f(x), r)}{(x, r) \in S}$\\ %& $*: (T \rightarrow T') \times set[T] \rightarrow set[T']$ &
-%         Bag Filter & $p \triangleleft S = \bag{(x, r)}{(x, r) \in S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool)
+%         Bag Mapping & $f * S = \Bag{(f(x), r)}{(x, r) \in S}$\\ %& $*: (T \rightarrow T') \times set[T] \rightarrow set[T']$ &
+%         Bag Filter & $p \triangleleft S = \Bag{(x, r)}{(x, r) \in S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool)
 %         Size & $size(S) = \sum r \cdot (x, r) \in S$\\
 %         Zero Occurrences & $(x,0) \in S \implies x \notin S$\\
 %         \hline
@@ -1320,7 +1323,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Bag Enumeration}
 \begin{prooftree}
 \hypo{\Gamma \vdash e_1, ..., e_n: A}
-\infer1{\Gamma \vdash \llbracket e_1, ..., e_n \rrbracket: bag[A]}
+\infer1{\Gamma \vdash \Bag{e_1, ..., e_n}: bag[A]}
 \end{prooftree}
 \\
 \tag{Sequence Type}
@@ -1563,7 +1566,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \tag{Bag Comprehension}
 \begin{prooftree}
 \hypo{\Gamma \vdash Q: Quantifier[A]}
-\infer1{\Gamma \vdash \bagOne{Q}: bag[A]}
+\infer1{\Gamma \vdash \Bag{Q}: bag[A]}
 \end{prooftree}
 \\
 \tag{Sequence Comprehension}
@@ -4539,7 +4542,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
   %   \hypo{r: record}
   %   \hypo{|t| = |r|}
   %   \hypo{\forall i \in 0..|t| \cdot }
-  %   \hypo{B: bag[T] = \bagT{v \in t}{v}}
+  %   \hypo{B: bag[T] = \Bag{v \in t}{v}}
   %   \infer2{\texttt{cast(t, bag)} \to \texttt{B}}
   % \end{prooftree}
   % \\
@@ -4925,17 +4928,17 @@ Below is a list of rewrite rules for key abstract data types, syntactic sugar, a
   R^{-1} \circ B
   \\
   \tag{Bag Predicates - Union}
-  S \cup T &\leadsto \bag{x \in dom(S) \cup dom(T)}{n = max(S[x] \cup T[x])}{x \mapsto n}
+  S \cup T &\leadsto \Bag{x \in dom(S) \cup dom(T)}{n = max(S[x] \cup T[x])}{x \mapsto n}
   \\
   \tag{Bag Predicates - Intersection}
-  S \cap T &\leadsto \bag{x \in dom(S)}{x \in dom(T) \land n = min(S[x] \cup T[x]) \land n > 0}{x \mapsto n}
+  S \cap T &\leadsto \Bag{x \in dom(S)}{x \in dom(T) \land n = min(S[x] \cup T[x]) \land n > 0}{x \mapsto n}
   \\
   \tag{Bag Predicates - Sum}
-  S + T &\leadsto \bag{x \in dom(S) \cup dom(T)}{n = sum(S[x] \cup T[x])}{x \mapsto n}
+  S + T &\leadsto \Bag{x \in dom(S) \cup dom(T)}{n = sum(S[x] \cup T[x])}{x \mapsto n}
   \\
   \tag{Bag Predicates - Difference}
-  % S - T &\leadsto \bag{x}{x \in dom(S) \land pop(S[x]) - popDefault(T[x], 0) \land n > 0}{x \mapsto n}
-  S - T &\leadsto \bag{x \in dom(S)}{n = S(x) - (T \cup \llbracket x \mapsto 0\rrbracket)(x) \land n > 0}{x \mapsto n}
+  % S - T &\leadsto \Bag{x}{x \in dom(S) \land pop(S[x]) - popDefault(T[x], 0) \land n > 0}{x \mapsto n}
+  S - T &\leadsto \Bag{x \in dom(S)}{n = S(x) - (T \cup \Bag{x \mapsto 0})(x) \land n > 0}{x \mapsto n}
 \end{align}
 
 \subsection{Syntactic Sugar for Sequences}
