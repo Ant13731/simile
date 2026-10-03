@@ -71,7 +71,7 @@ where $min(dom(q')) = 0$ and $max(dom(q')) = |q'|$ (ie. it is a sequence of char
 \begin{grammar}
 <B> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <i> \{`,' <value> \lit{$\mapsto$} <i>\}`\}'
 \end{grammar}
-where $\forall i in ran(B) | i \geq 0$
+where $\forall i \in ran(B) | i \geq 0$
 \subparagraph{Sequence}
 \begin{grammar}
 <S> ::= `\{\}' | `\{' <i> \lit{$\mapsto$} <value> \{`,' <i> \lit{$\mapsto$} <value>\}`\}'
@@ -187,7 +187,7 @@ where the constructor identifier is the same as the type identifier. Records act
   \tag{String-to-sequence typecast}
   \begin{prooftree}
     \hypo{q: str}
-    \hypo{S: sequence[str] = q'} % q' is the seq view of q
+    \hypo{S: sequence[str] = \List{c \in q}{c}}
     \infer2{\texttt{cast(q, sequence)} \to \texttt{S}}
   \end{prooftree}
   \\
@@ -202,7 +202,7 @@ where the constructor identifier is the same as the type identifier. Records act
   %    - str: (x in t | str(x)) as a string
   \tag{Tuple-to-string typecast}
   \begin{prooftree}
-    \hypo{t: (T, ...)}
+    \hypo{t: (T_1, T_2, ...)}
     \hypo{t_q = \Tuple{v \in t}{cast(v, str)}}
     \hypo{q: ``t_q"}
     \infer3{\texttt{cast(t, str)} \to \texttt{q}}
@@ -235,41 +235,200 @@ where the constructor identifier is the same as the type identifier. Records act
   %    - record: (size(t) == size(record) and forall i in 0..size(t) | t[i].type == record[i].type) ==> record(t)   --- use the record constructor and pass in args
   \tag{Tuple-to-record typecast}
   \begin{prooftree}
-    \hypo{t: (T, ...)}
-    \hypo{R_{type}: type[record]}
-    \hypo{\forall i \in 0..|t| \cdot t[i].type = R_{type}[i]}
-    \hypo{R: record = R_{type}\Tuple{v \in t}{v}}
+    \hypo{t: (T_1, T_2, ...)}
+    \hypo{R: record[T_1, T_2, ...] = R_{type}\Tuple{v \in t}{v}}
+    \hypo{\forall i \in 0..|t| \cdot type(t[i]) = type(R[i])}
     \hypo{|t| = |R|}
-    \infer5{\texttt{cast(t, record)} \to \texttt{R}}
+    \infer4{\texttt{cast(t, record)} \to \texttt{R}}
   \end{prooftree}
-%   \\
+  \\
   % - set s to:
   %    - str: {x in t | str(x)} as a string
+  \tag{Set-to-string typecast}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{s_q = \Set{v \in s}{cast(v, str)}}
+    \hypo{q: ``s_q"}
+    \infer3{\texttt{cast(s, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
   %    - sequence: [x in t | x] --- arbitrary order
+  \tag{Set-to-sequence typecast}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{S: sequence[T] = \List{v \in s}{v}}
+    \infer2{\texttt{cast(s, sequence)} \to \texttt{S}}
+  \end{prooftree}
+  \\
   %    - tuple: cast(cast(s, sequence), tuple)
+  \tag{Set-to-tuple typecast}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \infer1{\texttt{cast(s, tuple)} \to \texttt{cast(cast(s, sequence), tuple)}}
+  \end{prooftree}
+  \\
   %    - bag: {x in t | x |-> 1}
+  \tag{Set-to-bag typecast}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{B: bag[T] = \Bag{v \in s}{v}}
+    \infer2{\texttt{cast(s, bag)} \to \texttt{B}}
+  \end{prooftree}
+  \\
   %    - relation: {(x,y) in t | x |-> y}
+  \tag{Set-to-relation typecast}
+  \begin{prooftree}
+    \hypo{s: set[(T_1, T_2)]}
+    \hypo{r: relation[T_1, T_2] = \Set{(v_1, v_2) \in s}{v_1 \mapsto v_2}}
+    \infer2{\texttt{cast(s, relation)} \to \texttt{r}}
+  \end{prooftree}
+  \\
   % - relation r to:
   %    - str: {x |-> y in t | str(x) |-> str(y)} as a string
+  \tag{Relation-to-string typecast}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{r_q = \Set{v_1 \mapsto v_2 \in r}{cast(v_1, str) \mapsto cast(v_2, str)}}
+    \hypo{q: ``r_q"}
+    \infer3{\texttt{cast(r, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
   %    - set: {x |-> y in t | (x,y)}
+  \tag{Relation-to-set typecast}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{s: set[(T_1, T_2)] = \Set{v_1 \mapsto v_2 \in r}{(v_1, v_2)}}
+    \infer2{\texttt{cast(r, relation)} \to \texttt{s}}
+  \end{prooftree}
+  \\
   %    - sequence: [x |-> y in t | (x,y)] --- arbitrary order
+  \tag{Relation-to-sequence typecast}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \infer1{\texttt{cast(r, sequence)} \to \texttt{cast(cast(s, set), sequence)}}
+  \end{prooftree}
+  \\
   %    - tuple: cast(cast(s, sequence), tuple)
+  \tag{Relation-to-tuple typecast}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \infer1{\texttt{cast(r, sequence)} \to \texttt{cast(cast(s, sequence), tuple)}}
+  \end{prooftree}
+  \\
   % - bag b to:
   %    - str: {x |-> y in t | str(x) |-> str(y)} as a string
+  \tag{Bag-to-string typecast}
+  \begin{prooftree}
+    \hypo{B: bag[T]}
+    \hypo{B_q = \Bag{v \in B}{cast(v, str)}}
+    \hypo{q: ``B_q"}
+    \infer3{\texttt{cast(B, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
+  %    - relation: {x |-> y in t | x |-> y}
+  \tag{Bag-to-relation typecast}
+  \begin{prooftree}
+    \hypo{B: bag[T]}
+    \hypo{r: relation[T, int] = \Set{v \mapsto i \in B}{v \mapsto i}}
+    \infer2{\texttt{cast(B, set)} \to \texttt{r}}
+  \end{prooftree}
+  \\
   %    - set: {x |-> y in t | (x,y)}
+  \tag{Bag-to-set typecast}
+  \begin{prooftree}
+    \hypo{B: bag[T]}
+    \hypo{s: set[T] = \Set{v \in B}{v}}
+    \infer2{\texttt{cast(B, set)} \to \texttt{s}}
+  \end{prooftree}
+  \\
   %    - sequence: flatten([x |-> y in t | [i in 0..y | x]]) --- arbitrary order
+  \tag{Bag-to-sequence typecast}
+  \begin{prooftree}
+    \hypo{B: bag[T]}
+    \hypo{S: sequence[T] = flatten(\List{v \mapsto i \in B}{\List{j \in 0 \upto i}{v}})}
+    \infer2{\texttt{cast(B, sequence)} \to \texttt{S}}
+  \end{prooftree}
+  \\
   %    - tuple: cast(cast(s, sequence), tuple)
+  \tag{Bag-to-tuple typecast}
+  \begin{prooftree}
+    \hypo{B: bag[T]}
+    \infer1{\texttt{cast(B, tuple)} \to \texttt{cast(cast(B, sequence), tuple)}}
+  \end{prooftree}
+  \\
   % - sequence s to:
   %    - str: [x in t | x] as a string
+  \tag{Sequence-to-string typecast}
+  \begin{prooftree}
+    \hypo{S: sequence[T]}
+    \hypo{S_q = \List{v \in S}{cast(v, str)}}
+    \hypo{q: ``S_q"}
+    \infer3{\texttt{cast(S, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
   %    - set: {x |-> y in t | y}
+  \tag{Sequence-to-set typecast}
+  \begin{prooftree}
+    \hypo{S: sequence[T]}
+    \hypo{s: set[T] = \Set{v \in S}{v}}
+    \infer2{\texttt{cast(S, set)} \to \texttt{s}}
+  \end{prooftree}
+  \\
   %    - relation: {x |-> y in t | x |-> y}
+  \tag{Sequence-to-relation typecast}
+  \begin{prooftree}
+    \hypo{S: sequence[T]}
+    \hypo{r: relation[int, T] = \Set{i \mapsto v \in S}{i \mapsto v}}
+    \infer2{\texttt{cast(S, relation)} \to \texttt{r}}
+  \end{prooftree}
+  \\
   %    - tuple: (x |-> y in t | y)
+  \tag{Sequence-to-tuple typecast}
+  \begin{prooftree}
+    \hypo{S: sequence[T]}
+    \hypo{t: (T, ...) = \Tuple{v \in S}{v}}
+    \infer2{\texttt{cast(S, tuple)} \to \texttt{t}}
+  \end{prooftree}
+  \\
   % - record r to:
   %    - str: record_name(field1: r.field1, field2: r.field2, ...)
+  \tag{Record-to-string typecast}
+  \begin{prooftree}
+    \hypo{R: record[T_1, T_2, ...]}
+    \hypo{R_q = \Set{field \mapsto v \in R}{field \mapsto cast(v, str)}}
+    \hypo{q: ``R_q"}
+    \infer3{\texttt{cast(R, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
   %    - relation: {x in r.field_names | x |-> r.x}
+  \tag{Record-to-relation typecast}
+  \begin{prooftree}
+    \hypo{R: record[T, ...]}
+    \hypo{r: relation[str, T] = \Set{field \mapsto v \in R}{field \mapsto v}}
+    \infer2{\texttt{cast(R, relation)} \to \texttt{r}}
+  \end{prooftree}
+  \\
   %    - set: cast(cast(r, relation), set)
+  \tag{Record-to-set typecast}
+  \begin{prooftree}
+    \hypo{R: record[T, ...]}
+    \infer1{\texttt{cast(R, set)} \to \texttt{cast(cast(R, relation), set)}}
+  \end{prooftree}
+  \\
   %    - sequence: cast(cast(r, relation), sequence)
+  \tag{Record-to-sequence typecast}
+  \begin{prooftree}
+    \hypo{R: record[T, ...]}
+    \infer1{\texttt{cast(R, sequence)} \to \texttt{cast(cast(R, tuple), sequence)}}
+  \end{prooftree}
+  \\
   %    - tuple: cast(cast(r, relation), tuple)
+  \tag{Record-to-tuple typecast}
+  \begin{prooftree}
+    \hypo{R: record[T_1, T_2, ...]}
+    \hypo{t: (T_1, T_2, ...) = \Tuple{field \mapsto v \in R}{v}}
+    \infer2{\texttt{cast(R, tuple)} \to \texttt{t}}
+  \end{prooftree}
 \end{gather}
 \subparagraph{Equals}
 \subparagraph{Not equals}
