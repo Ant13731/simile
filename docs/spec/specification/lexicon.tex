@@ -1,0 +1,174 @@
+
+\subsection{Lexicon}
+Since Simile makes extensive use of Event-B-like set notation and otherwise non-ASCII characters, this section contains a list of such characters, translations to ASCII symbols where suitable, and other useful lexing information.
+
+\subsubsection{Whitespace}
+Similar to Python, indentation and newline tokens are significant in Simile. In particular, nested code blocks, as in if-statements, for-loops, and procedure definitions, require the use of indentations to signify the beginning and end. Indentation/newlines may also be used within collection-type comprehensions or enumerations, similar to the style seen in JSON. Comments are single-lined and start with a pound symbol (\#). Indentation is ignored within bracketed expressions\footnote{Except for within the `iter' block. This is a special case handled post-lexing: ignore indentation when parenthesis/bracket/brace level $>1$ and we are not within the block portion of `iter'... VBAR NEWLINE INDENT `block' DEDENT.}.
+
+\subsubsection{Identifiers}
+Identifiers in Simile follow the standard regular expression, using only ASCII letters, underscores, and numbers: $[a-zA-Z\_][a-zA-Z\_0-9]$.
+
+\subsubsection{Primitives}
+Integers and floating point numbers follow a similar style to modern programming languages. The dash character ($-$) may be used in either subtraction or as a unary negation. Superscript numbers may be used for constant exponentiation. Booleans (True/False) follow Python style, with capitalized first letters. Strings are delimited with double-quotes (") and may be multilined.
+
+% TODO: escaped characters in strings?
+
+\subsubsection{Operators}
+ASCII tokens will be provided as an alternative to unicode format where suitable. The following are symbols used for expressions:
+\begin{center}
+\begin{longtable}{c c l}
+    \textbf{Token} & \textbf{ASCII Token} & \textbf{Name} \\
+    \endhead
+    \lexentry{\cdot}{.:}{Center Dot (Quantifier Separator) \footnote{Anywhere $\cdot$ is valid, $.$ is valid, except the parser may attempt to treat $.$ as a record field access instead of a quantifier separator (like $a.b$), so we prefer the use of $\cdot$ instead. NOTE: We plan to remove this in favour of $.:$}} % TODO remove
+    \lexentry{.}{}{Dot}
+    \lexentry{,}{iter\_and}{Comma}
+    \lexentry{`}{iter\_or}{Comma}
+    \lexentry{:}{}{Colon}
+    \lexentry{;}{}{Semicolon}
+    \lexentry{|}{}{Vertical Bar}
+    \lexentry{\lambda}{lambda}{Lambda}
+    \lexentry{(}{}{Left Parenthesis}
+    \lexentry{)}{}{Right Parenthesis}
+    \lexentry{\langle}{<{}<}{Left Bracket}
+    \lexentry{}{[}{Left Bracket (Alternative)}
+    \lexentry{\rangle}{>{}>}{Right Bracket}
+    \lexentry{}{]}{Right Bracket (Alternative)}
+    \lexentry{\{}{}{Left Brace}
+    \lexentry{\}}{}{Right Brace}
+    \lexentry{\llbracket}{[[}{Left Double Bracket}
+    \lexentry{\rrbracket}{]]}{Right Double Bracket}
+    \lexentry{=}{}{Equals}
+    \lexentry{\neq}{!=}{Not Equals}
+    \lexentry{\lnot}{not}{Not}
+    \lexentry{}{!}{Not (Alternative)}
+    \lexentry{\land}{and}{And}
+    \lexentry{\lor}{or}{Or}
+    \lexentry{\Rightarrow}{=>}{Implies}
+    % \lexentry{\Leftarrow}{<==}{Reverse Implies}
+    \lexentry{\equiv}{==}{Equivalent}
+    % \lexentry{\equiv}{}{Equivalent (Alternative)}
+    \lexentry{\not\equiv}{!==}{Not Equivalent}
+    \lexentry{\forall}{forall}{For All}
+    \lexentry{\exists}{exists}{There Exists}
+    \lexentry{}{+}{Plus}
+    \lexentry{}{-}{Minus}
+    \lexentry{}{*}{Multiplication}
+    \lexentry{}{/}{Division}
+    \lexentry{}{div}{Integer Division}
+    \lexentry{}{mod}{Modulo}
+    \lexentry{}{\^}{Exponent}
+    \lexentry{<}{}{Less Than}
+    \lexentry{\leq}{<=}{Less Than or Equal}
+    \lexentry{>}{}{Greater Than}
+    \lexentry{\geq}{>=}{Greater Than or Equal}
+    \lexentry{\in}{in}{In (Membership)}
+    \lexentry{\not\in}{not in}{Not In (Membership)}
+    \lexentry{\cup}{\textbackslash/}{Union}
+    \lexentry{\cap}{/\textbackslash}{Intersection}
+    \lexentry{\setminus}{\textbackslash}{Backslash (Set Minus)}
+    \lexentry{\times}{><}{Cartesian Product}
+    % \lexentry{\times}{><}{Cartesian Product}
+    \lexentry{\subset}{<{}<:}{Subset}
+    \lexentry{\subseteq}{<:}{Subset or Equal}
+    \lexentry{\supset}{:>{}>}{Superset}
+    \lexentry{\supseteq}{:>}{Superset or Equal}
+    \lexentry{\not\subset}{!<{}<:}{Not Subset}
+    \lexentry{\not\subseteq}{!<:}{Not Subset or Equal}
+    \lexentry{\not\supset}{!:>{}>}{Not Superset}
+    \lexentry{\not\supseteq}{!:>}{Not Superset or Equal}
+    \lexentry{\bigcup}{union}{General Union}
+    \lexentry{\bigcap}{intersection}{General Intersection}
+    \lexentry{\mapsto}{|->}{Maplet}
+    \lexentry{\oplus}{<+>}{Relation Overriding} % Old: \ovl \footnote{This unicode symbol requires a specific font available from Rodin: Brave Sans Mono, U+E103}}
+    \lexentry{\circ}{<>}{Composition}
+    \lexentry{\concat}{++}{Concatenation}
+    \lexentry{^{-1}}{\~}{Inverse}
+    \lexentry{\domres}{<|}{Domain Restriction}
+    \lexentry{\domsub}{<{}<|}{Domain Subtraction}
+    \lexentry{\ranres}{|>}{Range Restriction}
+    \lexentry{\ransub}{|>{}>}{Range Subtraction}
+    \lexentry{\rel}{<->}{Relation}
+    \lexentry{\trel}{<{}<->}{Total Relation \footnote{Brave Sans Mono unicode: U+E100}}
+    \lexentry{\srel}{<->{}>}{Surjective Relation \footnote{Brave Sans Mono unicode: U+E101}}
+    \lexentry{\strel}{<{}<->{}>}{Total Surjective Relation \footnote{Brave Sans Mono unicode: U+E102}}
+    \lexentry{\pfun}{+->}{Partial Function}
+    \lexentry{\tfun}{-{}->}{Total Function}
+    \lexentry{\pinj}{>+>}{Partial Injection}
+    \lexentry{\tinj}{>->}{Total Injection}
+    \lexentry{\psur}{+->{}>}{Partial Surjection}
+    \lexentry{\tsur}{-{}->{}>}{Total Surjection}
+    \lexentry{\tbij}{>->{}>}{Bijection}
+    \lexentry{\upto}{}{Upto}
+    \lexentry{\pow}{powerset}{Powerset}
+    \lexentry{\pown}{powerset1}{Non-Empty Powerset}
+    \lexentry{\sum}{sum}{Summation}
+    \lexentry{\prod}{product}{Product}
+\end{longtable}
+\end{center}
+
+The following are symbols used for programming constructs:
+\begin{center}
+\begin{longtable}{c c c c}
+    \textbf{(Unicode) Token} & \textbf{(ASCII) Token} & \textbf{Name} \\
+    \endhead
+    \lexentry{\coloneqq}{:=}{Assignment}
+    \lexentry{:\in}{::}{Choice (Non-deterministic Membership) Assignment}
+    \lexentry{\rightarrow}{->}{Right Arrow}
+\end{longtable}
+\end{center}
+
+\subsubsection{Reserved Keywords}
+The following list of symbols and identifiers are reserved for programming constructs:
+
+\begin{center}
+\begin{tabular}{c c c c c c}
+true & false & if & else & for\\
+while & record & enum & procedure & is\\
+is not & return & break & continue & from\\
+import & skip & trait & type & iter \\
+iter\_or & iter\_and
+\end{tabular}
+\end{center}
+
+And for built-in types:
+\begin{center}
+\begin{tabular}{c c c c c c}
+int &
+float &
+string &
+bool &
+$\mathbb{Z}$ &
+$\mathbb{N}$ \\
+$\mathbb{N}_1$ &
+set &
+sequence &
+bag &
+relation &
+generic \\
+tuple &
+\end{tabular}
+\end{center}
+
+And built-in procedures:
+
+\begin{center}
+\begin{tabular}{c c c c c c}
+min &
+map\_min &
+max &
+map\_max &
+choice &
+dom \\
+ran &
+card &
+size &
+sum &
+cast &
+cast\_with \\
+print &
+map &
+heads &
+tails &
+fold
+\end{tabular}
+\end{center}

@@ -1,0 +1,208 @@
+\subsection{Overview}
+This document serves as a living specification and design record of the very-high-level programming language Simile. Simile is founded on the union between formal specification languages and efficiency-focused programming languages, with the belief that a language can be both highly performant and highly abstract. We focus on providing a python-like/specification-language-like programming experience with a compiler strong enough to compete with hand-optimized C code. Where possible, we aim to formalize Simile's compilation process to ensure that aggressively optimized programs remain correct by construction.
+
+% TODO dont talk about event b so much here - prime real estate to introduce Simile
+Simile takes its syntactic and semantic roots in that of Event-B, a set-theory-first language used to formalize safety-oriented software specifications. Event-B notation often leans on set comprehensions (of the form $\Set{x \in S}{E}$) and set operations (like $S \cup T$), with progressive specification refinement at the core of the development process. Like object-oriented programs, Event-B programs tend to operate at multiple refinement levels simultaneously, especially when proving program correctness. Each atomic action must be proved correct, then proofs may be composed to prove larger programs, and so on. With Event-B as inspiration, Simile's syntax and semantics is intended to be proof-friendly in the same way, by following discrete mathematics notation.
+
+At the same time, Simile attempts to use the semantic information available at high-level programs to aggressively optimize the executable value. For example, $X \cap T = T$ may require evaluation of $X \cap T$ in a normal programming language, but Simile attempts to match known theorems against expressions to determine that $X \cap T = T$ is only true when $X \supseteq T$. By avoiding the difficult reasoning paths of traditional imperative languages (involving side effects or mutable objects) to perform an action, set theory semantics affords an entire class of optimizations not available to other programming languages.
+
+By building from 50 years of programming language and formal methods literature, we hope to create a language that will spark further interest in simple-to-use, efficient-to-run languages. Following sections include the high-level design of Simile, formalized subsystems, and an implementation reference.
+
+\subsection{Scope}
+In scope:
+\begin{itemize}
+    \item We follow set theory semantics most of the time, diverging only for a particularly useful expression or programming objective.
+    \item Programs should remain as abstract as possible, but users may provide helpful information to the compiler to unlock more aggressive optimizations.
+    \item Notation follows that of Event-B (mostly), including a rich set of set and relational operators.
+\end{itemize}
+%%
+Out of scope:
+\begin{itemize}
+    \item We cannot hope to become the objectively best language in all use cases. Each language has their strength, and Simile aims to be well-rounded; ergonomic enough to pick up, and fast enough to be more usable than other specification language runtimes.
+    \item We do not follow conventional imperative language semantics that would otherwise clash with set theory optimizations.
+\end{itemize}
+
+\subsection{Background}
+\subsubsection{Programmers should not worry about implementation details}
+In high level programming languages, users often reach for abstract constructs like relations (dictionaries in Python, maps in Java), lists, and sets, largely because they are standardized, concise, and expressive. For example, HashMaps can be found in almost every language's standard library, and it would be peculiar to find a language that does not have first-class support for list collections. Most of the time, programmers using these types don't think about the layout or execution of their data, just that it is held within a container and operable under several composable actions (concatenation, union, intersection, lookups, etc.). However, this abstraction under the semantics of traditional high-level imperative/OO programs can lead to wasted memory and computation time, especially when composing multiple operations together. For example, the expression $S \cap (A \cup B \cup C)$ is theoretically bounded by the size of $S$, but a conventional language would construct several intermediary sets for $A \cup B$, then $(A \cup B) \cup C$, consuming more memory and time than required.
+
+Low-level languages share an adjacent problem: programmers may trust primitive data type operations to be fast, but they must also tune every piece of their code to fit the type's implementation. Formally simple and powerful operations like list concatenation force the user to consider implementation details like memory allocation and ownership for both inputs and outputs. For example, in $A := S \concat T$, does the specific implementation create a new list for $A$ containing a shallow copy of the contents of $S$ and $T$? Or perhaps $A$ and $S$ will reference the same object, where the data in $T$ is moved to the pointed-to value of $S$. Programmers must track every byte of data for straightforward operations, causing mental overhead, distractions from program correctness, and the risk of implementation errors.
+
+Abstract data types are semantically powerful and have been implemented by hundreds of languages across thousands of libraries. Further, they can be represented by a variety of concrete types, with wildly varying levels of efficiency and effectiveness for different use cases. For example, a set of integers can be implemented by a HashSet, a bitset, an array, a tree set, or even a trie. HashSets are advantageous for element lookups, but may not be able to compare to a dense bitset in terms of memory efficiency. An array could be effective for a set that may need to be sorted, but doesn't have direct element lookups. With a little metadata-help from the programmer, the compiler should be intelligent enough to make decisions on the concrete type and optimize expressions tailored to the concrete type while completely following the abstract type's semantics.
+
+\paragraph{Motivating Example: A Visitor Information System}
+Let's turn towards an example for specification-focused programming: a group of conference administrators create a program to track resourcing for a week's worth of workshops. They already have a list of visitors, available rooms, and planned workshops for each room. A specification would model these records via carrier sets (i.e., enumerated sets):
+\begin{gather*}
+    Visitor = \Set{Ryan, Adrian, Kevin, Charlie, Michael, ...}\\
+    Room = \Set{100, 101, 201, ...}\\
+    Workshop = \Set{ESOP, FASE, FoSSaCS}
+\end{gather*}
+To make this model more useful, we express relationships between these sets. For example, every workshop must occur in a room and visitors will attend workshops. Further, we can place restrictions on each relation concisely through specification language notation. If we know workshops occur in a room, it would be safe to tighten our observation that \textit{all} workshops must occur in one room \textit{at a time}. So, we can explicitly refine the relationship to an injective (one-to-one) function that is total on the domain (the carrier set $Workshop$). In formal notation, we write concisely:
+\begin{gather*}
+    location: Workshop \tinj Room
+\end{gather*}
+We can further refine another relationship: visitors can attend workshops, but visitors can only attend one workshop \textit{at a time} and \textit{not all} visitors may attend a workshop. This relation is actually partial on the carrier set of $Visitor$ and a functional (many-to-one) relation. Formally:
+\begin{gather*}
+    attends: Visitor \pfun Workshop
+\end{gather*}
+With these relations, we can query for interesting information concisely. Let's say we want to throw a surprise dinner for all attendees in a specific room. We can compose the $attends$ relation with the $location$ relation to find the number of people expected in a specific room. For a specific $room$, we write:
+\begin{gather*}
+    card((location^{-1} \circ attends^{-1})[\Set{room}]
+\end{gather*}
+A HashMap would be the first concrete data structure of choice for most programmers, but without knowledge of the refined relationships, we cannot guarantee that the relational inverse operation is guaranteed to work. We set aside HashMaps for now for the sole reason that they are limited in their representation capabilities; we cannot model a many-to-many relationship using the convential definition of the type.
+
+If we were to build a compiler for this specification language, a naive implementation might only see the broad connection between these sets and choose to safely model them as a HashSet of tuples (which can represent many-to-many relations). In this case, we concretize the types of $location$ and $attends$ like so:
+\begin{gather*}
+    location: HashSet[(Workshop, Room)]\\
+    attends: HashSet[(Visitor, Workshop)]
+\end{gather*}
+Then, each operation from the above query can be ordered in an imperative fashion:
+\begin{algorithmic}
+    \State $locationInverse: HashSet[(Room, Workshop)] := Inverse(location)$
+    \State $attendsInverse: HashSet[(Workshop, Visitor)] := Inverse(attends)$
+    \State $visitorsInRooms: HashSet[(Room, Visitor)] := Compose(locationInverse, attendsInverse)$
+    \State $visitorsInQueryRoom: HashSet[Visitor] := Lookup(room, visitorsInRooms)$
+    \State $mealsToPrepForRoom: int := Card(visitorsInQueryRoom)$
+\end{algorithmic}
+With a library of concrete functions:
+\begin{algorithmic}
+    \Function{Inverse}{$r: HashSet[(X, Y)]$}
+        \Comment{Runtime: $O(n)$. Memory use: $O(n)$}
+        \State $r': HashSet[(Y, X)] := \Set{}$
+        \For{$x,y \in r$}
+            \State $r'.add((y,x))$ \Comment{$s.add$ is a primitive HashSet operation mutating $s$}
+        \EndFor
+        \Return $r'$
+    \EndFunction
+    \Function{Compose}{$r_1: HashSet[(X, Y)], r_2: HashSet[(Y, Z)]$}
+        \Comment{Runtime: $O(n^2)$. Memory use: $O(n)$}
+        \State $r': HashSet[(X,Z)] := \Set{}$
+        \For{$x,y_1 \in r_1$}
+            \For{$y_2,z \in r_2$}
+                \If{$y_1 = y_2$}
+                    \State $r'.add((x,y))$
+                \EndIf
+            \EndFor
+        \EndFor
+        \Return $r'$
+    \EndFunction
+    \Function{Lookup}{$searchFor: X, r: HashSet[(X,Y)]$}
+        \Comment{Runtime: $O(n)$. Memory use: $O(n)$}
+        \State $r': HashSet[Y] := \Set{}$
+        \For{$x,y \in r$}
+            \If{$searchFor = x$}
+                \State $r'.add(y)$
+            \EndIf
+        \EndFor
+        \Return $r'$
+    \EndFunction
+    \Function{Card}{$s: HashSet$}
+        \Comment{Runtime: $O(n)$. Memory use: $O(1)$}
+        \State $c: int := 0$
+        \For{$x \in s$}
+            \State $c := c + 1$
+        \EndFor
+        \Return $c$
+    \EndFunction
+\end{algorithmic}
+As evident by the poor runtime and memory complexity, this is far from the most efficient representation of the system. However, it is a direct, valid translation, fulfilling all semantic requirements. A human may never write such code, but a compiler without statically analyzing the use of abstract times, may choose the broadest representation at the cost of runtime and memory usage. With knowledge of the problem domain and usage of these library functions, human programmers can intuitively decide that the $Lookup$ function, for example, only ever needs to match for one room. Further, they would likely observe that this solution could be made a magnitude faster by using HashMaps instead of a tupled HashSet.
+
+But as programmers deciding on concrete data structures, it is our responsibility to be aware of the restrictions of the concrete types and make the most appropriate decision for the expected data. A compiler should be able to make the same decisions, consulting a longer list of alternatives for further unique cases. If we inform the compiler that HashMaps must represent many-to-one relations in addition to the refined relational types mentioned above (where $location$ and $attends$ are one-to-one and many-to-one respectively), we effectively offload the burden of implementation choice towards a rigid, correct system.
+
+Compare the above solution with the optimal HashMap implementation, which allocates no extra space for intermediate sets and runs in $O(n)$:
+\begin{algorithmic}
+    \Function{HashMapSolution}{$location: HashMap[Workshop, Room], attends: HashMap[Visitor, Workshop]$}
+        \State c := 0
+        \For{$v, w \in attends$}
+            \If{$location[w] = room$}
+                \State $c := c + 1$
+            \EndIf
+        \EndFor
+        \Return $c$
+    \EndFunction
+\end{algorithmic}
+
+\paragraph{Digression: relational databases} Upon reviewing this example, we see strong parallels in language and functionality to relational database engines (particularly SQL). And as a data processing-focused problem, this example could of course be modelled by a relational database. For a very large event with many rooms, visitors, and workshops, perhaps a relational database is the only way to manage the data. However, using formal notation, the programmer is not burdened with the choice of that representation; they focus on correctness of the abstract data and abstract operations. The specification language intentionally hides implementation-specific operations like joins and counts, instead opting for a purer mathematical model following traditional set theory semantics.
+
+The execution engine should have the freedom of choosing a relational database-like storage-and-query mechanism, but it should also have the freedom to choose between aggressively memory-efficient or fully-cached implementations too. In this particular example, a relational database may not even be the best choice of representation. Imagine we could encode the unchanging carrier sets (ex. a building has a limited number of $Room$s, the set of $Workshop$s is naturally limited by the number of $Room$s) as a compact bitset. If we were to perform an intersection between these encoded sets, the execution could be many times faster than the overhead from a relational database.
+
+By providing the compute engine with more opportunities to follow unique optimization paths, we may be able to tune the computation method to the problem at hand.
+
+% TODO mention collection skeletons area of research - abstract types, with optional traits to provide more domain-related information if known. But the code still works either way
+
+\subsubsection{Programmers should focus on correctness, compiler on efficiency}
+One of the best traits of specification languages towards correct program development is their emphasis on proving the intent of the code. Even in industry, organizing software requirements remains a bottleneck for shipping features and products. Although software developers will no doubt need to consider algorithmic efficiency when writing programs, they should be able to abstract away primitive operations to focus on writing readable, correct, and clear code. Then, the compiler should have the freedom to swap out expressive code with a semantically equivalent, more efficient counterpart. In this case, rigorous semantics are required to demonstrate that the source program exhibits the same key behaviours as optimized programs.
+
+High level program libraries and frameworks are already trending towards semantically rich, abstract interfaces covering a low level hand-optimized implementation. For example, the numpy library has become essential syntactic sugar for scientific computing within python. Python further serves as the standard for machine learning tooling, with libraries like PyTorch, TensorFlow, and Triton abstracting complex GPU code behind a vendor-agnostic interface.
+
+By simplifying the language and formalizing semantics, we can grant the compiler more power over optimizations than would otherwise be possible in conventional languages.
+
+\paragraph{Motivating Example: Operation Optimization in Python}
+Let's say we have 3 sets $S, T, V$ that can only be represented by the concrete HashSet type. Further, take our candidate query $(S \cup T) \cap V$. Python provides a suite of abstract operators for sets, so this expression may be represented as \texttt{(S | T) \& V}. But its imperative semantics hide the actual computation process:
+\begin{minted}{python}
+def compute(S, T, V):
+    # Step 1: S | T
+    s_union_t = set()
+    for x in S:
+        s_union_t.add(x)
+    for x in T:
+        s_union_t.add(x)
+    # len(s_union_t) <= len(S) + len(T)
+
+    # Step 2: (S | T) & V
+    ret = set()
+    for x in s_union_t:
+        ret.add(x)
+    for x in ret:
+        if x not in V:
+            ret.remove(x)
+    # len(ret) <= len(V)
+    return ret
+\end{minted}
+Because the expected behaviour of Python operators is to create a new set while leaving the input arguments untouched, the interpreter must create a new set for the union of $S$ and $T$, then another set for the intersection with $V$. Further, Python is forced to evaluate from left-to-right, obeying the priority of parenthesis. So, in the likely case where $S \cup T$ are larger than $V$, we must waste computation and memory adding and removing values from the return set (as in Step 2). The semantics of conventional imperative languages limit the compiler's ability to shuffle expression evaluation, not least because of side effects.
+
+If we freed the semantics of these operators so that known set theorems can replace expressions, we may choose to swap $(S \cup T) \cap V$ with a more complex but computationally faster expression $(S \cap V) \cup ((T \setminus S) \cap V)$. Further, if we prevent the construction of intermediary sets and instead compute the final result directly, we can create an implementation where the resulting set never undoes prior operations, and never consumes more memory than necessary:
+\begin{minted}{python}
+def compute(S, T, V):
+    # Step 1: S & V
+    ret = set()
+    for x in S:
+        if x in V:
+            ret.add(x)
+    # len(ret) <= min(len(S), len(V))
+    # Step 2
+    for x in T:
+        if x not in S and x in V:
+            ret.add(x)
+    # len(ret) <= min(len(S) + len(T), len(V))
+    return ret
+\end{minted}
+The constructed return set strengthens the upper bound cardinality by distributing the intersection operation (which shrinks set sizes) across the union operation (which grows set sizes). As a bonus for focusing on memory efficiency, the runtime is faster too. This second version only iterates over S and T once, while the first version iterates over S, T, and $S \cup T$ twice.
+
+High level specifications can make the intention of computation clearer and simpler, allowing simplifications to happen early in the compilation process. But we must be careful: as demonstrated with this example, the optimized answer is not necessarily the shortest formula. We must consider the concrete type representations, the atomic actions of those concrete types, and the strengths/weaknesses of those atomic actions. A new language defining only abstract semantics allows for extensions of optimizations without any behavioural differences the user would care about; the only behaviours we promise are those defined by the semantics.
+
+% TODO lean into the semantics, proofs, event b literature
+% TODO an example of where safety is critical, and language implementations distract from the correctness (or even worse, make something incorrect)
+
+\subsubsection{Partial computation is powerful}
+% TODO incrementalization
+\paragraph{Motivating Example: Maximum Tail Sum}
+%% TODO, benchmarks
+
+
+% What information is needed for reviewers to understand the design?
+% What information is helpful towards contributing to this project?
+
+% Motivation? % Give examples, motivation, why we are taking this route, include steps for code generation, give intuition
+
+\subsection{Requirements}
+The below requirements outline the driving features of Simile:
+\begin{description}
+  \item [R1] Syntax is that of a very high level language, inspired by formal languages but practical for imperative programming.
+  \item [R2] Set theory semantics remain consistent through any optimization. The semantic contract is defined by formalized behaviours, and the compiler must uphold these contracts.
+  \item [R3] Programmers think in abstract types; the compiler has the responsibility of concretization. Type system behaviours are formalized and explicit.
+  \item [R4] Programmers must be able to communicate with the compiler when needed (to direct optimizations), but they should never be forced to do so.
+  \item [R5] Optimizations are described through a term rewriting system, though we do not necessarily prove these formalizations. We lean on existing optimizers when appropriate (ex. LLVM as the last stage of compilation)
+  \item [R6] Output should be efficient in memory and runtime, competitive with optimized high-level languages like Java or CPython. The overall goal is to be competitive with low level languages like C and Rust.
+\end{description}
+% - Simile focuses on providing high level optimizations by joining formal semantics with imperative syntax.

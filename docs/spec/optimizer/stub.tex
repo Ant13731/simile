@@ -1,0 +1,662 @@
+Below is a list of rewrite rules for key abstract data types, syntactic sugar, and some builtin functions. Phases are intended to be executed in order; the post-condition of one phase serves as the pre-condition for the next. Standard functions (like map, flatten, length, etc.) are written as a library in Simile rather than baked-in optimizations.
+
+
+\subsection{Syntactic Sugar for Bags}
+\begin{align}
+  \tag{Bag Image}
+  R[B]
+  &\leadsto
+  R^{-1} \circ B
+  \\
+  \tag{Bag Predicates - Union}
+  S \cup T &\leadsto \Bag{x \in dom(S) \cup dom(T)}{n = max(S[x] \cup T[x])}{x \mapsto n}
+  \\
+  \tag{Bag Predicates - Intersection}
+  S \cap T &\leadsto \Bag{x \in dom(S)}{x \in dom(T) \land n = min(S[x] \cup T[x]) \land n > 0}{x \mapsto n}
+  \\
+  \tag{Bag Predicates - Sum}
+  S + T &\leadsto \Bag{x \in dom(S) \cup dom(T)}{n = sum(S[x] \cup T[x])}{x \mapsto n}
+  \\
+  \tag{Bag Predicates - Difference}
+  % S - T &\leadsto \Bag{x}{x \in dom(S) \land pop(S[x]) - popDefault(T[x], 0) \land n > 0}{x \mapsto n}
+  S - T &\leadsto \Bag{x \in dom(S)}{n = S(x) - (T \cup \Bag{x \mapsto 0})(x) \land n > 0}{x \mapsto n}
+\end{align}
+
+\subsection{Syntactic Sugar for Sequences}
+\begin{align}
+    \tag{Concatenation}
+    L \concat M
+    &\leadsto
+    L \cup \Set{x \mapsto y \in M }{x + max(dom(L)) \mapsto y}
+\end{align}
+
+\subsection{Syntactic Sugar for Relations}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Functional Override}
+  f(x) := E
+  &\leadsto
+  f := f \oplus \Set{x \mapsto E}
+  \\
+  \tag{Override}
+  R \oplus Q &\leadsto Q \cup (dom(Q) \domsub R)
+  \\
+  \tag{Domain Restriction}
+  S \triangleleft R &\leadsto \Set{x \mapsto y \in R}{x \in S}{x \mapsto y}
+  \\
+  \tag{Domain Subtraction}
+  S \domsub R &\leadsto \Set{x \mapsto y \in R}{x \notin S}{x \mapsto y}
+  \\
+  \tag{Range Restriction}
+  R \triangleright S &\leadsto \Set{x \mapsto y \in R}{y \in S}{x \mapsto y}
+  \\
+  \tag{Range Subtraction}
+  R \ransub S &\leadsto \Set{x \mapsto y \in R}{y \notin S}{x \mapsto y}
+\end{align}
+\end{minipage}
+
+\subsection{Comprehension Construction}
+
+\paragraph{Intuition} All set-like variables and literals are decomposed into set comprehensions.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item All terms with a set-like type (relations, bags, sets, sequences, etc.) must be in comprehension form.
+\end{itemize}
+
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Functional Image \footnote{May fail if R is not total. $choice$ is nondeterministic.}}
+  R(x) &\leadsto choice(R[x])
+  \\ % dont use pop - random choice but pop(S) == pop(S). Python op is completely nondeterministic so it may not return the same one R(x) = small epsilon y . y in R[{x}]
+  % if R[{x}] is empty, you return "an arbitrary element of range of R", not None
+  \tag{Image}
+  R[S] &\leadsto \Set{x \mapsto y \in R}{x \in S}{y}
+  \\
+  \tag{Product}
+  x \mapsto y \in S \times T &\leadsto x \in S \land y \in T
+  \\
+  \tag{Inverse}
+  x \mapsto y \in R^{-1} &\leadsto y \mapsto x \in R
+  \\
+  \tag{Composition}
+  x \mapsto y \in (Q \circ R) &\leadsto x \mapsto z \in Q \land z' \mapsto y \in R \land z=z'
+  % \tag{Exists Elimination}
+  % \exists z \cdot x \mapsto z \in Q \land z \mapsto y \in R &\leadsto x \mapsto z \in Q \land z' \mapsto y \in R \land z=z'
+  % \\
+  \end{align}
+\end{minipage}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Predicate Operations - Union}
+  S \cup T
+  &\leadsto
+  \Set{(x \in S \mid x) ` (x \in T \cdot x \notin S \mid x)}
+  \\
+  \tag{Predicate Operations - Intersection}
+  S \cap T
+  &\leadsto
+  \Set{x \in S}{x \in T}
+  \\
+  \tag{Predicate Operations - Difference}
+  S \setminus T
+  &\leadsto
+  \Set{x \in S}{x \notin T}
+  % \\
+  % \tag{Singleton Membership \footnote{Currently unused. We need to be careful to handle the case where $x$ is a free variable.}}
+  % x \in \Set{e}
+  % &\leadsto
+  % x = e
+  \\
+  \tag{Membership Collapse \footnote{Rule only matches inside the predicate of a quantifier. Explicitly enumerating all matches for all quantuantification types and predicate cases (ANDs, ORs, etc.) would require too much boilerplate. $x$ must be bound by the encasing quantifier.\\
+  The $\oplus$ operator represents any quantifier that returns a set-like type (ex. generalized union/intersection, set comprehension, relation comprehension).}}
+  x \in \oplus(E \mid P)
+  &\leadsto
+  P \land x = E
+  \\
+  \tag{Set Membership}
+  e \in S
+  &\leadsto
+  \exists{x \in S \mid e = x}
+\end{align}
+\end{minipage}
+
+\subsection{Disjunctive Normal Form}
+
+\paragraph{Intuition} All quantifier predicates are expanded to DNF (i.e. $\land$-operations nested within top-level $\lor$-operations).
+
+\paragraph{Notes} All matches of this phase occur only inside quantifier predicates.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item All terms with a set-like type (relations, bags, sets, sequences, etc.) must be in comprehension form.
+  \item Quantifier predicates are in disjunctive normal form - top level or-clauses with inner and-clauses.
+  \item If no $\lor$ operators exist within a quantifier predicate, the predicate must only contain $\land$ operators.
+\end{itemize}
+
+% https://en.wikipedia.org/wiki/Disjunctive_normal_form
+\noindent\begin{minipage}{\linewidth} % Need minipage for footnote
+\begin{align}
+  \tag{Flatten Nested $\land$}
+  x_1 \land ... \land (x_i \land x_{i+1}) \land ...
+  &\leadsto
+  x_1 \land ... \land x_i \land x_{i+1} \land ...
+  \\
+  \tag{Flatten Nested $\lor$}
+  x_1 \lor ... \lor (x_i \lor x_{i+1}) \lor ...
+  &\leadsto
+  x_1 \lor ... \lor x_i \lor x_{i+1} \lor ...
+  \\
+  \tag{Double Negation}
+  \lnot \lnot x
+  &\leadsto
+  x
+  \\
+  \tag{Distribute De Morgan - Or}
+  \lnot (x \lor y)
+  &\leadsto
+  \lnot x \land \lnot y
+  \\
+  \tag{Distribute De Morgan - And}
+  \lnot (x \land y)
+  &\leadsto
+  \lnot x \lor \lnot y
+  \\
+  \tag{Distribute $\land$ over $\lor$}
+  x \land (y \lor z)
+  &\leadsto
+  (x \land y) \lor (x \land z)
+\end{align}
+\end{minipage}
+
+\subsection{Or-wrapping}
+\paragraph{Intuition} Restructuring quantifier predicates with top-level ORs for later rules.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item All terms with a set-like type (relations, bags, sets, sequences, etc.) must be in comprehension form.
+  \item Quantifier predicates are in disjunctive normal form - top level or-clauses with inner and-clauses.
+\end{itemize}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Or-wrapping \footnote{To simplify the matching process later on, we wrap every top-level AND statement (which is guaranteed to be a ListOp by the dataclass field type definition) with an OR.}}
+  \Set{E}{\bigwedge P_i}
+  &\leadsto
+  \Set{E}{\bigvee \bigwedge P_i}
+\end{align}
+\end{minipage}
+
+\subsection{Generator Selection}
+\paragraph{Intuition} All nested ANDs are placed in a tree structure to better suit loop lowering.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item All terms with a set-like type (relations, bags, sets, sequences, etc.) must be in comprehension form.
+  \item Each top-level or-clause within quantification predicates must have one selected `generator' predicate (GeneratorSelectionPredicate - GSP) of the form $x \in S$ that loops over its bound dummy variable $x$.
+  \item All conjunctive clauses are wrapped in either a GSP or CombGSP structure.
+  \item Quantifier predicates are in disjunctive normal form (with GSP replacing AND structures) - top level or-clauses with inner and-clauses.
+\end{itemize}
+
+\paragraph{Notes} All matches of this phase occur only inside quantifier predicates. GSP is a tuple of form (generator chain, predicates) that can be flattened to a conjunctive clause. A CombGSP is a triple of form (shared generator, disjunctive children predicates/generators, predicates) that can likewise be flattened into a conjunctive clause. We keep the structure of these tuples distinct to ease the rewriting process.
+
+\paragraph{Brainstorming selection heuristics}
+Conditions to consider:
+\begin{itemize}
+  \item Prefer composition chains in case of nested loops (ex. $x \mapsto y \in R \land y \mapsto z \in Q$, but what about renaming? - $x \mapsto y \in R \land y' \mapsto z \in Q \land y = y'$). Perhaps this could just be a preference for relations over sets if we see a nested quantifier.
+  \item Choose most common generator among a list of or-clauses (allows for greater simplification later on)
+  \item Choose smallest generator (by set size). This information may not always be accessible (ex. if a set is created by reading values from standard input). Functions may need to choose this on a case-by-case basis (ie. one function call could have two args, with a small set on the left arg and a large set on the right arg. But what if the sizes are reversed later in the code? We've already statically lowered it).
+  \item When should constant folding happen? Equality substitution necessary for this?
+  \item This may need to work with nesting considerations.
+  \item What if we try moving these optimizations to $loop$ structures far later in the pipeline?
+\end{itemize}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{GSP Wrapping \footnote{GSP is a tuple-like structure, where all entries can be flattened into an AND. The LH term must occur inside a quantifier's predicate - one generator per top-level or-clause. Chained generators may be necessary to allow for nested loop operations (ie. non-top-level clauses may require generators). $P_g$ is a list of chained generators, specific set membership clauses (of form $x \in S$) distinguished from the rest of $\bigwedge P_i$. Currently, the selection of $P_g$ is arbitrary (and thus the rewrite system is not confluent), but heurestics may be added later to choose better generators.}}
+  \bigwedge P_i
+  &\leadsto
+  GSP(\bigwedge P_{g_i}, \bigwedge_{P_i \notin P_g} P_i)
+  \\
+  \tag{Nested Generator Selection \footnote{$free$ is a function that returns true when variables in the predicate are defined (either bound by the current generator or bound prior to the current statement)}}
+  GSP(x \land xs, P) \lor GSP(x \land ys, Q)
+  &\leadsto
+  CombGSP(x, GSP(xs, P) \lor GSP(ys, Q))
+\end{align}
+\end{minipage}
+
+
+
+\subsection{GSP to Loop}
+
+\paragraph{Intuition} Start lowering expressions into imperative-like loops.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item All quantifiers are transformed into $loop$ structures.
+  \item $loop$ predicates are of the form $x \in S \land \bigwedge P_i$.
+  \item All $loop$ predicates have an assigned generator of the form $x \in S$.
+\end{itemize}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Quantifier Generation \footnote{$\oplus$ works for any quantifier (but not $\forall$ and $\exists$). The identity and accumulate functions are determined by the realized $\oplus$. For example, if $\oplus = \sum$, the identity is 0 and accumulate is addition.}}
+  \oplus E \mid P
+  &\leadsto
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+  \State $a := identity(\oplus)$
+    \Loop\ $P:$ % should we use the \in operator here, or just plaintext in?
+        \State $a := accumulate(a, E)$
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+% \noindent\begin{minipage}{\linewidth}
+% \begin{align}
+%   \tag{Nested Quantifier}
+%   \begin{minipage}[]{0.5\textwidth}
+%   \begin{algorithmic}
+%     \State $a := accumulator(a, \oplus(E \mid P))$
+%   \end{algorithmic}
+%   \end{minipage}
+%   &\leadsto
+%   \begin{minipage}[]{0.4\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $P:$
+%       \State $a := accumulator(a, E)$
+%     \EndLoop
+%   \end{algorithmic}
+%   \end{minipage}
+% \end{align}
+% \end{minipage}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Top-level Or-Loop}
+  \begin{minipage}[]{0.3\textwidth}
+  \begin{algorithmic}
+    \Loop\ $\bigvee P_i:$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \Loop\ $P_0$
+      \State $body$
+    \EndLoop
+    \Loop\ $P_1 \land \lnot P_0$
+      \State $body$
+    \EndLoop
+    \Loop\ $P_2 \land \lnot \bigvee_{i < 2} P_i$
+      \State $body$
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+%
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Chained GSP Loop \footnote{$free$ considers defined variables at this point in time.}}
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \Loop\ $GSP(g \land gs, P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(g, free(P))$
+      \Loop\ $GSP(gs, bound(P))$
+        \State body
+      \EndLoop
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+%
+% \noindent\begin{minipage}{\linewidth}
+% \begin{align}
+%   \tag{Single GSP Loop}
+%   \begin{minipage}[]{0.4\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $GSP(g, P)$
+%       \State body
+%     \EndLoop
+%   \end{algorithmic}
+%   \end{minipage}
+%   &\leadsto
+%   \begin{minipage}[]{0.4\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $SingleGSP(g, P)$
+%       \State body
+%     \EndLoop
+%   \end{algorithmic}
+%   \end{minipage}
+% \end{align}
+% \end{minipage}
+%
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Empty GSP Loop}
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \Loop\ $GSP([], P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \If{$P$}
+      \State body
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+%
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Combined GSP Loop}
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \Loop\ $CombGSP(g, gs, P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(g, P)$
+      \Loop\ $gs_0$
+        \State body
+      \EndLoop
+      \Loop\ $gs_1$
+        \State body
+      \EndLoop
+      \State ...
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+
+% \noindent\begin{minipage}{\linewidth}
+% \begin{align}
+%   \tag{Disjunct conditional}
+%   \begin{minipage}[]{0.33\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $\bigvee GSP_i(P_{g_i}, P_i)$
+%       \State body
+%     \EndLoop
+%   \end{algorithmic}
+%   \end{minipage}
+%   &\leadsto
+%   \begin{minipage}[]{0.5\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $GSP_0(P_{g_0}, P_0):$
+%       \State body
+%     \EndLoop
+%     \Loop\ $GSP_1(P_{g_1}, P_1 \land \lnot GSP_0):$
+%       \State body
+%     \EndLoop
+%     \Loop\ $GSP_2(P_{g_2}, P_2 \land \lnot (\bigvee_{i < 2} GSP_i)):$
+%       \State body
+%     \EndLoop
+%     \State ...
+%   \end{algorithmic}
+%   \end{minipage}
+%   \\
+%   \tag{Disjunct Conditional 2}
+%   \begin{minipage}[]{0.3\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $GSP(P_g, \bigvee P_i)$
+%       \State body
+%     \EndLoop
+%   \end{algorithmic}
+%   \end{minipage}
+%   &\leadsto
+%   \begin{minipage}[]{0.8\textwidth}
+%   \begin{algorithmic}
+%     \Loop\ $GSP(P_g, \bigwedge True):$
+%       \If{$\bigvee_{ P_i \neq GSP(...)} P_i$}
+%         \State body
+%       \EndIf
+%       \Loop\ $\bigvee_{P_i: GSP(P_{ig}, P_{is})} GSP(P_{g_i}, P_{is} \land \lnot \bigvee_{P_i \neq GSP(...)} P_i):$
+%         \State body
+%       \EndLoop
+%     \EndLoop
+%   \end{algorithmic}
+%   \end{minipage}
+% \end{align}
+% \end{minipage}
+
+\subsection{Relational Subtyping Loop Simplification}
+
+\paragraph{Intuition} Simplify unnecessary iteration structures into direct accesses.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item All quantifiers are transformed into $loop$ structures.
+  \item $loop$ predicates are of the form $x \in S \land \bigwedge P_i$.
+  \item All $loop$ predicates have an assigned generator of the form $x \in S$.
+\end{itemize}
+No change from previous, but the number of loop structures should not increase.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Total membership elimination \footnote{$R$ is total and $x$ satisfies the type of $R$'s domain. Currently unused since it may eliminate some generators - move higher in the list?}}
+  x \in dom(R)
+  &\leadsto
+  True
+  \\
+  \tag{Surjective membership elimination \footnote{$R$ is surjective and $x$ satisfies the type of $R$'s range. Currently unused since it may eliminate some generators - move higher in the list? Or }}
+  x \in ran(R)
+  &\leadsto
+  True
+\end{align}
+\end{minipage}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Concrete Domain Image}
+  \begin{minipage}[]{0.55\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(x \mapsto y \in R, x = a \land P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.6\textwidth}
+  \begin{algorithmic}
+    \If{$a \in dom(R)$}
+      \Loop\ $SingleGSP(y \in R[a], P[x := a])$
+        \State body
+      \EndLoop
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Concrete Range Image \footnote{Requires efficient lookups for $ran$, inverse, and image}}
+  \begin{minipage}[]{0.55\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(x \mapsto y \in R, y = a \land P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.6\textwidth}
+  \begin{algorithmic}
+    \If{$a \in ran(R)$}
+      \Loop\ $SingleGSP(x \in R^{-1}[a], P[y := a])$
+        \State body
+      \EndLoop
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Single Element Loop}
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(y \in R[x], P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \text{where $free(x)$ and $R$ is many-to-one}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \If{$P[y:=R(a)]$}
+      \State $body[y:=R(a)]$
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Singleton Membership Elimination}
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(x \in \Set{y}, P)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \If{$P[x:=y]$}
+      \State $body[x:=y]$
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+
+\subsection{Loop Code Generation}
+
+\paragraph{Intuition} Eliminate all intermediate loop structures.
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item AST is in imperative code style (for loops, if statements, etc).
+  \item All $loop$ and quantification constructs have been eliminated.
+  \item Some variables may not be defined.
+\end{itemize}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Conjunct Conditional \footnote{Function $free$ returns clauses in $P$ that contain only free + defined variables. $bound$ returns the clauses that contain the bound variable $x$ or undefined variables. $P_g$ is the selected generator.}}
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \Loop\ $SingleGSP(P_g, \bigwedge P_i)$
+      \State body
+    \EndLoop
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \If{$\bigwedge_{free(P_i)} P_i$}
+      \For{$P_g$}
+        % \State $P_as$ % TODO rewrite these to be more clear that they are assignments
+        \If{$\bigwedge_{bound(P_i)} P_i$}
+            \State body
+          % \If{$Q_0$}
+          %   \State body
+          % \EndIf
+          % \If{$Q_1 \land \lnot Q_0$}
+          %   \State body
+          % \EndIf
+          % \If{$Q_2 \land \lnot (\bigvee_{i < 2} Q_i)$}
+          %   \State body
+          % \EndIf
+          % \State ...
+        \EndIf
+      \EndFor
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+
+
+
+\subsection{Replace and Simplify}
+
+\paragraph{Intuition} Eliminate all undefined variables (with implicit $\exists$ quantifiers).
+
+\paragraph{Post-condition}
+\begin{itemize}
+  \item AST is in imperative code style (for loops, if statements, etc).
+  \item All variables are defined.
+\end{itemize}
+
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Equality Elimination \footnote{$x$ is an undefined, unbound variable in the current scope. $E$ is an expression that does not contain $x$. Simplify resulting booleans.}}
+  \begin{minipage}[]{0.5\textwidth}
+  \begin{algorithmic}
+    \If{$Identifier(x) = E \land P$}
+      \State body
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+  &\leadsto
+  \begin{minipage}[]{0.4\textwidth}
+  \begin{algorithmic}
+    \If{$P[x := E]$}
+      \State body[x := E]
+    \EndIf
+  \end{algorithmic}
+  \end{minipage}
+\end{align}
+\end{minipage}
+%
+\noindent\begin{minipage}{\linewidth}
+\begin{align}
+  \tag{Simplify And-true}
+  P \land True
+  &\leadsto
+  P
+  \\
+  \tag{Simplify And-false}
+  P \land False
+  &\leadsto
+  False
+  \\
+  \tag{Simplify Or-true}
+  P \lor True
+  &\leadsto
+  True
+  \\
+  \tag{Simplify Or-false}
+  P \lor False
+  &\leadsto
+  P
+  \\
+  \tag{Flatten Nested Statements}
+  Statement(Statement(x))
+  &\leadsto
+  Statement(x)
+\end{align}
+\end{minipage}

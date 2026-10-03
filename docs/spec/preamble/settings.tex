@@ -1,0 +1,23 @@
+% Tikz settings
+\usemintedstyle{tango} %or tango, vs, xcode, solarized-light
+\setminted{bgcolor=gray!5, tabsize=4}
+\usetikzlibrary{calc,trees,positioning,arrows.meta,chains,shapes.geometric,decorations.pathreplacing,decorations.pathmorphing,shapes,matrix,shapes.symbols}
+\tikzset{%
+  % for waterfall diagrams
+  previous/.style={below=1cm of #1},
+  % Normal tikz shapes
+  box/.style={draw, align=center, rounded corners},
+  arrow/.style={-{Stealth}}
+}
+
+\allowdisplaybreaks
+\graphicspath{{./images/}}
+% NOTE: need to run `biber <name>` to ensure up-to-date references
+\addbibresource{../ref.bib}
+
+% Modify appearance of nonterminals in {grammar} environments
+% Enables italics for nonterminals
+% \renewcommand{\syntleft}{\itshape}
+\renewcommand{\syntleft}{}
+\renewcommand{\syntright}{}
+

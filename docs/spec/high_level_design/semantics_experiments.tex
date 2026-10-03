@@ -1,0 +1,181 @@
+
+\subsection{Semantics}
+% Review the semantic design of simile - how does semantic analysis work? How is it structured? alternatives considered?
+
+% Design decisions:
+% - Architecture
+% - hilberts choice
+% - short circuiting booleans
+
+
+A basic strategy to optimize set and relational expressions is:
+\begin{enumerate}
+  \item Normalize the expression as a set comprehensions
+  \item Simplify and reorganize conjuncts of the set comprehension body
+\end{enumerate}
+
+The TRS for this language primarily involves lowering collection data type expressions into pointwise boolean quantifications. Breaking down each operation into set builder notation enables a few key actions:
+\begin{itemize}
+  \item Quantifications over sets ($\Set{G}{P}{E}$) are naturally separated into generators ($G$), (non-generating) predicates ($P$), and expressions ($E$). For sets, at least one membership operator per top-level conjunction in $G$ will serve as a concrete element generator in generated code. Then, top level disjunctions will select one membership operation to act as a generator, relegating all others to the predicate level. For example, if the rewrite system observes an intersection of the form $\Set{x \in S \land x \in T}{x}$, the set construction operation must iterate over at least one of $S$ and $T$. Then, the other will act as a condition to check every iteration (becoming $\Set{x \in S}{x \in T}{x}$).
+  \item By definition of generators in quantification notation, operations in $G$ must be statements of the form $x \in S$, where $x$ is used in the ``element'' portion of the set construction. Statements like $x \notin T$ or checking a property $p(x)$ must act like conditions since they do not produce any iterable elements.
+  \item Any boolean expression for conditions may be rewritten as a combination of $\lnot, \lor$, and $\land$ expressions. Therefore, by converting all set notation down into boolean notation and then generating code based on set constructor booleans, we can accommodate any form of predicate function.
+\end{itemize}
+\subsection{Experiments}
+
+% TODO make a diagram for the internal structure of each component (ex. parser has a scanner and recursive-descent parser, static analysis has: symbol table + type synthesis + traits synthesis, optimizer has desugaring + simrw + library. Lets plan this out a bit more
+% Then we can create a tree diagram for our data structures - see drawio/convo for tikz format.
+
+% \subsection{Beyond the Language Core}
+% Design decisions:
+% -
+
+% \paragraph{Granular Strategy (Sets)}
+% % TODO take from report.tex, give supporting equations too (all the rules must be stable first)
+% \begin{description}
+%   \item[Set Comprehension Construction] Break down all qualifying sets into comprehension forms, collapsing and simplifying where needed.
+%   \item[DNF Predicates] Revise comprehension predicates to top-level disjunctive normal form. Each or-clause should have at least one feasible generator. Each clause should record a list of candidate generators
+%   \item[Predicate Simplification] Remove superfluous dummy variables, group or-clauses that use the exact same generator (ex. $\Set{x}{x \in S \land x \neq 0 \lor x \in S \land x = 0} \rightarrow \Set{x}{x \in S \land (x \neq 0 \lor x = 0)}$). Clauses should be group-able based on DNF, and generators should be selected and recorded.
+%   \item[Set Code Generation] Converts quantifiers into for-loops and if-statements.
+% \end{description}
+
+% \section{Supported Operations}
+% \begin{table}[H]
+%     \centering
+%     \caption{Summary table: a few operators on sets and relations.}
+%     \begin{tabular}{|c|c||c|c|}
+%     \hhline{|--||--|}
+%     \multicolumn{2}{|c||}{Sets} & \multicolumn{2}{|c|}{Relations} \\
+%     \hhline{:==::==:}
+%     Syntax & Label/Description & Syntax & Label/Description\\
+%     \hhline{|--||--|}
+%     $set(T)$ & Unordered, unique collection             & $S \pfun T$ & Partial function \\
+%     $S \leftrightarrow T$ & Relation, $set(S\times T)$  & $S \tinj T$& Total injection\\
+%     $\emptyset$ & Empty set                             & $a \mapsto b$ & Pair (relational element) \\
+%     $\Set{a,b,...}$ & Set enumeration                     & $dom(S)$ & Domain\\
+%     $\Set{x}{x \in S}{P}$ & Set comprehension          & $ran(S)$ & Range\\
+%     $S \cup T$ & Union                                  & $R[S]$ & Relational image\\
+%     $S \cap T$ & Intersection                           & $R \ovl Q$ & Relational overriding\\
+%     $S \setminus T$ & Difference                        & $R \circ Q$ & Relational composition\\
+%     $S \times T$ & Cartesian Product                    & $S \triangleleft R$ & Domain restriction\\
+%     $S \subseteq T$ & Subset                            & $R^{-1}$ & Relational inverse\\
+%     \hhline{|--||--|}
+%     % $f(S)$ & Function application\\ % is this like function mapping over a set? do we need to include this?
+%     \end{tabular}
+%     \label{tab:ADTOps}
+% \end{table}
+% \begin{table}[H]
+%     \centering
+%     \caption{Collection of operators on set data types.}
+%     \begin{tabular}{|c|c|}
+%         \hline
+%         Name & Definition \\ %& Type &
+%         \hline
+%         Empty Set & Creates a set with no elements.\\ %& $\emptyset: set[]$ &
+%         Set Enumeration & Literal collection of elements to create a set.\\ %& $\Set{x, y, ...}: set[T]$ &
+%         Set Membership & The term $x \in S$ is True if $x$ can be found somewhere in $S$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
+%         \hline
+%         Union & $S \cup T = \Set{x}{x \in S \lor x \in T}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
+%         Intersection & $S \cap T = \Set{x}{x \in S \land x \in T}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
+%         Difference & $S \setminus T = \Set{x}{x \in S}{x \notin T}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
+%         Cartesian Product & $S \times T = \Set{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
+%         \hline
+%         Powerset & $\mathbb{P}(S) = \Set{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
+%         Magnitude & $\#S = \sum_{x \in S} 1$\\ %& $\#:set[T] \rightarrow int$ &
+%         Subset & $S \subseteq T \equiv \forall x \in S: s \in T$ \\ %& $\subseteq: set[T] \times set[T] \rightarrow bool$ &
+%         Strict Subset & $S \subset T \equiv S \subseteq T \land S \neq T$ \\ %& $\subset: set[T] \times set[T] \rightarrow bool$ &
+%         Superset & $S \supseteq T \equiv \forall x \in T: s \in S$ \\ %& $\supseteq: set[T] \times set[T] \rightarrow bool$ &
+%         Strict Superset & $S \supset T \equiv S \supseteq T \land S \neq T$ \\ %& $\supset: set[T] \times set[T] \rightarrow bool$ &
+%         \hline
+%         Set Mapping & $f * S = \Set{f(x)}{x \in S}$\\ %& $*: (T \rightarrow T') \times set[T] \rightarrow set[T']$ &
+%         Set Filter & $p \triangleleft S = \Set{x}{x \in S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool) \times set[T] \rightarrow set[T]$ &
+%         % Reduction & $f / S = $ %& $/:(T\times T \rightarrow T) \times set[T] \rightarrow T$ &
+%         Set Quantification (Folding) & $\oplus x \cdot x \in S \mid P$\\
+%         Cardinality & $card(S) = \sum 1 \cdot x \in S$\\
+%         \hline
+%     \end{tabular}
+%     \label{tab:setOps}
+% \end{table}
+% \begin{table}[H]
+%     \centering
+%     \caption{Collection of operators on bag/multiset data types.}
+%     \begin{tabular}{|c|c|}
+%         \hline
+%         Name & Definition \\ %& Type &
+%         \hline
+%         Empty Set & Creates a set with no elements.\\ %& $\emptyset: set[]$ &
+%         Bag Enumeration & Literal collection of elements to create a set \\ & (for now, stored as a tuple of elements and number of occurrences).\\ %& $\Set{x, y, ...}: set[T]$ &
+%         Bag Membership & The term $x \in S$ is True if $S$ contains one or more occurrences of $x$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
+%         \hline
+%         Union & $S \cup T = \Bag{(x, a+b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
+%         Intersection & $S \cap T = \Bag{(x, min(a,b))}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
+%         Difference & $S - T = \Bag{(x, a-b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0 \land a-b > 0}$ \\ %& $\setminus: set[T] \times set[T] \rightarrow set[T]$ &
+%         % Cartesian Product & $S \times T = \Set{x \mapsto y}{x \in S \land y \in T}$ \\ %& $\times: set[T] \times set[V] \rightarrow relation[T,V]$ &
+%         % \hline
+%         % Powerset & $\mathbb{P}(S) = \Set{s}{s \subseteq S }$ \\ %& $\mathbb{P}: set[T] \rightarrow set[set[T]]$&
+%         % Magnitude & $\#S = \sum_{x \in S} 1$\\ %& $\#:set[T] \rightarrow int$ &
+%         % Subset & $S \subseteq T \equiv \forall x \in S: s \in T$ \\ %& $\subseteq: set[T] \times set[T] \rightarrow bool$ &
+%         % Strict Subset & $S \subset T \equiv S \subseteq T \land S \neq T$ \\ %& $\subset: set[T] \times set[T] \rightarrow bool$ &
+%         % Superset & $S \supseteq T \equiv \forall x \in T: s \in S$ \\ %& $\supseteq: set[T] \times set[T] \rightarrow bool$ &
+%         % Strict Superset & $S \supset T \equiv S \supseteq T \land S \neq T$ \\ %& $\supset: set[T] \times set[T] \rightarrow bool$ &
+%         % \hline
+%         Bag Mapping & $f * S = \Bag{(f(x), r)}{(x, r) \in S}$\\ %& $*: (T \rightarrow T') \times set[T] \rightarrow set[T']$ &
+%         Bag Filter & $p \triangleleft S = \Bag{(x, r)}{(x, r) \in S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool)
+%         Size & $size(S) = \sum r \cdot (x, r) \in S$\\
+%         Zero Occurrences & $(x,0) \in S \implies x \notin S$\\
+%         \hline
+%     \end{tabular}
+%     \label{tab:setOps}
+% \end{table}
+% \begin{table}[H]
+%     \centering
+%     \caption{Collection of operators on sequence data types.}
+%     \begin{tabular}{|c|c|}
+%         \hline
+%         Name & Definition \\ %& Type &
+%         \hline
+%         Empty List & Creates a list with no elements.\\ %& $[]: list[]$ &
+%         List Enumeration & Literal collection of elements to create a list.\\ %& $[x, y, ...]: list[T]$ &
+%         Construction & Alternative form of List Enumeration.\\ %& $(:):T \times list[T] \rightarrow list[T]$ &
+%         List Membership & The term $x \texttt{ in } S$ is True if $x$ can be found somewhere in $S$. \\ %& $\texttt{in}: T \times list[T] \rightarrow bool$ &
+%         \hline
+%         Append & $[s_1, s_2, ..., s_n] + t = [s_1, s_2, ..., s_n, t]$ \\ %& $+: list[T] \times T \rightarrow list[T]$ &
+%         Concatenate & $[s_1, ..., s_n] \concat [t_1, ..., t_n] = [s_1, ..., s_n, t_1, ... t_n]$ \\ %& $\concat: list[T] \times list[T] \rightarrow list[T]$ &
+%         Length & $\#S = \sum 1 \cdot x \texttt{ in } S$ \\ %& $\#: list[T] \rightarrow int$ &
+%         \hline
+%         List Mapping & $f * S = \List{f(x)}{x \texttt{ in } S}$\\ %& $*: (T \rightarrow T') \times list[T] \rightarrow list[T']$ &
+%         List Filter & $p \triangleleft S = \List{f(x)}{x \texttt{ in } S}{p(x)}$\\ %& $\triangleleft: (T \rightarrow bool) \times list[T] \rightarrow list[T]$ &
+%         Associative Reduction & $\oplus / [s_1, s_2, ..., s_n] = s_1 \oplus s_2 \oplus ... \oplus s_n$\\ %& $/:(T\times T \rightarrow T) \times list[T] \rightarrow T$ &
+%         Right Fold & $\texttt{foldr}(f, e, [s_1, s_2, ..., s_n]) = f(s_1 ,f(s_2 , f(..., f(s_n, e))))$\\ %& $\texttt{foldr}:(T\times V \rightarrow V) \times V \times list[T] \rightarrow V$ &
+%         Left Fold & $\texttt{foldl}(f, e, [s_1, s_2, ..., s_n]) = f(f(f(f(e, s_1), s_2), ...), s_n)$\\ %& $\texttt{foldl}:(T\times T \rightarrow T) \times list[T] \rightarrow T$ &
+%         \hline
+%     \end{tabular}
+%     \label{tab:seqOps}
+% \end{table}
+% \begin{table}[H]
+%     \centering
+%     \caption{Collection of operators on relation data types.}
+%     \begin{tabular}{|c|c|}
+%         \hline
+%         Name & Definition \\ %& Type &
+%         \hline
+%         Empty Relation & Creates a relation with no elements.\\ %& $\Set{}:relation[]$ &
+%         Relation Enumeration & Literal collection of elements to create a relation.\\ %& $\Set{x \mapsto y, a \mapsto b,...}: relation[T, V]$ &
+%         Identity & $id(S)= \Set{x \mapsto x}{x \in S}$\\ %& $id: set[T] \rightarrow relation[T,T]$ &
+%         Domain & $dom(R) = \Set{x}{x \mapsto y \in R}$\\ %& $dom: relation[T,V] \rightarrow set[T]$ &
+%         Range & $ran(R) = \Set{y}{x \mapsto y \in R}$\\ %& $ran: relation[T,V] \rightarrow set[V]$ &
+%         \hline
+%         Relational Image & $R[S] = \Set{y}{x \mapsto y \in R}{x \in S}$ \\ %& $([]): relation[T,V] \times set[T] \rightarrow set[V]$ &
+%         Overriding & $R \ovl Q = Q \cup (dom(Q) \domsub R)$\\ %\Set{x \mapsto y}{x\mapsto y \in Q \lor (x \mapsto y \in R \land x \notin dom(Q))}$ \\ %& $\ovl: relation[T,V] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         (Forward) Composition & $Q \circ R = \Set{x \mapsto z}{x \mapsto y \in R \land y \mapsto z \in Q}$\\ %& $\circ: relation[V,W] \times relation[T,V] \rightarrow relation[T,W]$ &
+%         Inverse & $R^{-1} = \Set{y \mapsto x}{x \mapsto y \in R}$ \\ %& $(^{-1}): relation[T,V] \rightarrow relation[V,T]$ &
+%         \hline
+%         Domain Restriction & $S \triangleleft R = \Set{x \mapsto y}{x \mapsto y \in R}{x \in S}$\\ %& $\triangleleft: set[T] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Domain Subtraction & $S \domsub R = \Set{x \mapsto y}{x \mapsto y \in R}{x \notin S}$\\ %& $\domsub: set[T] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Range Restriction & $R \triangleright S = \Set{x \mapsto y}{x \mapsto y \in R}{y \in S}$\\ %& $\triangleright: set[V] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         Range Subtraction & $R \ransub S = \Set{x \mapsto y}{x \mapsto y \in R}{y \notin S}$\\ %& $\ransub: set[V] \times relation[T,V] \rightarrow relation[T,V]$ &
+%         % \hline % Do we need to include tests for total, surjective, injective, etc.?
+%         % Eventually add closures
+%         \hline
+%     \end{tabular}
+%     \label{tab:relOps}
+% \end{table}

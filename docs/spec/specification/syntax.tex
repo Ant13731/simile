@@ -1,0 +1,207 @@
+
+\subsection{Syntax}
+We follow the standard EBNF notation for describing the language structure.
+
+\begin{grammar}
+<Start> ::= <Statements>
+
+<Statements> ::= \{ <SimpleStatements> | <CompoundStmt>\}
+
+% Small hack needed with trait statements hijacking assignment or expr since lots of productions would share the `first' set
+<SimpleStatements> ::= <AssignmentOrExpr> (`;' <SimpleStmt> \{`;' <SimpleStmt>\} NEWLINE | NEWLINE [<TraitStmt>])
+    \alt (<ControlFlowStmt> | <ImportStmt>) \{`;' <SimpleStmt>\} NEWLINE
+
+<SimpleStmt> ::= <AssignmentOrExpr>
+    \alt <ControlFlowStmt>
+    \alt <ImportStmt>
+
+<AssignmentOrExpr> ::= <Expr> [`:' <TypeExpr>] [(\lit{$\coloneqq$} | \lit{$:\in$}) <Expr>]
+
+<TraitStmt> ::= INDENT `trait' <Expr> NEWLINE \{`trait' <Expr> NEWLINE\} DEDENT
+
+<Expr> ::= <Quantification> | <Predicate>
+
+<Quantification> ::= \lit{$\lambda$} [<FlatTupleIdentifier>] \lit{$\cdot$} <Predicate> `|' <Expr>
+    \alt (\lit{$\sum$} | \lit{$\prod$} | \lit{$\bigcup$} | \lit{$\bigcap$} | \lit{$\exists$} | \lit{$\forall$} | `max' | `min') <QuantificationBody>
+    % fold requires a generator, an accumulator assignment with an initial value, and an update expr (no need to explicitly assign to the accumulator var)
+    \alt `fold' <Assignment> `:' <QuantificationBody>
+    % iter requires a generator, initialization values, maybe a return value/identifier/tupleIdentifier, then some statements to modify the init values
+    \alt `iter' <IterQuantificationBody>
+
+<QuantificationBody> ::= <BranchQuantificationBody>
+    % Generator trees all end in expr eventually (even if that expr is nested within branches)
+    \alt <Generator> \{`,' <Generator>\} (`,' <BranchQuantificationBody> | `|' <Expr>)
+
+<BranchQuantificationBody> ::= `(' <QuantificationBody> `)' \{``(' <QuantificationBody> `)'\}
+
+% Predicates are attached to a single generator and only apply to that generator
+<Generator> ::= <IdentList> \lit{$\in$} <Expr> [`·' <Expr>]
+
+<IterQuantificationBody> ::= <BranchIterQuantificationBody>
+    \alt <GeneratorWithAssignments> \{`,' <GeneratorWithAssignments> \} (`,' <BranchIterQuantificationBody> | `->' <IdentList> `|' <IterBlock>)
+
+<BranchIterQuantificationBody> ::= `(' <IterQuantificationBody> `)' \{``(' <IterQuantificationBody> `)' \}
+
+<GeneratorWithAssignments> ::= <Generator> `:' <Assignment> \{ `;' <Assignment>\}
+
+<Assignment> ::= <Expr> [`:' <TypeExpr>] (\lit{$\coloneqq$} | \lit{$:\in$}) <Expr>
+
+% Iterblock separate from <Block> so that we can safely ignore indentation when we do not see the VBAR NEWLINE INDENT combo
+<IterBlock> ::= <SimpleStmt> \{`;' <SimpleStmt>\}
+    \alt NEWLINE INDENT <Statements> DEDENT
+
+<IdentList> ::= <IdentListItem> \{`,' <IdentListItem>\}
+
+<IdentListItem> ::= IDENTIFIER
+    \alt <IdentListItem> \lit{$\mapsto$} <IdentListItem>
+    \alt `(' <IdentList> `)'
+
+<Predicate> ::= <Implication>
+    \alt <Predicate> (\lit{$\equiv$} | \lit{$\not\equiv$}) <Implication>
+
+% TODO is this right? rev implies seems awkward
+<Implication> ::= <Disjunction>
+    \alt <Disjunction> \{\lit{$\Rightarrow$} <Disjunction>\}
+    % \alt <Disjunction> \{\lit{$\impliedby$} <Implication>\}
+
+<Disjunction> ::= <Conjunction> \{\lit{$\lor$} <Conjunction>\}
+
+<Conjunction> ::= <Negation> \{\lit{$\land$} <Negation>\}
+
+<Negation> ::= <AtomBool>
+    \alt \lit{$\lnot$} <Negation>
+
+<AtomBool> ::= <PairExpr> [(
+        \lit{$=$}
+      | \lit{$\neq$}
+      % | \lit{is}
+      % | \lit{is not}
+      | `<'
+      | `>'
+      | \lit{$\leq$}
+      | \lit{$\geq$}
+      | \lit{$\in$}
+      | \lit{$\not\in$}
+      | \lit{$\subset$}
+      | \lit{$\subseteq$}
+      | \lit{$\supset$}
+      | \lit{$\supseteq$}
+      | \lit{$\not\subset$}
+      | \lit{$\not\subseteq$}
+      | \lit{$\not\supset$}
+      | \lit{$\not\supseteq$}
+    ) <PairExpr>]
+
+<PairExpr> ::= <RelSetExpr>
+    \alt <PairExpr> \lit{$\mapsto$} <RelSetExpr>
+
+<RelSetExpr> ::= <SetExpr> [(
+      \lit{$\rel$}
+    | \lit{$\trel$}
+    | \lit{$\srel$}
+    | \lit{$\strel$}
+    | \lit{$\pfun$}
+    | \lit{$\tfun$}
+    | \lit{$\pinj$}
+    | \lit{$\tinj$}
+    | \lit{$\psur$}
+    | \lit{$\tsur$}
+    | \lit{$\tbij$}
+) <RelSetExpr>]
+
+<SetExpr> ::= <IntervalExpr>
+    \alt <IntervalExpr> \{\lit{$\cup$} <IntervalExpr>\}
+    \alt <IntervalExpr> \{\lit{$\times$} <IntervalExpr>\}
+    \alt <IntervalExpr> \{\lit{$\oplus$} <IntervalExpr>\}
+    \alt <IntervalExpr> \{\lit{$\circ$} <IntervalExpr>\}
+    \alt <IntervalExpr> \{\lit{$\cap$} <IntervalExpr>\}
+    \alt <IntervalExpr> \{\lit{$\concat$} <IntervalExpr>\}
+    \alt <IntervalExpr> (\lit{$\domsub$} | \lit{$\domres$}) <IntervalExpr> \{\lit{$\cap$} <IntervalExpr>\} [<RelSubExpr>]
+
+<RelSubExpr> ::= (\lit{$\setminus$} | \lit{$\ranres$} | \lit{$\ransub$}) <IntervalExpr>
+
+<IntervalExpr> ::= <ArithmeticExpr> [`..' <ArithmeticExpr>]
+
+<ArithmeticExpr> ::= <Term>
+    \alt <ArithmeticExpr> (`+' | `-') <Term>
+
+% Need to have \times and * be different symbols - otherwise 1..n \times n is ambiguous - either the set of 1 to n*n or the set of 1..n, n times (I know the semantics for the second one dont make much sense, but it may be best to separate the two symbols because of the differing precedence around .. and +/-
+<Term> ::= <Factor>
+    \alt <Term> (`*' | `/' | `div' | `mod') <Factor>
+
+<Factor> ::= [(`+' | `-')] <Power>
+
+% Note, because of next production, if you see {}^{-1}, look for relational image operation
+<Power> ::= <Primary> [\lit{\^{}} <Factor> | [\lit{${}^-$}](\lit{${}^{INTEGER}$} | \lit{${}^{FLOAT}$})]
+
+<Primary> ::= <Atom> \{<AtomFollow>\}
+
+<AtomFollow> ::= `.' IDENTIFIER
+    \alt `(' <Expr> \{`,' <Expr>\} `)'
+    % comma within this image operation is to allow for parameterized generics similar to python's typing. Maybe we should extract into a different object?
+    \alt `[' <Expr> \{`,' <Expr> \} `]' % Python like list slcing but with commas? or should we allow multiple things to be queried... Primary use of commas is for type exprs
+
+<Atom> ::= INTEGER | FLOAT | STRING | BOOLEAN | IDENTIFIER
+    \alt <Set> | <Sequence> | <Bag> | <Tuple>
+    %\alt \lit{$\mathbb{P}$} `(' <Expr> `)' | \lit{$\mathbb{P}_1$} `(' <Expr> `)'
+    \alt `(' <Expr> `)' % SEE NOTE for Tuple
+
+<Set> ::= `{' <CollectionBody> `}'
+
+<Bag> ::= \lit{$\llbracket$} <CollectionBody> \lit{$\rrbracket$}
+
+<Sequence> ::= \lit{$\langle$} <CollectionBody> \lit{$\rangle$}
+
+% Tuples either are empty, have one element (distinct from a parenthesized expr by a comma), or follow enumerationbody
+% TODO check if this attempts to match to parenth expr in atom... may need to move tuple up to that function in the code
+<Tuple> ::= `(' `)' | `(' [NEWLINE INDENT] <Expr> `,' [NEWLINE [INDENT]] [<EnumerationBody>] `)'
+
+<CollectionBody> ::= <QuantificationBody>
+    \alt <EnumerationBody>
+
+<EnumerationBody> ::= [NEWLINE INDENT] <Expr> \{`,' [NEWLINE [INDENT]] <Expr>\} [NEWLINE DEDENT]
+
+<CompoundStmt> ::= <IfStmt> | <ForStmt> | <WhileStmt>
+    \alt <RecordStmt> | <ProcedureStmt>
+
+<IfStmt> ::= `if' <Predicate> `:' <Block> [<ElseStmt>]
+
+<ElseStmt> ::= `else :' <Block>
+    \alt `else if' <Predicate> `:' <Block> [<ElseStmt>]
+
+<ForStmt> ::= `for' <IdentList> \lit{$\in$} <Expr> `:' <Block>
+
+<WhileStmt> ::= `while' <Expr> `:' <Block>
+
+<RecordStmt> ::= `record' IDENTIFIER `:' NEWLINE INDENT ( \\
+        `skip' | <TypedName> \{(`,' [NEWLINE] | NEWLINE) <TypedName> \} \\
+    ) NEWLINE DEDENT
+
+<ProcedureStmt> ::= `procedure' IDENTIFIER `(' <TypedName> \{`,' <TypedName> \} `)' \lit{$\rightarrow$} <Expr> `:' <Block>
+
+<Block> ::= <SimpleStatements>
+    \alt NEWLINE INDENT <Statements> DEDENT
+
+<TypedName> ::= IDENTIFIER [`:' <TypeExpr>]
+
+<TypeExpr> ::= IDENTIFIER \{`.' IDENTIFIER\} [`[' <TypeExpr> \{`,' <TypeExpr>\}`]']
+    \alt `(' `)'
+    \alt `(' <TypeExpr> `,' [<TupleTypeExprBody>] `)'
+
+<TupleTypeExprBody> ::= <TypeExpr> \{`,' <TypeExpr>\}
+
+<ControlFlowStmt> ::= `return' [<Expr>]
+    \alt `break'
+    \alt `continue'
+    \alt `skip'
+
+<ImportStmt> ::= `import' STRING
+    \alt `from' STRING `import' <ImportList>
+
+<ImportList> ::= `*'
+    \alt <FlatTupleIdentifier>
+
+<FlatTupleIdentifier> ::= IDENTIFIER \{`,' IDENTIFIER \}
+    \alt `(' IDENTIFIER \{`,' IDENTIFIER \} `)'
+
+\end{grammar}

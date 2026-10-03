@@ -1,0 +1,104 @@
+
+% Comprehensions
+%% Set
+\makeatletter
+\newcommand{\Set}[1]{%
+  \@ifnextchar\bgroup
+    {\Set@check{#1}}
+    {\{\,#1\,\}}%
+}
+\def\Set@check#1#2{%
+  \@ifnextchar\bgroup
+    {\Set@three{#1}{#2}}
+    {\{\,#1 \mid #2\,\}}%
+}
+\def\Set@three#1#2#3{%
+  \{\,#1 \cdot #2 \mid #3\,\}%
+}
+\makeatother
+
+%% Bag
+\makeatletter
+\newcommand{\Bag}[1]{%
+  \@ifnextchar\bgroup
+    {\Bag@check{#1}}
+    {\llbracket\,#1\,\rrbracket}%
+}
+\def\Bag@check#1#2{%
+  \@ifnextchar\bgroup
+    {\Bag@three{#1}{#2}}
+    {\llbracket\,#1 \mid #2\,\rrbracket}%
+}
+\def\Bag@three#1#2#3{%
+  \llbracket\,#1 \cdot #2 \mid #3\,\rrbracket%
+}
+\makeatother
+
+%% List
+\makeatletter
+\newcommand{\List}[1]{%
+  \@ifnextchar\bgroup
+    {\List@check{#1}}
+    {[\,#1\,]}%
+}
+\def\List@check#1#2{%
+  \@ifnextchar\bgroup
+    {\List@three{#1}{#2}}
+    {[\,#1 \mid #2\,]}%
+}
+\def\List@three#1#2#3{%
+  [\,#1 \cdot #2 \mid #3\,]%
+}
+\makeatother
+
+%% Tuple
+\makeatletter
+\newcommand{\Tuple}[1]{%
+  \@ifnextchar\bgroup
+    {\Tuple@check{#1}}
+    {(\,#1\,)}%
+}
+\def\Tuple@check#1#2{%
+  \@ifnextchar\bgroup
+    {\Tuple@three{#1}{#2}}
+    {(\,#1 \mid #2\,)}%
+}
+\def\Tuple@three#1#2#3{%
+  (\,#1 \cdot #2 \mid #3\,)%
+}
+\makeatother
+
+% List concatenation
+\newcommand{\concat}{%
+  \mathbin{{+}\mspace{-8mu}{+}}%
+}
+% \DeclareUnicodeCharacter{29FA}{\concat}
+
+% Lex table entry
+\newcommand{\lexentry}[3]{%
+  \ensuremath{#1} & \texttt{#2} & #3\\%
+}
+
+% For traits table
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+\newcommand{\ccmark}{%
+    \cmark\kern-0.4em\cmark%
+}
+
+% For footnotes within equations
+% From https://tex.stackexchange.com/questions/82782/footnote-in-align-environment
+\makeatletter
+\let\original@footnote\footnote
+\newcommand{\align@footnote}[1]{%
+  \ifmeasuring@
+    \chardef\@tempfn=\value{footnote}%
+    \footnotemark
+    \setcounter{footnote}{\@tempfn}%
+  \else
+    \iffirstchoice@
+      \original@footnote{#1}%
+    \fi
+  \fi}
+\pretocmd{\start@align}{\let\footnote\align@footnote}{}{}
+\makeatother

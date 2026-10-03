@@ -1,0 +1,161 @@
+% TODO merge this with the abstract data types section above and the design?
+% Non-determinism, short circuiting
+
+\subsection{(Abstract) Data Types}
+For the most part, Simile's semantics resemble those of set theory and specification languages (specifically, Event-B). Aside from a few primitive types that abstract over bare set theory and programming language specific structures, like integer arithmetic and procedure definitions, all objects inherit properties from sets. For example, a sequence can be modelled as a set of pairs from natural numbers to the sequence element type.
+
+In the forthcoming sections, we explicitly state the design of these set-theory-inspired types, useful properties, and underlying implementations.
+
+\subsubsection{Primitives}
+With consideration to execution efficiency and the extensive amount of existing optimization in modern languages, Simile makes use of the following basic types:
+\begin{description}
+    \item[Booleans] As the cornerstone of logical reasoning, booleans deserve an explicit type with reserved identifiers: $\mathbb{B} = \Set{True, False}$. Further, Simile provides a healthy supply of common operations beyond $\land$ and $\lor$: $\implies, \equiv, \impliedby, \forall, \exists,$ etc.
+    \item[Integers] While integers are a very mature type in the world of computing, trade-offs between arbitrary-precision and fixed-point arithmetic may require testing and careful review.
+    \\
+    If Simile chooses to represent numbers through conventional fixed point arithmetic, struggles with overflow and extremely large numbers are compounded by the innate non-determinism within Simile. For example, calculating the sum of a set of very large numbers can be done in arbitrary order, according to the semantics of mathematics (and Simile). But in fixed-point arithmetic, the resulting value can very well differ based on the order of operations. In other words, commutative math operations are no longer commutative under fixed precision. At some point in the computation pipeline, Simile will need to decide the order in which to evaluate the set, which may cause hard-to-spot bugs and unexpected runtime failures.
+    \\
+    Conversely, choosing arbitrary precision integers may bring Simile operators closer to mathematics at the cost of speed. The core features of Simile, while targeting formal methods users, attempt to efficiently execute set and relation operations. Adding checks for overflow on every mathematical operation may prove detrimental to performance.
+    \\
+    The implementation decision essentially is one of context vs. safety. To benchmark Simile with these types, we gather a list of examples and judge whether the performance hit is worth the reliability benefits. Specific questions to examine: How often does overflow occur in these examples? Do numbers approach the upper limits of fixed precision often enough to warrant accommodating infrastructure? What is the performance of fixed vs. arbitrary precision calculations.
+    \item[Floating Point Numbers] In a similar vein to integers, floats are an imperfect translation of real numbers into efficiently calculable representations. Since floats (or even reals) are not used as often in specifications as integers, we leave the implementation as the conventional 64-bit representation. However, we note that non-determinism on these operations will prove especially tricky, since the result of commutative complements may differ without explicit over/underflow.
+    \item[Strings] Strings are syntactic sugar over Sequences of characters, represented internally as a sequence of (fixed precision) integers. Eventually, Simile aims to support built-in string operations as seen in many common programming languages.
+\end{description}
+
+\subsubsection{Sets}
+Foundational Simile type: an unordered, unique collection of objects.
+
+Sets may be used in two ways:
+\begin{enumerate}
+    \item Enumerations by way of $\Set{x,y,z}$ (read: The set of elements $x,y$, and $z$)
+    \item Comprehensions of the form $\Set{x \in S}{p(x)}{f(x)}$ (read: The set of function $f$ applied to all elements in $S$ satisfying predicate $p(x)$). A small effort is made to accommodate a shorthand form, wherein $\Set{x \in S}{true}{x}$ may be written as $\Set{x \in S}{x}$.
+\end{enumerate}
+
+Sets, as mathematical objects with only two major restrictions, lend themselves well to a variety of computational implementations. Arrays, ordered arrays, hash maps, bit sets, roaring bit sets, path maps, and tries can all be used to satisfy the uniqueness property and hide an internally ordered representation from users.
+
+% Arrays, heaps, hashmaps, bitsets, roaring bitsets, pathmaps, tries?
+
+No matter the underlying implementation, the optimizer may make use of syntactically-analyzed set sizes to direct the choice of lowered iterator. Further, recording the cardinality of a set at runtime may prove beneficial to the performance of common cardinality-based specification expressions at a very small memory cost. Other properties based on element type, like max/min for numeric types, limits for numeric ranges, maximum sizes, may be useful.
+
+
+\subsubsection{Relations}
+Relations are sets that make use of paired/maplet elements (i.e., they define a relationship between two sets). Like sets, implementations may vary greatly, with the potential to increase efficiency of relation-specific operations.
+
+% Array of tuples, bimaps, bimaps with lists, bimaps with pointers, pathmaps, tries?
+
+Like sets, relations may benefit from compile-time computed properties: size of the domain, size of the range, totality, many-to-oneness, $O(1)$ access to the domain and range, and access to associated domain/range properties.
+
+
+% Once everything is settled, see about theorem provers, HOL/Lean, to force correct handling of definedness
+
+
+% TODO add a section discussion nondeterminism, operator behaviour, justification, etc.
+
+\paragraph{Relational Subtypes}
+The notion of a relation is a broad classification of a set of pairs, where the domain, range, and relationship are not bound by any conditions. However, when generating code based on purely mathematical relations, it can be advantageous to use notions of totality, injectivity, surjectivity, etc. In particular, these named relational subtypes can be described with four properties: total on the domain, total on the range, one-to-many, and many-to-one.
+
+The below table converts conventional notation into these four subtypes:
+\begin{table}[H]
+  \centering\begin{tabular}{|c|c|c|c|c|}
+    \hline
+    Relational Subtype & \multicolumn{4}{c|}{Properties}\\
+    & T & TR & 1- & 1-R\\
+    \hline
+    Relation & & & & \\
+     & & & & \checkmark \\
+    Partial Function & & & \checkmark & \\
+    Partial Injection & & & \checkmark & \checkmark \\
+    Surjective Relation & & \checkmark & & \\
+     & & \checkmark & & \checkmark \\
+    Partial Surjection & & \checkmark & \checkmark & \\
+     & & \checkmark & \checkmark & \checkmark \\
+    Total Relation & \checkmark & & & \\
+     & \checkmark & & & \checkmark \\
+    Total Function & \checkmark & & \checkmark & \\
+    Total Injection & \checkmark & & \checkmark & \checkmark \\
+    Total Surjective Relation & \checkmark & \checkmark & & \\
+     & \checkmark & \checkmark & & \checkmark \\
+    Total Surjection & \checkmark & \checkmark & \checkmark & \\
+    Bijection & \checkmark & \checkmark & \checkmark & \checkmark \\
+    % Relation & \\
+    % Total Relation & T \\
+    % Surjective Relation & TR \\
+    % Total Surjective Relation & T, TR \\
+    % Partial Function & 1-\\
+    % Total Function & T, 1-\\
+    % Partial Injection & 1-, 1-R\\
+    % Total Injection & T, 1-, 1-R\\
+    % Partial Surjection & TR, 1-\\
+    % Total Surjection & T, TR, 1-\\
+    % Bijection & T, TR, 1-, 1-R\\
+    % Should we consider Partial Bijection too?
+    % Partial Bijection  & \\
+    \hline
+  \end{tabular}
+  \caption{Conventional mathematical notation of relational subtypes decomposed into four properties: domain totality (T), range totality (TR), domain one-to-manyness (1-), and range one-to-manyness (1-R)}
+  \label{tab:relSubtype}
+\end{table}
+
+\paragraph{Subtype Properties}
+Properties that can affect code generation may involve:
+\begin{itemize}
+  \item New properties after applying operations on sets/relations
+  \item Size of result
+  \item Validity of operations
+  \item Deterministic nature of operations
+  \item Super/subset properties
+  \item Relational identities
+\end{itemize}
+%
+Below is a list of the impact of these properties.
+\\
+Domain Totality:
+\begin{itemize}
+  \item $R[S] \neq \emptyset$
+  \item $R(S)$ is always valid
+  \item $R^{-1}$ is TR
+  \item $|R| \geq dom(R)$
+\end{itemize}
+%
+Range Totality:
+\begin{itemize}
+  \item $R^{-1}$ is T
+  \item $|R| \geq ran(R)$
+\end{itemize}
+%
+Domain One-to-manyness:
+\begin{itemize}
+  \item $R(\Set{e})$ is deterministic
+  \item $|R[\Set{e}]| = 1$
+  \item $|R[S]| \leq |S|$
+  \item $|R| \leq dom(R)$
+\end{itemize}
+%
+Range One-to-manyness:
+\begin{itemize}
+  \item $|R| \leq ran(R)$
+\end{itemize}
+
+\subsubsection{Bags}
+Bags (or Multisets) are a refinement of relations wherein, for a bag with element type $T$, the bag is a relational function from $T \rightarrow \mathbb{Z}^+$, denoting the count of items in a collection. Once the count of an item reaches 0, the item is removed from the bag.
+
+Bags must be many-to-one and carry specialized behaviours for conventional relation operations. For example, relational image ($R[B]$) with a bag argument will now return a bag, where the number of occurrences of the resulting item replaces what would otherwise be a regular set of those items.
+
+Additional fields to record the size of the bag (sum of the range) may prove useful.
+
+\subsubsection{Sequences}
+Sequences are yet another refinement of relations where a sequence with element type $T$ represents a relational function from $\mathbb{N} \rightarrow T$ that is total on some defined bounds.
+
+The dense nature of sequence domains, along with knowledge of sequence sizes, may open up further data type refinements.
+
+\subsection{Data Type Operations}
+\subsubsection{Primitives}
+\subsubsection{Sets}
+\subsubsection{Relations}
+\subsubsection{Bags}
+\subsubsection{Sequences}
+
+% \section{Low Level Design} % TODO see if this is still needed, or if it should be incorporated into other sections
+% \subsection{Abstract Data Types}
+% \subsection{Atomic Operations}
+% \subsection{Optimization Frontend}
+% \subsection{Optimization Backends}

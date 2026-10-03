@@ -1,0 +1,174 @@
+\subsection{Pipeline Architecture}
+Like most compiled programming languages, Simile follows the usual workflow of parsing, analysis, optimization, and lowering. While the pipeline itself is not completely novel, the combination of Simile's semantics with verifiable components allow for aggressive, safe optimizations. Figure~\ref{fig:pipeline} shows the end-to-end flow of code through the compilation pipeline.
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (source) {Source program};
+  \node[box, previous=source] (ast) {AST (parse-only)};
+  \node[box, previous=ast] (typed) {AST (post-static analysis) + Symbol Table};
+  \node[box, previous=typed] (rewritten) {AST (post-optimization) + Symbol Table};
+  \node[box, previous=rewritten] (concrete) {AST (post-concretization) + concrete Symbol Table};
+  \node[box, previous=concrete] (concreteopt) {AST (post-concrete-optimization) + concrete Symbol Table};
+  \node[box, previous=concreteopt] (ssa) {SSA};
+  \node[box, previous=ssa] (llvm) {LLVM IR};
+  \node[box, previous=llvm] (executable) {Executable code};
+
+  \draw[arrow] (source) -- node[right] {Parse} (ast);
+  \draw[arrow] (ast) -- node[right] {Static analysis} (typed);
+  \draw[arrow] (typed) -- node[right] {General rewrite optimizations} (rewritten);
+  \draw[arrow] (rewritten) -- node[right] {Abstract-to-concrete datatype selection} (concrete);
+  \draw[arrow] (concrete) -- node[right] {Concrete-datatype-specific rewrite optimizations} (concreteopt);
+  \draw[arrow] (concreteopt) -- node[right] {Braun's algorithm} (ssa);
+  \draw[arrow] (ssa) -- node[right] {LLVM lowering} (llvm);
+  \draw[arrow] (llvm) -- node[right] {Compiled by LLVM} (executable);
+  \end{tikzpicture}
+  \caption{Simile compilation pipeline from source code to LLVM-based executable}
+  \label{fig:pipeline}
+\end{figure}
+
+Below sections will discuss each component.
+
+\subsubsection{Parser}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (source) {Plain text};
+  \node[box, previous=source] (tokens) {Tokens};
+  \node[box, previous=tokens] (ast) {AST};
+
+  \draw[arrow] (source) -- node[right] {Scan} (tokens);
+  \draw[arrow] (tokens) -- node[right] {Parse} (ast);
+  \end{tikzpicture}
+  \caption{Component Diagram: Parser}
+  \label{fig:componentParser}
+\end{figure}
+
+\subsubsection{Static Analysis}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (ast) {AST};
+  \node[box, previous=ast] (normalizedAST) {Normalized AST};
+  \node[box, previous=ast, xshift=4cm] (stdlibAST) {Standard Library AST};
+  \node[box, previous=normalizedAST] (symbol) {Symbol Table};
+  \node[box, previous=symbol] (type) {Type Synthesizer};
+  \node[box, previous=type] (output) {AST + Symbol Table + Type Synthesizer};
+  % \node[box, right=6cm of ast] (verifyKeyword) {Keywords verified};
+  % \node[box, previous=verifyKeyword] (verifyAST) {AST subtypes (normalization) verified};
+  % \node[box, below=2.45cm of verifyAST] (verifyType) {Types verified};
+
+  % \draw[arrow] (ast) -- node[above] {Reserved keyword check} (verifyKeyword);
+  % \draw[arrow] (normalizedAST) -- node[above] {Assert no parser-only nodes} (verifyAST);
+  % \draw[arrow] (type) -- node[above] {Bottom-up type checking} (verifyType);
+
+  \draw[arrow] (ast) -- node[right] {Reserved keyword check + Normalize AST} (normalizedAST);
+  \draw[arrow] (stdlibAST) -- ++(0cm,-1cm) |-(symbol.east);
+  \draw[arrow] (normalizedAST) -- node[right] {Make Symbol Table} (symbol);
+  \draw[arrow] (normalizedAST.west) -- ++(-0.4cm,0cm) |- (type.west);
+  \draw[arrow] (symbol) -- node[right] {Create Type Synthesizer} (type);
+  \draw[arrow] (normalizedAST.west) -- ++(-2.5cm,0cm) |- (output.west);
+  \draw[arrow] (symbol.west) -- ++(-2.5cm,0cm) |- (output.west);
+  \draw[arrow] (type) -- node[right] {Type check + Collect analysis artifacts} (output);
+  \end{tikzpicture}
+  \caption{Component Diagram: Static Analysis}
+  \label{fig:componentStaticAnalysis}
+\end{figure}
+
+\subsubsection{General Rewrites}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (simrwSrc) {SimRW rules source library};
+  \node[box, previous=simrwSrc] (simrwAST) {SimRW Rewrite Rules AST};
+  \node[box, previous=simrwAST] (simrwRule) {SimRW Rewrite Rules library};
+  \node[box, left=2.5cm of simrwAST, yshift=-0.5cm] (guard) {Guard condition library};
+  \node[box, previous=guard] (input) {AST + Symbol Table + Type Synthesizer};
+  \node[box, previous=simrwRule] (optInputs) {AST + Symbol Table + Type Synthesizer + Rewrite Rules};
+  \node[box, previous=optInputs] (output) {Optimized AST};
+
+  \draw[arrow] (simrwSrc) -- node[right] {Parse SimRW DSL} (simrwAST);
+  \draw[arrow] (simrwAST) -- node[right] {Convert to matchable rule} (simrwRule);
+  \draw[arrow] (guard) -- ++(0cm,-0.5cm) |- (simrwRule.west);
+  \draw[arrow] (simrwRule) -- node[right] {Collect optimizer inputs} (optInputs);
+  \draw[arrow] (input) -- ++(0cm,-0.5cm) |- (optInputs.west);
+  \draw[arrow] (optInputs) -- node[right] {Structurally match rewrite rules (in phases)} (output);
+  \draw[arrow] (output.east) -- ++(5.7cm,0cm) |- (optInputs.east);
+  \end{tikzpicture}
+  \caption{Component Diagram: General Rewrite Optimization}
+  \label{fig:componentGeneralRewrite}
+\end{figure}
+
+\subsubsection{Concretization}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (input) {AST + Symbol Table};
+  \node[box, previous=input] (opAnalysis) {AST + Symbol Table (with operator counts\footnotemark/analysis)};
+  \node[box, previous=opAnalysis] (concretePref) {AST + Symbol Table (with concrete preferences)};
+  \node[box, previous=concretePref] (output) {AST + Concrete Symbol Table};
+  \node[box, left=1cm of opAnalysis] (mapping) {Abstract $\leftrightarrow$ concrete mapping};
+
+  \draw[arrow] (input) -- node[right] {Abstract operation analysis} (opAnalysis);
+  \draw[arrow] (opAnalysis) -- node[right] {Weighted operation/trait concretization preference analysis} (concretePref);
+  \draw[arrow] (mapping) -- ++(0cm,-0.5cm) |- (concretePref);
+  \draw[arrow] (concretePref) -- node[right] {Demote\footnotemark and select top concrete type} (output);
+  \end{tikzpicture}
+  \caption{Component Diagram: Abstract Data Type Concretization}
+  \label{fig:componentAdtConcretization}
+\end{figure}
+\hypertarget{fn:fst}{\addtocounter{footnote}{-1}}
+\footnotetext{For example, the number of times a variable is used in a particular operation. We traverse the entire tree until that variable is out of scope (inefficient, but should give us somewhat-accurate counts). The most important info is probably which counts are zero, since we know we won't need that operation when concretizing.}
+\hypertarget{fn:snd}{\addtocounter{footnote}{1}}
+\footnotetext{A variable's preferences may be demoted based on other operand preferences, following the most conservative type.}
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (input) {AST + Symbol Table};
+  \node[box, previous=input] (output) {AST + Concrete Symbol Table};
+  \node[box, left=1.5cm of input] (mapping) {Abstract $\rightarrow$ concrete map};
+
+  \draw[arrow] (input) -- node[right] {Convert abstract to concrete types} (output);
+  \draw[arrow] (mapping) -- ++(0cm,-0.5cm) |- (output);
+  \end{tikzpicture}
+  \caption{Component Diagram: Abstract Data Type Concretization (Scrappy version)}
+  \label{fig:componentAdtConcretizationScrappy}
+\end{figure}
+
+\subsubsection{Specialized Rewrites}
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[]
+  \node[box] (simrwRule) {SimRW Rewrite Rules library};
+  \node[box, left=2.5cm of simrwRule, yshift=-0.5cm] (incodeRule) {AST-based Rewrite Rule library};
+  \node[box, previous=simrwRule] (concrete) {Concrete Rewrite Rule library};
+  \node[box, previous=incodeRule] (input) {AST + Symbol Table + Type Synthesizer};
+  \node[box, previous=concrete] (optInputs) {AST + Symbol Table + Type Synthesizer + Concrete Rewrite Rules};
+  \node[box, previous=optInputs] (output) {Optimized AST};
+
+  \draw[arrow] (simrwRule) -- (concrete);
+  \draw[arrow] (incodeRule) -- ++(0cm,-0.5cm) |- (concrete.west);
+  \draw[arrow] (concrete) -- node[right] {Collect optimizer inputs} (optInputs);
+  \draw[arrow] (input) -- ++(0cm,-0.5cm) |- (optInputs.west);
+  \draw[arrow] (optInputs) -- node[right] {Structurally match rewrite rules (in phases)} (output);
+  \draw[arrow] (output.east) -- ++(5.7cm,0cm) |- (optInputs.east);
+  \end{tikzpicture}
+  \caption{Component Diagram: Concrete-specific Rewrite Optimizations}
+  \label{fig:componentConcreteRewrite}
+\end{figure}
+\subsubsection{SSA Lowering}
+\subsubsection{LLVM Lowering}
+
+\subsection{Data Architecture}
+\subsubsection{Source}
+% - Generators
+% - Iter/Fold
+% - Parser, Symb Table, Optimizer-specific nodes
+\subsubsection{Symbol Table}
+\subsubsection{Abstract Types}
+
+\subsubsection{Traits}
+\subsubsection{Concrete Types}
+\subsubsection{SimRW}
+\subsubsection{SSA IR}

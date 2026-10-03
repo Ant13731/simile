@@ -1,0 +1,396 @@
+
+\subsection{Operational Semantics}
+Let $\sigma$ represent the symbol table (data store) for assigned variables, defined types, and procedure definitions. Further, let $\bot$ represent an error state; any operations that do not explicitly handle the error state are expected to propagate the error. The following sections define small-step semantics for Simile in the form of inference statements from $\langle$Simile code, $\sigma \rangle \to \langle$Derived simile code, $\sigma' \rangle$. When $\sigma$ does not change between steps, it is excluded for brevity. Generally, notation in the hypothesis section of each statement will correspond to set theory; notation in the inference corresponds to Simile code.
+%
+% Need to write out small step semantics for each operator in simile... Built-in functions too?
+% Ex:
+% \begin{prooftree}
+%   \infer0{\langle n / 0, \sigma \rangle \to \bot}
+% \end{prooftree}
+%
+% Ex. Operators that can be undefined:
+% - division by 0
+% - function on an empty set, simplifies to choice of image
+% - all non-equality operations with undefined as an input is undefined
+% - dont allow complex numbers?
+% - 0^0?
+% the event b guide specifies short circuited ands for definedness, but they probably dont swap ands in optimization... we should try two different ways: either all and clauses must be defined or we attempt to recover from undefined clauses when seen
+% Functions that can be undefined:
+% - choice on empty set (undefined with a given type)
+%
+% Need to also tackle unique semantics here - described in the HLD, formalized here.
+%
+\paragraph{Values of Types}
+The following are models of value sets in Simile. Although we try to follow set theory where possible, some types opt for more conventional programming styles for ease of use and relevance to programming. Let value $v$ be defined as any of the following:
+\begin{grammar}
+<v> ::= <a> | <b> | <i> | <f> | <q> | <t> | <s> | <r> | <B> | <S> | <R>
+\end{grammar}
+\subparagraph{None}
+\begin{grammar}
+<a> ::= `none'
+\end{grammar}
+\subparagraph{Bool}
+\begin{grammar}
+<b> ::= `true' | `false'
+\end{grammar}
+\subparagraph{Int}
+\begin{grammar}
+<i> ::= [-][0-9]+
+\end{grammar}
+where $i \in -\infty \upto \infty$
+\subparagraph{Float}
+Let $i_N$ be an int constrained such that $-2^{N-1}+1 \leq i_N \leq 2^{N-1}$. Then,
+\begin{grammar}
+<f> ::= [-][0-9]*`.'[0-9]+
+\end{grammar}
+64-bit floats following IEEE-754-2019 %TODO cite
+with variables $e_{bits} = 11, m_{bits} = 52, e = 2^{e_{bits}}-1023, m = 2 \times 2^{m_{bits}}$
+where $-2^e\times m \leq f \leq 2^e\times m$
+\subparagraph{String}
+\begin{grammar}
+<q> ::= `"' [\^{}`"']* `"'
+\end{grammar}
+with additional semantics like:
+\begin{grammar}
+<q'> ::= `\{\}' | `\{'<i> \lit{$\mapsto$} <q> \{`,' <i> \lit{$\mapsto$} <q> \}`\}'
+\end{grammar}
+where $min(dom(q')) = 0$ and $max(dom(q')) = |q'|$ (ie. it is a sequence of characters).
+\subparagraph{Tuple}
+\begin{grammar}
+<t> ::= `()' | `(' <value> `,)' | `(' <value> `,' <value> \{`,' <value>\}`)'
+\end{grammar}
+\subparagraph{Set}
+\begin{grammar}
+<s> ::= `\{\}' | `\{' <value> \{`,' <value>\}`\}'
+\end{grammar}
+\subparagraph{Relation}
+\begin{grammar}
+<r> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <value> \{`,' <value> \lit{$\mapsto$} <value>\}`\}'
+\end{grammar}
+\subparagraph{Bag}
+\begin{grammar}
+<B> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <i> \{`,' <value> \lit{$\mapsto$} <i>\}`\}'
+\end{grammar}
+where $\forall i in ran(B) | i \geq 0$
+\subparagraph{Sequence}
+\begin{grammar}
+<S> ::= `\{\}' | `\{' <i> \lit{$\mapsto$} <value> \{`,' <i> \lit{$\mapsto$} <value>\}`\}'
+\end{grammar}
+where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
+\subparagraph{Record}
+\begin{grammar}
+<R> ::= <constructor> `()' | <constructor> `('<value> \{`,' <value>\}`)'
+\end{grammar}
+
+\paragraph{Base Operations}
+\subparagraph{Cast}
+\begin{gather}
+  \tag{Self typecast}
+  \begin{prooftree}
+    \hypo{a: T}
+    \hypo{T: type}
+    \infer2{\texttt{cast(a,T)} \to \texttt{a}}
+  \end{prooftree}
+  \\
+  % ... TODO how can we show every type cast to every other type. We have:
+  % - self-to-self
+  % - int n to:
+  %    - float: n
+  \tag{Int-to-float typecast}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{f: float = i}
+    \infer2{\texttt{cast(i, float)} \to \texttt{f}}
+  \end{prooftree}
+  \\
+  %    - str: "n"
+  \tag{Int-to-string typecast}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{q: str = ``i''}
+    \infer2{\texttt{cast(i, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
+  %    - bool: 0 -> false, anything else -> true
+  \tag{Int-to-bool typecast (False)}
+  \begin{prooftree}
+    \infer0{\texttt{cast(0, bool)} \to \texttt{false}}
+  \end{prooftree}
+  \\
+  \tag{Int-to-bool typecast (True)}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{i \neq 0}
+    \infer2{\texttt{cast(i, bool)} \to \texttt{true}}
+  \end{prooftree}
+  \\
+  % - float n to:
+  %    - int: floor(n)
+  \tag{Float-to-int typecast}
+  \begin{prooftree}
+    \hypo{f: float}
+    \hypo{i: int = \lfloor f \rfloor}
+    \infer2{\texttt{cast(f, int)} \to \texttt{i}}
+  \end{prooftree}
+  \\
+  %    - str: "n", up to 4 decimal places
+  \tag{Float-to-string typecast}
+  \begin{prooftree}
+    \hypo{f: float}
+    \hypo{f_4: float = \frac{\lfloor f \times 10^4 \rfloor}{10^4}}
+    \hypo{q: str = ``f_4''}
+    \infer3{\texttt{cast(f, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
+  %    - bool: 0 -> false, anything else -> true
+  \tag{Float-to-bool typecast (False)}
+  \begin{prooftree}
+    \infer0{\texttt{cast(0.0, bool)} \to \texttt{false}}
+  \end{prooftree}
+  \\
+  \tag{Float-to-bool typecast (True)}
+  \begin{prooftree}
+    \hypo{f: float}
+    \hypo{f \neq 0.0}
+    \infer2{\texttt{cast(f, bool)} \to \texttt{true}}
+  \end{prooftree}
+  \\
+  % - str s to:
+  %    - int: cast(cast(n, float), int)
+  \tag{String-to-int typecast}
+  \begin{prooftree}
+    \hypo{q: str}
+    \infer1{\texttt{cast(q, int)} \to \texttt{cast(cast(q, float), int)}}
+  \end{prooftree}
+  \\
+  %    - float: n within [0-9]+\.[0-9]*
+  \tag{String-to-float typecast}
+  \begin{prooftree}
+    \hypo{q: str}
+    \hypo{q \in [-][0-9]* \backslash .[0-9]+}
+    \hypo{f: float = q}
+    \infer3{\texttt{cast(q, float)} \to \texttt{f}}
+  \end{prooftree}
+  \\
+  %    - bool: "true" -> true, "false" -> false
+  \tag{String-to-bool typecast (False)}
+  \begin{prooftree}
+    \infer0{\texttt{cast("false", bool)} \to \texttt{false}}
+  \end{prooftree}
+  \\
+  \tag{String-to-bool typecast (True)}
+  \begin{prooftree}
+    \infer0{\texttt{cast("true", bool)} \to \texttt{true}}
+  \end{prooftree}
+  \\
+  %    - sequence[str]: s.split()
+  \tag{String-to-sequence typecast}
+  \begin{prooftree}
+    \hypo{q: str}
+    \hypo{S: sequence[str] = q'} % q' is the seq view of q
+    \infer2{\texttt{cast(q, sequence)} \to \texttt{true}}
+  \end{prooftree}
+  \\
+  %    - tuple[str]: cast(cast(s, sequence), list)
+  \tag{String-to-tuple typecast}
+  \begin{prooftree}
+    \hypo{q: str}
+    \infer1{\texttt{cast(q, tuple)} \to \texttt{cast(cast(q, sequence), tuple)}}
+  \end{prooftree}
+  % \\
+  % % - tuple t to:
+  % %    - str: (x in t | str(x)) as a string
+  % \tag{Tuple-to-string typecast}
+  % \begin{prooftree}
+  %   \hypo{t: (T, ...)}
+  %   \hypo{t_q = (v \in t | cast(v, str))}
+  %   \hypo{q: ``t_q''}
+  %   \infer3{\texttt{cast(t, str)} \to \texttt{q}}
+  % \end{prooftree}
+  % \\
+  % %    - set: {x in t | x}
+  % \tag{Tuple-to-set typecast}
+  % \begin{prooftree}
+  %   \hypo{t: (T, ...)}
+  %   \hypo{s: set[T] = \Set{v \in t}{v}}
+  %   \infer2{\texttt{cast(t, set)} \to \texttt{s}}
+  % \end{prooftree}
+  % \\
+  % %    - sequence: [x in t | x]
+  % \tag{Tuple-to-sequence typecast}
+  % \begin{prooftree}
+  %   \hypo{t: (T, ...)}
+  %   \hypo{S: sequence[T] = \List{v \in t}{v}}
+  %   \infer2{\texttt{cast(t, sequence)} \to \texttt{S}}
+  % \end{prooftree}
+  % \\
+  % %    - bag: cast(cast(t, s), bag)
+  % \tag{Tuple-to-sequence typecast}
+  % \begin{prooftree}
+  %   \hypo{t: (T, ...)}
+  %   \hypo{B: bag[T] = \Bag{v \in t}{v}}
+  %   \infer2{\texttt{cast(t, bag)} \to \texttt{B}}
+  % \end{prooftree}
+  % \\
+  % %    - record: (size(t) == size(record) and forall i in 0..size(t) | t[i].type == record[i].type) ==> record(t)   --- use the record constructor and pass in args
+  % \tag{Tuple-to-sequence typecast}
+  % \begin{prooftree}
+  %   \hypo{t: (T, ...)}
+  %   \hypo{r: record}
+  %   \hypo{|t| = |r|}
+  %   \hypo{\forall i \in 0..|t| \cdot }
+  %   \hypo{B: bag[T] = \Bag{v \in t}{v}}
+  %   \infer2{\texttt{cast(t, bag)} \to \texttt{B}}
+  % \end{prooftree}
+  % \\
+  % - set s to:
+  %    - str: {x in t | str(x)} as a string
+  %    - sequence: [x in t | x] --- arbitrary order
+  %    - tuple: cast(cast(s, sequence), tuple)
+  %    - bag: {x in t | x |-> 1}
+  %    - relation: {(x,y) in t | x |-> y}
+  % - relation r to:
+  %    - str: {x |-> y in t | str(x) |-> str(y)} as a string
+  %    - set: {x |-> y in t | (x,y)}
+  %    - sequence: [x |-> y in t | (x,y)] --- arbitrary order
+  %    - tuple: cast(cast(s, sequence), tuple)
+  % - bag b to:
+  %    - str: {x |-> y in t | str(x) |-> str(y)} as a string
+  %    - set: {x |-> y in t | (x,y)}
+  %    - sequence: flatten([x |-> y in t | [i in 0..y | x]]) --- arbitrary order
+  %    - tuple: cast(cast(s, sequence), tuple)
+  % - sequence s to:
+  %    - str: [x in t | x] as a string
+  %    - set: {x |-> y in t | y}
+  %    - relation: {x |-> y in t | x |-> y}
+  %    - tuple: (x |-> y in t | y)
+  % - record r to:
+  %    - str: record_name(field1: r.field1, field2: r.field2, ...)
+  %    - relation: {x in r.field_names | x |-> r.x}
+  %    - set: cast(cast(r, relation), set)
+  %    - sequence: cast(cast(r, relation), sequence)
+  %    - tuple: cast(cast(r, relation), tuple)
+\end{gather}
+\subparagraph{Equals}
+\subparagraph{Not equals}
+\paragraph{Bool}
+\subparagraph{Not}
+\subparagraph{Equivalent}
+\subparagraph{Not equivalent}
+\subparagraph{Implies}
+\subparagraph{And}
+\subparagraph{Or}
+\paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
+\subparagraph{Less than}
+\subparagraph{Greater than}
+\subparagraph{Less than or equals}
+\subparagraph{Greater than or equals}
+\subparagraph{Negate}
+\subparagraph{Int divide}
+\subparagraph{Modulo}
+\subparagraph{Add}
+\subparagraph{Subtract}
+\subparagraph{Divide}
+\subparagraph{Multiply}
+\subparagraph{Power}
+\subparagraph{Upto}
+\paragraph{String} % TODO define string operations? Leave out for now?
+\paragraph{Tuple}
+\subparagraph{Enumeration}
+\subparagraph{Maplet}
+\paragraph{Record}
+\subparagraph{Access}
+\paragraph{Set}
+\subparagraph{Enumeration}
+\subparagraph{Clear}
+\subparagraph{Is empty}
+\subparagraph{Add}
+\subparagraph{Remove}
+\subparagraph{In}
+\subparagraph{Not in}
+\subparagraph{Cardinality}
+\subparagraph{Choice}
+\subparagraph{Min}
+\subparagraph{Max}
+\subparagraph{Sum}
+\subparagraph{Product}
+\subparagraph{Union}
+\subparagraph{Intersection}
+\subparagraph{Difference}
+% \subparagraph{Symmetric difference} % TODO if we add this, make sure we add to the op-trait and type defs. Leaving out for now bc I dont think we have syntax for it. Same with SetType.is_disjoint
+\subparagraph{Cartesian product}
+\subparagraph{Subset}
+\subparagraph{Subset equals}
+\subparagraph{Superset}
+\subparagraph{Superset equals}
+\subparagraph{Not subset}
+\subparagraph{Not subset equals}
+\subparagraph{Not superset}
+\subparagraph{Not superset equals}
+\paragraph{Relation}
+\subparagraph{Inverse}
+\subparagraph{Function call}
+\subparagraph{Image}
+\subparagraph{Overriding}
+\subparagraph{Domain}
+\subparagraph{Range}
+\subparagraph{Domain restriction}
+\subparagraph{Domain subtraction}
+\subparagraph{Range restriction}
+\subparagraph{Range subtraction}
+\subparagraph{Bag Image}
+\subparagraph{Comprehension}
+\paragraph{Bag}
+\subparagraph{Bag union}
+\subparagraph{Bag intersection}
+\subparagraph{Bag add}
+\subparagraph{Bag difference}
+\subparagraph{Comprehension}
+\subparagraph{Size}
+\paragraph{Sequence}
+\subparagraph{Concat}
+\subparagraph{Comprehension}
+\paragraph{Procedure}
+\subparagraph{Call}
+    % Procedure call? need to propagate traits from return value type - should be done at procedure definition time?
+\paragraph{Quantifications}
+% TODO quantification body, multiple generators
+\subparagraph{Min}
+\subparagraph{Max}
+\subparagraph{Forall}
+\subparagraph{Exists}
+\subparagraph{Union all}
+\subparagraph{Intersection all}
+\subparagraph{Comprehension}
+\subparagraph{Sum}
+\subparagraph{Product}
+\subparagraph{Map}
+\subparagraph{Map min}
+\subparagraph{Map max}
+\subparagraph{Iter}
+\subparagraph{Fold}
+\subparagraph{Lambda}
+\paragraph{Simple Statements}
+\subparagraph{Assignment}
+\subparagraph{Type Assignment}
+\subparagraph{Trait Application}
+\subparagraph{Return}
+\subparagraph{Break} % TODO how will we even define these in context...
+\subparagraph{Continue}
+\subparagraph{Skip}
+\paragraph{Import Statmenets}
+\subparagraph{Module Import}
+\subparagraph{Unnamed Module Import}
+\subparagraph{Named Import}
+\paragraph{Compound Statements}
+\subparagraph{If}
+\subparagraph{Else-If}
+\subparagraph{Else}
+\subparagraph{For}
+\subparagraph{While}
+\subparagraph{Block}
+\paragraph{Definitions}
+\subparagraph{Record}
+\subparagraph{Procedure}
+
+
