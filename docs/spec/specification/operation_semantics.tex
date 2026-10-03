@@ -81,7 +81,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
 \begin{grammar}
 <R> ::= <constructor> `()' | <constructor> `('<value> \{`,' <value>\}`)'
 \end{grammar}
-
+where the constructor identifier is the same as the type identifier. Records act like a named, ordered tuple; effectively a $relation[str, T]$ where $T$ may be any combination of types. Let record $R'$ be defined with fields $f_1, f_2, ...$. Then the view $R': relation[str, T] = \Set{f_1 \mapsto v_1, f_2 \mapsto v_2, ...}$ can be used. The type is inherently ordered, so there is a another relational view: $R_{type}: relation[int, type[T]] = \Set{0 \mapsto v_{type_1}, 1 \mapsto v_{type_2}, ...}$. image on the type
 \paragraph{Base Operations}
 \subparagraph{Cast}
 \begin{gather}
@@ -107,7 +107,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
   \tag{Int-to-string typecast}
   \begin{prooftree}
     \hypo{i: int}
-    \hypo{q: str = ``i''}
+    \hypo{q: str = ``i"}
     \infer2{\texttt{cast(i, str)} \to \texttt{q}}
   \end{prooftree}
   \\
@@ -138,7 +138,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
   \begin{prooftree}
     \hypo{f: float}
     \hypo{f_4: float = \frac{\lfloor f \times 10^4 \rfloor}{10^4}}
-    \hypo{q: str = ``f_4''}
+    \hypo{q: str = ``f_4"}
     \infer3{\texttt{cast(f, str)} \to \texttt{q}}
   \end{prooftree}
   \\
@@ -188,7 +188,7 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
   \begin{prooftree}
     \hypo{q: str}
     \hypo{S: sequence[str] = q'} % q' is the seq view of q
-    \infer2{\texttt{cast(q, sequence)} \to \texttt{true}}
+    \infer2{\texttt{cast(q, sequence)} \to \texttt{S}}
   \end{prooftree}
   \\
   %    - tuple[str]: cast(cast(s, sequence), list)
@@ -197,52 +197,52 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
     \hypo{q: str}
     \infer1{\texttt{cast(q, tuple)} \to \texttt{cast(cast(q, sequence), tuple)}}
   \end{prooftree}
-  % \\
-  % % - tuple t to:
-  % %    - str: (x in t | str(x)) as a string
-  % \tag{Tuple-to-string typecast}
-  % \begin{prooftree}
-  %   \hypo{t: (T, ...)}
-  %   \hypo{t_q = (v \in t | cast(v, str))}
-  %   \hypo{q: ``t_q''}
-  %   \infer3{\texttt{cast(t, str)} \to \texttt{q}}
-  % \end{prooftree}
-  % \\
-  % %    - set: {x in t | x}
-  % \tag{Tuple-to-set typecast}
-  % \begin{prooftree}
-  %   \hypo{t: (T, ...)}
-  %   \hypo{s: set[T] = \Set{v \in t}{v}}
-  %   \infer2{\texttt{cast(t, set)} \to \texttt{s}}
-  % \end{prooftree}
-  % \\
-  % %    - sequence: [x in t | x]
-  % \tag{Tuple-to-sequence typecast}
-  % \begin{prooftree}
-  %   \hypo{t: (T, ...)}
-  %   \hypo{S: sequence[T] = \List{v \in t}{v}}
-  %   \infer2{\texttt{cast(t, sequence)} \to \texttt{S}}
-  % \end{prooftree}
-  % \\
-  % %    - bag: cast(cast(t, s), bag)
-  % \tag{Tuple-to-sequence typecast}
-  % \begin{prooftree}
-  %   \hypo{t: (T, ...)}
-  %   \hypo{B: bag[T] = \Bag{v \in t}{v}}
-  %   \infer2{\texttt{cast(t, bag)} \to \texttt{B}}
-  % \end{prooftree}
-  % \\
-  % %    - record: (size(t) == size(record) and forall i in 0..size(t) | t[i].type == record[i].type) ==> record(t)   --- use the record constructor and pass in args
-  % \tag{Tuple-to-sequence typecast}
-  % \begin{prooftree}
-  %   \hypo{t: (T, ...)}
-  %   \hypo{r: record}
-  %   \hypo{|t| = |r|}
-  %   \hypo{\forall i \in 0..|t| \cdot }
-  %   \hypo{B: bag[T] = \Bag{v \in t}{v}}
-  %   \infer2{\texttt{cast(t, bag)} \to \texttt{B}}
-  % \end{prooftree}
-  % \\
+  \\
+  % - tuple t to:
+  %    - str: (x in t | str(x)) as a string
+  \tag{Tuple-to-string typecast}
+  \begin{prooftree}
+    \hypo{t: (T, ...)}
+    \hypo{t_q = \Tuple{v \in t}{cast(v, str)}}
+    \hypo{q: ``t_q"}
+    \infer3{\texttt{cast(t, str)} \to \texttt{q}}
+  \end{prooftree}
+  \\
+  %    - set: {x in t | x}
+  \tag{Tuple-to-set typecast}
+  \begin{prooftree}
+    \hypo{t: (T, ...)}
+    \hypo{s: set[T] = \Set{v \in t}{v}}
+    \infer2{\texttt{cast(t, set)} \to \texttt{s}}
+  \end{prooftree}
+  \\
+  %    - sequence: [x in t | x]
+  \tag{Tuple-to-sequence typecast}
+  \begin{prooftree}
+    \hypo{t: (T, ...)}
+    \hypo{S: sequence[T] = \List{v \in t}{v}}
+    \infer2{\texttt{cast(t, sequence)} \to \texttt{S}}
+  \end{prooftree}
+  \\
+  %    - bag: cast(cast(t, s), bag)
+  \tag{Tuple-to-bag typecast}
+  \begin{prooftree}
+    \hypo{t: (T, ...)}
+    \hypo{B: bag[T] = \Bag{v \in t}{v}}
+    \infer2{\texttt{cast(t, bag)} \to \texttt{B}}
+  \end{prooftree}
+  \\
+  %    - record: (size(t) == size(record) and forall i in 0..size(t) | t[i].type == record[i].type) ==> record(t)   --- use the record constructor and pass in args
+  \tag{Tuple-to-record typecast}
+  \begin{prooftree}
+    \hypo{t: (T, ...)}
+    \hypo{R_{type}: type[record]}
+    \hypo{\forall i \in 0..|t| \cdot t[i].type = R_{type}[i]}
+    \hypo{R: record = R_{type}\Tuple{v \in t}{v}}
+    \hypo{|t| = |R|}
+    \infer5{\texttt{cast(t, record)} \to \texttt{R}}
+  \end{prooftree}
+%   \\
   % - set s to:
   %    - str: {x in t | str(x)} as a string
   %    - sequence: [x in t | x] --- arbitrary order
