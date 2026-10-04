@@ -545,10 +545,18 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{b_1 and b_2} \to \texttt{b_3}}
   \end{prooftree}
   \\
-  \tag{Optimistic short-circuiting}
+  \tag{Optimistic short-circuiting (left)}
   \begin{prooftree}
-    \hypo{b = \bot}
-    \infer1{\texttt{false and b} \to \texttt{false}}
+    \hypo{b: bool}
+    \hypo{v \in \Set{\bot, b}}
+    \infer2{\texttt{false and v} \to \texttt{false}}
+  \end{prooftree}
+  \\
+  \tag{Optimistic short-circuiting (right)}
+  \begin{prooftree}
+    \hypo{b: bool}
+    \hypo{v \in \Set{\bot, b}}
+    \infer2{\texttt{v and false} \to \texttt{false}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Or}
@@ -560,10 +568,18 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{b_1 or b_2} \to \texttt{b_3}}
   \end{prooftree}
   \\
-  \tag{Optimistic short-circuiting}
+  \tag{Optimistic short-circuiting (left)}
   \begin{prooftree}
-    \hypo{b = \bot}
-    \infer1{\texttt{true or b} \to \texttt{true}}
+    \hypo{b: bool}
+    \hypo{v \in \Set{\bot, b}}
+    \infer2{\texttt{true or v} \to \texttt{true}}
+  \end{prooftree}
+  \\
+  \tag{Optimistic short-circuiting (right)}
+  \begin{prooftree}
+    \hypo{b: bool}
+    \hypo{v \in \Set{\bot, b}}
+    \infer2{\texttt{v or true} \to \texttt{true}}
   \end{prooftree}
 \end{gather}
 \paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
@@ -1061,30 +1077,180 @@ where the constructor identifier is the same as the type identifier. Records act
 \end{gather}
 \paragraph{Relation}
 \subparagraph{Inverse}
+\begin{gather}
+  \tag{Inverse}
+  \begin{prooftree}
+    \hypo{r_1: relation[T_1, T_2]}
+    \hypo{r_2: relation[T_2, T_1] = \Set{v_1 \mapsto v_2 \in r_1}{v_2 \mapsto v_1}}
+    \infer2{\texttt{r_1 \^{} -1} \to \texttt{r_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Function call}
+\begin{gather}
+  \tag{Function call}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{v: T_1}
+    \infer2{\texttt{r(v)} \to \texttt{choice(r[\Set{v}])}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Image}
+\begin{gather}
+  \tag{Image}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{v: T_1}
+    \hypo{s: set[T_2] = \Set{v_1 \mapsto v_2 \in r}{v_1 = v}{v_2}}
+    \infer3{\texttt{r[v]} \to \texttt{s}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Overriding}
+\begin{gather}
+  \tag{Overriding}
+  \begin{prooftree}
+    \hypo{r_1, r_2, r_3: relation[T_1, T_2]}
+    \hypo{r_3 = r_2 \cup (dom(r_2) \domsub r_1)}
+    \infer2{\texttt{r_1 <+ r_2} \to \texttt{r_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Domain}
+\begin{gather}
+  \tag{Domain}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{s: set[T_1] = \Set{v_1 \mapsto v_2 \in r}{v_1}}
+    \infer2{\texttt{dom(r)} \to \texttt{s}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Range}
+\begin{gather}
+  \tag{Range}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{s: set[T_1] = \Set{v_1 \mapsto v_2 \in r}{v_2}}
+    \infer2{\texttt{ran(r)} \to \texttt{s}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Domain restriction}
+\begin{gather}
+  \tag{Domain restriction}
+  \begin{prooftree}
+    \hypo{r_1, r_2: relation[T_1, T_2]}
+    \hypo{s: set[T_1]}
+    \hypo{r_2 = \Set{v_1 \mapsto v_2 \in r}{v_1 \in s}{v_1 \mapsto v_2}}
+    \infer3{\texttt{s <| r_1} \to \texttt{r_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Domain subtraction}
+\begin{gather}
+  \tag{Domain subtraction}
+  \begin{prooftree}
+    \hypo{r_1, r_2: relation[T_1, T_2]}
+    \hypo{s: set[T_1]}
+    \hypo{r_2 = \Set{v_1 \mapsto v_2 \in r}{v_1 \not\in s}{v_1 \mapsto v_2}}
+    \infer3{\texttt{s <{}<| r_1} \to \texttt{r_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Range restriction}
+\begin{gather}
+  \tag{Range restriction}
+  \begin{prooftree}
+    \hypo{r_1, r_2: relation[T_1, T_2]}
+    \hypo{s: set[T_1]}
+    \hypo{r_2 = \Set{v_1 \mapsto v_2 \in r}{v_2 \in s}{v_1 \mapsto v_2}}
+    \infer3{\texttt{r_1 |> s} \to \texttt{r_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Range subtraction}
+\begin{gather}
+  \tag{Range subtraction}
+  \begin{prooftree}
+    \hypo{r_1, r_2: relation[T_1, T_2]}
+    \hypo{s: set[T_1]}
+    \hypo{r_2 = \Set{v_1 \mapsto v_2 \in r}{v_2 \not\in s}{v_1 \mapsto v_2}}
+    \infer3{\texttt{r_1 |>{}> s} \to \texttt{r_2}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Composition}
+\begin{gather}
+  \tag{Composition}
+  \begin{prooftree}
+    \hypo{r_1: relation[T_1, T_2]}
+    \hypo{r_2: relation[T_2, T_3]}
+    \hypo{r_3: relation[T_1, T_3] = \Set{v_1 \mapsto v_2 \in r_1 \land v_3 \mapsto v_4 \in r_2}{v_2 = v_3}{v_1 \mapsto v_4}}
+    \infer3{\texttt{r_1 <> r_2} \to \texttt{r_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Bag Image}
-\subparagraph{Comprehension}
+\begin{gather}
+  \tag{Bag image}
+  \begin{prooftree}
+    \hypo{r: relation[T_1, T_2]}
+    \hypo{B_1: bag[T_1]}
+    \hypo{B_2: bag[T_2]}
+    \hypo{B_2 = r^{-1} \circ B_1}
+    \infer4{\texttt{r[B_1]} \to \texttt{B_2}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Bag}
 \subparagraph{Bag union}
+\begin{gather}
+  \tag{Bag union}
+  \begin{prooftree}
+    \hypo{B_1, B_2, B_3: bag[T]}
+    \hypo{B_3 = \Bag{v \in (dom(B_1) \cup dom(B_2))}{i = max(B_1[v] \cup B_2[v])}{v \mapsto i}}
+    \infer2{\texttt{B_1 \textbackslash{}/ B_2} \to \texttt{B_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Bag intersection}
+\begin{gather}
+  \tag{Bag intersection}
+  \begin{prooftree}
+    \hypo{B_1, B_2, B_3: bag[T]}
+    \hypo{B_3 = \Bag{v \in dom(B_1)}{v \in dom(B_2) \land i = min(B_1[v] \cup B_2[v]) \land i > 0}{v \mapsto i}}
+    \infer2{\texttt{B_1 /\textbackslash{} B_2} \to \texttt{B_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Bag add}
+\begin{gather}
+  \tag{Bag add}
+  \begin{prooftree}
+    \hypo{B_1, B_2, B_3: bag[T]}
+    \hypo{B_3 = \Bag{v \in (dom(B_1) \cup dom(B_2))}{i = sum(B_1[v] \cup B_2[v])}{v \mapsto i}}
+    \infer2{\texttt{B_1 + B_2} \to \texttt{B_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Bag difference}
-\subparagraph{Comprehension}
+\begin{gather}
+  \tag{Bag difference}
+  \begin{prooftree}
+    \hypo{B_1, B_2, B_3: bag[T]}
+    \hypo{B_3 = \Bag{v \in dom(B_1)}{i = B_1(v) - (B_2 \cup \Bag{v \mapsto 0})(v) \land i > 0}{v \mapsto i}}
+    \infer2{\texttt{B_1 - B_2} \to \texttt{B_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Size}
+\begin{gather}
+  \tag{Size}
+  \begin{prooftree}
+    \hypo{B: bag[T]}
+    \hypo{i: int = \Sum{v \mapsto i_1}{i_1}}
+    \infer2{\texttt{size(B)} \to \texttt{i}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Sequence}
 \subparagraph{Concat}
-\subparagraph{Comprehension}
+\begin{gather}
+  \tag{Concat}
+  \begin{prooftree}
+    \hypo{S_1, S_2, S_3: sequence[T]}
+    \hypo{S_3 = S_1 \cup \Set{i \mapsto v \in S_2}{i + max(dom(S_1)) \mapsto v}}
+    \infer2{\texttt{S_1 ++ S_2} \to \texttt{S_3}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Procedure}
 \subparagraph{Call}
-    % Procedure call? need to propagate traits from return value type - should be done at procedure definition time?
+% TODO procedures make their own env, how can we express pass-by-value vs pass-by-reference semantics formally?
 \paragraph{Quantifications}
 % TODO quantification body, multiple generators
 \subparagraph{Min}
@@ -1104,6 +1270,7 @@ where the constructor identifier is the same as the type identifier. Records act
 \subparagraph{Lambda}
 \paragraph{Simple Statements}
 \subparagraph{Assignment}
+% And relation/record assignment
 \subparagraph{Type Assignment}
 \subparagraph{Trait Application}
 \subparagraph{Return}
