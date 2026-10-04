@@ -45,7 +45,7 @@ Let $i_N$ be an int constrained such that $-2^{N-1}+1 \leq i_N \leq 2^{N-1}$. Th
 \end{grammar}
 64-bit floats following IEEE-754 %TODO cite
 with variables $e_{bits} = 11, m_{bits} = 52, e = 2^{e_{bits}}-1023, m = 2 \times 2^{m_{bits}}$
-where $-2^e\times m \leq f \leq 2^e\times m$
+where $-2^e\times m \leq f \leq 2^e\times m$. Effectively, floats follow $ -1.79\times 10^{308} \leq f \leq 1.79\times 10^{308}$.
 \subparagraph{String}
 \begin{grammar}
 <q> ::= `"' [\^{}`"']* `"'
@@ -503,8 +503,8 @@ where the constructor identifier is the same as the type identifier. Records act
 \begin{gather}
   \tag{Not}
   \begin{prooftree}
-    \hypo{b_1: bool}
-    \hypo{b_2: bool = \lnot b_1}
+    \hypo{b_1, b_2: bool}
+    \hypo{b_2 = \lnot b_1}
     \infer2{\texttt{not b_1} \to \texttt{b_2}}
   \end{prooftree}
 \end{gather}
@@ -512,39 +512,39 @@ where the constructor identifier is the same as the type identifier. Records act
 \begin{gather}
   \tag{Equivalent}
   \begin{prooftree}
-    \hypo{b_1, b_2: bool}
-    \hypo{b: bool = (b_1 \equiv b_2)}
-    \infer2{\texttt{b_1 == b_2} \to \texttt{b}}
+    \hypo{b_1, b_2, b_3: bool}
+    \hypo{b_3: bool = (b_1 \equiv b_2)}
+    \infer2{\texttt{b_1 == b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Not equivalent}
 \begin{gather}
   \tag{Not equivalent}
   \begin{prooftree}
-    \hypo{b_1, b_2: bool}
-    \hypo{b: bool = (b_1 \not\equiv b_2)}
-    \infer2{\texttt{b_1 !== b_2} \to \texttt{b}}
+    \hypo{b_1, b_2, b_3: bool}
+    \hypo{b_3: bool = (b_1 \not\equiv b_2)}
+    \infer2{\texttt{b_1 !== b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Implies}
 \begin{gather}
   \tag{Implies}
   \begin{prooftree}
-    \hypo{b_1, b_2: bool}
-    \hypo{b: bool = (b_1 \implies b_2)}
-    \infer2{\texttt{b_1 => b_2} \to \texttt{b}}
+    \hypo{b_1, b_2, b_3: bool}
+    \hypo{b_3: bool = (b_1 \implies b_2)}
+    \infer2{\texttt{b_1 => b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
 \subparagraph{And}
 \begin{gather}
   \tag{And}
   \begin{prooftree}
-    \hypo{b_1, b_2: bool}
-    \hypo{b: bool = (b_1 \land b_2)}
-    \infer2{\texttt{b_1 and b_2} \to \texttt{b}}
+    \hypo{b_1, b_2, b_3: bool}
+    \hypo{b_3 = (b_1 \land b_2) = (b_2 \land b_1)}
+    \infer2{\texttt{b_1 and b_2} \to \texttt{b_3}}
   \end{prooftree}
   \\
-  \tag{Undefined with false}
+  \tag{Optimistic short-circuiting}
   \begin{prooftree}
     \hypo{b = \bot}
     \infer1{\texttt{false and b} \to \texttt{false}}
@@ -554,12 +554,12 @@ where the constructor identifier is the same as the type identifier. Records act
 \begin{gather}
   \tag{Or}
   \begin{prooftree}
-    \hypo{b_1, b_2: bool}
-    \hypo{b: bool = (b_1 \lor b_2)}
-    \infer2{\texttt{b_1 or b_2} \to \texttt{b}}
+    \hypo{b_1, b_2, b_3: bool}
+    \hypo{b_3 = (b_1 \lor b_2) = (b_2 \lor b_1)}
+    \infer2{\texttt{b_1 or b_2} \to \texttt{b_3}}
   \end{prooftree}
   \\
-  \tag{Undefined with true}
+  \tag{Optimistic short-circuiting}
   \begin{prooftree}
     \hypo{b = \bot}
     \infer1{\texttt{true or b} \to \texttt{true}}
@@ -567,41 +567,418 @@ where the constructor identifier is the same as the type identifier. Records act
 \end{gather}
 \paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
 \subparagraph{Less than}
+\begin{gather}
+  \tag{Less than}
+  \begin{prooftree}
+    \hypo{T_1 \in \Set{int, float}}
+    \hypo{T_2 \in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{b: bool = (v_1 < v_2)}
+    \infer5{\texttt{v_1 < v_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Greater than}
+\begin{gather}
+  \tag{Greater than}
+  \begin{prooftree}
+    \hypo{T_1 \in \Set{int, float}}
+    \hypo{T_2 \in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{b: bool = (v_1 > v_2)}
+    \infer5{\texttt{v_1 > v_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Less than or equals}
+\begin{gather}
+  \tag{Less than or equals}
+  \begin{prooftree}
+    \hypo{T_1 \in \Set{int, float}}
+    \hypo{T_2 \in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{b: bool = (v_1 \leq v_2)}
+    \infer5{\texttt{v_1 <= v_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Greater than or equals}
+\begin{gather}
+  \tag{Greater than or equals}
+  \begin{prooftree}
+    \hypo{T_1 \in \Set{int, float}}
+    \hypo{T_2 \in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{b: bool = (v_1 \geq v_2)}
+    \infer5{\texttt{v_1 >= v_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Negate}
+\begin{gather}
+  \tag{Int}
+  \begin{prooftree}
+    \hypo{i_1: int}
+    \hypo{i_2: int = (-i_1)}
+    \infer2{\texttt{-i_1} \to \texttt{i_2}}
+  \end{prooftree}
+  \\
+  \tag{Float}
+  \begin{prooftree}
+    \hypo{f_1: float}
+    \hypo{f_2: float = (-f_1)}
+    \infer2{\texttt{-f_1} \to \texttt{f_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Int divide}
+\begin{gather}
+  \tag{Int divide}
+  \begin{prooftree}
+    \hypo{i_1: int}
+    \hypo{i_2: int}
+    \hypo{i_3: int = \lfloor \frac{i_1}{i_2} \rfloor}
+    \infer3{\texttt{i_1 div i_2} \to \texttt{i_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Modulo}
+\begin{gather}
+  \tag{Modulo}
+  \begin{prooftree}
+    \hypo{i_1: int}
+    \hypo{i_2: int}
+    \hypo{i_3: int = i_1 - i_2 \times \lfloor \frac{i_1}{i_2} \rfloor}
+    \infer3{\texttt{i_1 mod i_2} \to \texttt{i_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Add}
+\begin{gather}
+  \tag{Int and Int}
+  \begin{prooftree}
+    \hypo{i_1, i_2, i_3: int}
+    \hypo{i_3 = (i_1 + i_2) = (i_2 + i_1)}
+    \infer2{\texttt{i_1 + i_2} \to \texttt{i_3}}
+  \end{prooftree}
+  \\
+  \tag{Int and Float}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{f_1, f_2: float}
+    \hypo{f_2 = i + f_1}
+    \infer3{\texttt{i + f_1} \to \texttt{f_2}}
+  \end{prooftree}
+  \\
+  \tag{Float and Int}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{f_1, f_2: float}
+    \hypo{f_2 = f_1 + i}
+    \infer3{\texttt{f_1 + i} \to \texttt{f_2}}
+  \end{prooftree}
+  \\
+  \tag{Float and Float}
+  \begin{prooftree}
+    \hypo{f_1, f_2, f_3: float}
+    \hypo{f_3 = f_1 + f_2}
+    \infer2{\texttt{f_1 + f_2} \to \texttt{f_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Subtract}
+\begin{gather}
+  \tag{Subtract}
+  \begin{prooftree}
+    \hypo{T_1, T_2, T_3 :\in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{v_3: T_3}
+    \hypo{v_3 = v_1 + -(v_2)}
+    \infer5{\texttt{v_1 - v_2} \to \texttt{v_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Divide}
+\begin{gather}
+  \tag{Subtract}
+  \begin{prooftree}
+    \hypo{T_1, T_2 :\in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{f: float}
+    \hypo{f = \frac{v_1}{v_2}}
+    \infer5{\texttt{v_1 / v_2} \to \texttt{f}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Multiply}
+\begin{gather}
+  \tag{Int and Int}
+  \begin{prooftree}
+    \hypo{i_1, i_2, i_3: int}
+    \hypo{i_3 = \Sum{i \in 0 \upto i_1}{i_2}}
+    \infer2{\texttt{i_1 * i_2} \to \texttt{i_3}}
+  \end{prooftree}
+  \\
+  \tag{Int and Float}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{f_1, f_2: float}
+    \hypo{f_2 = i \times f_1}
+    \infer3{\texttt{i * f_1} \to \texttt{f_2}}
+  \end{prooftree}
+  \\
+  \tag{Float and Int}
+  \begin{prooftree}
+    \hypo{i: int}
+    \hypo{f_1, f_2: float}
+    \hypo{f_2 = f_1 \times i}
+    \infer3{\texttt{f_1 * i} \to \texttt{f_2}}
+  \end{prooftree}
+  \\
+  \tag{Float and Float}
+  \begin{prooftree}
+    \hypo{f_1, f_2, f_3: float}
+    \hypo{f_3 = f_1 \times f_2}
+    \infer2{\texttt{f_1 * f_2} \to \texttt{f_3}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Power}
+\begin{gather}
+  \tag{Int exponent}
+  \begin{prooftree}
+    \hypo{T_1, T_2 :\in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{i: int}
+    \hypo{v_2 = \Product{i \in 0 \upto i}{v_1}}
+    \infer5{\texttt{v_1 \^{} i} \to \texttt{v_2}}
+  \end{prooftree}
+  \\
+  \tag{Float exponent}
+  \begin{prooftree}
+    \hypo{T_1, T_2 :\in \Set{int, float}}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{f: float}
+    \hypo{v_2 = v_1^{f}}
+    \infer5{\texttt{v_1 \^{} f} \to \texttt{v_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Upto}
+\begin{gather}
+  \tag{Upto}
+  \begin{prooftree}
+    \hypo{i_1, i_2: int}
+    \hypo{s: set[int]}
+    \hypo{s = i_1 \upto i_2}
+    \infer3{\texttt{i_1 .. i_2} \to \texttt{s}}
+  \end{prooftree}
+\end{gather}
 \paragraph{String} % TODO define string operations? Leave out for now?
 \paragraph{Tuple}
 \subparagraph{Enumeration}
+\begin{gather}
+  \tag{Enumeration}
+  \begin{prooftree}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{t: (T_1, T_2, ...) = \Tuple{v_1, v_2, ...}}
+    \infer3{\texttt{\Tuple{v_1, v_2, ...}} \to \texttt{t}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Maplet}
+\begin{gather}
+  \tag{Maplet}
+  \begin{prooftree}
+    \hypo{v_1: T_1}
+    \hypo{v_2: T_2}
+    \hypo{t: (T_1, T_2) = \Tuple{v_1, v_2}}
+    \infer3{\texttt{v_1 |-> v_2} \to \texttt{t}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Record}
 \subparagraph{Access}
+\begin{gather}
+  \tag{Access}
+  \begin{prooftree}
+    \hypo{R: record[T_1, T_2, ...]}
+    \hypo{q: str}
+    \hypo{v = R[q]}
+    \infer3{\texttt{R.q} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Set}
 \subparagraph{Enumeration}
+\begin{gather}
+  \tag{Enumeration}
+  \begin{prooftree}
+    \hypo{v_1, v_2: T}
+    \hypo{s: set[T] = \Set{v_1, v_2, ...}}
+    \infer2{\texttt{\Set{v_1, v_2, ...}} \to \texttt{s}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Clear}
-\subparagraph{Is empty}
+\begin{gather}
+  \tag{Clear}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \hypo{s_2 = \Set{}}
+    \infer2{\texttt{clear(s_1)} \to \texttt{s_2}}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Is empty}
 \subparagraph{Add}
+\begin{gather}
+  \tag{Add}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \hypo{v: T}
+    \hypo{s_2 = s_1 \cup \Set{v}}
+    \infer3{\texttt{add(s_1)} \to \texttt{s_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Remove}
+\begin{gather}
+  \tag{Remove}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \hypo{v: T}
+    \hypo{s_2 = s_1 \setminus \Set{v}}
+    \infer3{\texttt{remove(s_1, v)} \to \texttt{s_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{In}
+\begin{gather}
+  \tag{In}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{v: T}
+    \hypo{b: bool = v \in s}
+    \infer3{\texttt{v in s} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not in}
+\begin{gather}
+  \tag{In}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{v: T}
+    \hypo{b: bool = v \not\in s}
+    \infer3{\texttt{v not in s} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Cardinality}
+\begin{gather}
+  \tag{Cardinality}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{i: int = |s|}
+    \infer2{\texttt{card(s)} \to \texttt{i}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Choice}
+\begin{gather}
+  \tag{Normal execution}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{v: T}
+    \hypo{v \in s}
+    \infer3{\texttt{choice(s)} \to \texttt{v}}
+  \end{prooftree}
+  \\
+  \tag{Undefined}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{s = \Set{}}
+    \hypo{v = \bot}
+    \infer3{\texttt{choice(s)} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Min}
+\begin{gather}
+  \tag{Min}
+  \begin{prooftree}
+    \hypo{T :\in \Set{int, float, str, tuple[T]}}
+    \hypo{s: set[T]}
+    \hypo{v: T}
+    \hypo{v \in s}
+    \hypo{\Forall{e \in s}{v \leq e}}
+    \infer5{\texttt{\Min{s}} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Max}
+\begin{gather}
+  \tag{Max}
+  \begin{prooftree}
+    \hypo{T :\in \Set{int, float, str, tuple[T]}}
+    \hypo{s: set[T]}
+    \hypo{v: T}
+    \hypo{v \in s}
+    \hypo{\Forall{e \in s}{v \geq e}}
+    \infer5{\texttt{\Max{s}} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Sum}
+\begin{gather}
+  \tag{Sum}
+  \begin{prooftree}
+    \hypo{T :\in \Set{int, float}}
+    \hypo{s: set[T]}
+    \hypo{v: T = \Sum{e \in s}{e}}
+    \infer3{\texttt{\Sumttt{s}} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Product}
+\begin{gather}
+  \tag{Product}
+  \begin{prooftree}
+    \hypo{T :\in \Set{int, float}}
+    \hypo{s: set[T]}
+    \hypo{v: T = \Product{e \in s}{e}}
+    \infer3{\texttt{\Productttt{s}} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{General Union}
+\begin{gather}
+  \tag{Union}
+  \begin{prooftree}
+    \hypo{s: set[set[T]]}
+    \hypo{v: set[T] = \Union{e \in s}{e}}
+    \infer2{\texttt{\Unionttt{s}} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{General Intersection}
+\begin{gather}
+  \tag{Intersection}
+  \begin{prooftree}
+    \hypo{s: set[set[T]]}
+    \hypo{v: set[T] = \Inter{e \in s}{e}}
+    \infer2{\texttt{\Interttt{s}} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Union}
+\begin{gather}
+  \tag{Union}
+  \begin{prooftree}
+    \hypo{s_1, s_2, s_3: set[T]}
+    \hypo{s_3 = s_1 \cup s_2}
+    \infer2{\texttt{s_1 \textbackslash{}/ s_2} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Intersection}
+\begin{gather}
+  \tag{Intersection}
+  \begin{prooftree}
+    \hypo{s_1, s_2, s_3: set[T]}
+    \hypo{s_3 = s_1 \cap s_2}
+    \infer2{\texttt{s_1 /\textbackslash{} s_2} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Difference}
+\begin{gather}
+  \tag{Difference}
+  \begin{prooftree}
+    \hypo{s_1, s_2, s_3: set[T]}
+    \hypo{s_3 = s_1 \setminus s_2}
+    \infer2{\texttt{s_1 \textbackslash{} s_2} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
 % \subparagraph{Symmetric difference} % TODO if we add this, make sure we add to the op-trait and type defs. Leaving out for now bc I dont think we have syntax for it. Same with SetType.is_disjoint
 \subparagraph{Cartesian product}
 \subparagraph{Subset}
