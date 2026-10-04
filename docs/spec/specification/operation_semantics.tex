@@ -67,16 +67,17 @@ where $min(dom(q')) = 0$ and $max(dom(q')) = |q'|$ (ie. it is a sequence of char
 \begin{grammar}
 <r> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <value> \{`,' <value> \lit{$\mapsto$} <value>\}`\}'
 \end{grammar}
+Further, $relation[T_1, T_2] = set[(T_1, T_2)]$ and carry all semantics associated with that type.
 \subparagraph{Bag}
 \begin{grammar}
 <B> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <i> \{`,' <value> \lit{$\mapsto$} <i>\}`\}'
 \end{grammar}
-where $\forall i \in ran(B) | i \geq 0$
+where $\forall i \in ran(B) | i \geq 0$. Further, $bag[T] = relation[T, int]$ and carry all semantics associated with that type.
 \subparagraph{Sequence}
 \begin{grammar}
 <S> ::= `\{\}' | `\{' <i> \lit{$\mapsto$} <value> \{`,' <i> \lit{$\mapsto$} <value>\}`\}'
 \end{grammar}
-where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$
+where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$, Further, $sequence[T] = relation[int, T]$ and carry all semantics associated with that type.
 \subparagraph{Record}
 \begin{grammar}
 <R> ::= <constructor> `()' | <constructor> `('<value> \{`,' <value>\}`)'
@@ -981,14 +982,83 @@ where the constructor identifier is the same as the type identifier. Records act
 \end{gather}
 % \subparagraph{Symmetric difference} % TODO if we add this, make sure we add to the op-trait and type defs. Leaving out for now bc I dont think we have syntax for it. Same with SetType.is_disjoint
 \subparagraph{Cartesian product}
+\begin{gather}
+  \tag{Cartesian product}
+  \begin{prooftree}
+    \hypo{s_1: set[T_1]}
+    \hypo{s_2: set[T_2]}
+    \hypo{r: relation[T_1, T_2] = \Set{v_1 \in s_1 \land v_2 \in s_2}{v_1 \mapsto v_2}}
+    \infer3{\texttt{s_1 >< s_2} \to \texttt{r}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Subset}
+\begin{gather}
+  \tag{Subset}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \hypo{b: bool}
+    \hypo{b = \Forall{v_1 \in s_1}{v_1 \in s_2} \land |s_1| < |s_2|}
+    \infer3{\texttt{s_1 <{}<: s_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Subset equals}
+\begin{gather}
+  \tag{Subset equals}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \hypo{b: bool}
+    \hypo{b = \Forall{v_1 \in s_1}{v_1 \in s_2}}
+    \infer3{\texttt{s_1 <: s_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Superset}
+\begin{gather}
+  \tag{Superset}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \infer1{\texttt{s_1 :>{}> s_2} \to \texttt{s_2 <{}<: s_1}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Superset equals}
+\begin{gather}
+  \tag{Superset equals}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \infer1{\texttt{s_1 :> s_2} \to \texttt{s_2 <: s_1}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not subset}
+\begin{gather}
+  \tag{Not subset}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \infer1{\texttt{s_1 !<{}<: s_2} \to \texttt{!(s_2 <{}<: s_1)}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not subset equals}
+\begin{gather}
+  \tag{Not subset equals}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \infer1{\texttt{s_1 !<: s_2} \to \texttt{!(s_2 <: s_1)}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not superset}
+\begin{gather}
+  \tag{Not superset}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \infer1{\texttt{s_1 !:>{}> s_2} \to \texttt{!(s_2 :>{}> s_1)}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not superset equals}
+\begin{gather}
+  \tag{Not superset equals}
+  \begin{prooftree}
+    \hypo{s_1, s_2: set[T]}
+    \infer1{\texttt{s_1 !:> s_2} \to \texttt{!(s_2 :> s_1)}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Relation}
 \subparagraph{Inverse}
 \subparagraph{Function call}
