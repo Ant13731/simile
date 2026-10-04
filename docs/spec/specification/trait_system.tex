@@ -90,7 +90,7 @@ Represents the relational subtype properties (injectiveness, surjectiveness, etc
 \begin{itemize}
     \item \textit{TreatAsExpr}: Inline this function and treat it as an expression/operator. Useful for having function-call notation act like an operator. For example:
     \begin{algorithmic}
-      \State procedure $add(s: set[T], e: T) -> set[T]:$
+      \State procedure $add(s: set[T], e: T) \rightarrow set[T]:$
       \State \quad trait $treat\_as\_expr$
       \State \quad return $s \cup \Set{e}$
     \end{algorithmic}
@@ -100,6 +100,7 @@ Represents the relational subtype properties (injectiveness, surjectiveness, etc
 Some types are incompatible with some traits, and some types must have some traits. We provide tables showing compatibility between traits and types. A double-checkmark means the trait is always present - a base trait of that type.
 
 \paragraph{Primitives}
+
 \begin{center}
 \begin{longtable}{l c c c c c}
     & none & bool & int & float & str \\

@@ -43,7 +43,7 @@ Let $i_N$ be an int constrained such that $-2^{N-1}+1 \leq i_N \leq 2^{N-1}$. Th
 \begin{grammar}
 <f> ::= [-][0-9]*`.'[0-9]+
 \end{grammar}
-64-bit floats following IEEE-754-2019 %TODO cite
+64-bit floats following IEEE-754 %TODO cite
 with variables $e_{bits} = 11, m_{bits} = 52, e = 2^{e_{bits}}-1023, m = 2 \times 2^{m_{bits}}$
 where $-2^e\times m \leq f \leq 2^e\times m$
 \subparagraph{String}
@@ -237,7 +237,7 @@ where the constructor identifier is the same as the type identifier. Records act
   \begin{prooftree}
     \hypo{t: (T_1, T_2, ...)}
     \hypo{R: record[T_1, T_2, ...] = R_{type}\Tuple{v \in t}{v}}
-    \hypo{\forall i \in 0..|t| \cdot type(t[i]) = type(R[i])}
+    \hypo{\Forall{i \in 0..|t|}{type(t[i]) = type(R[i])}}
     \hypo{|t| = |R|}
     \infer4{\texttt{cast(t, record)} \to \texttt{R}}
   \end{prooftree}
@@ -431,14 +431,140 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
 \end{gather}
 \subparagraph{Equals}
+\begin{gather}
+  \tag{Primitives}
+  \begin{prooftree}
+    \hypo{T \in \Set{none, bool, int, float, str, enum}}
+    \hypo{v_1, v_2: T}
+    \hypo{b: bool = (v_1 = v_2)}
+    \infer3{\texttt{v_1 = v_2} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  \tag{Tuple}
+  \begin{prooftree}
+    \hypo{t_1: (T_1, T_2, ...)}
+    \hypo{t_2: (T_1, T_2, ...)}
+    \hypo{|t_1| = |t_2|}
+    \hypo{b: bool = \Forall{i \in 0..|t_1|}{t_1[i] = t_2[i]}}
+    \infer4{\texttt{t_1 = t_2} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  \tag{Set}
+  \begin{prooftree}
+    \hypo{s_1: set[T]}
+    \hypo{s_2: set[T]}
+    \hypo{|s_1| = |s_2|}
+    \hypo{b: bool = \Forall{v \in s_1}{v \in s_2}}
+    \infer4{\texttt{s_1 = s_2} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  \tag{Relation}
+  \begin{prooftree}
+    \hypo{r_1: relation[T_1, T_2]}
+    \hypo{r_2: relation[T_1, T_2]}
+    \hypo{|r_1| = |r_2|}
+    \hypo{b: bool = \Forall{v \in dom(r_1)}{r_1[v] = r_2[v]}}
+    \infer4{\texttt{r_1 = r_2} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  \tag{Bag}
+  \begin{prooftree}
+    \hypo{b_1: bag[T]}
+    \hypo{b_2: bag[T]}
+    \infer2{\texttt{b_1 = b_2} \to \texttt{cast(b_1, relation) = cast(b_2, relation)}}
+  \end{prooftree}
+  \\
+  \tag{Sequence}
+  \begin{prooftree}
+    \hypo{S_1: sequence[T]}
+    \hypo{S_2: sequence[T]}
+    \infer2{\texttt{S_1 = S_2} \to \texttt{cast(S_1, relation) = cast(S_2, relation)}}
+  \end{prooftree}
+  \\
+  \tag{Record}
+  \begin{prooftree}
+    \hypo{R_1: record[T_1, T_2, ...]}
+    \hypo{R_2: record[T_1, T_2, ...]}
+    \hypo{b: bool = \Forall{f \in dom(R_1)}{R_1.f = R_2.f}}
+    \infer3{\texttt{R_1 = R_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not equals}
+\begin{gather}
+  \tag{Not equals}
+  \begin{prooftree}
+    \hypo{v_1, v_2: T}
+    \hypo{b: bool = \lnot (v_1 = v_2)}
+    \infer2{\texttt{v_1 != v_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Bool}
 \subparagraph{Not}
+\begin{gather}
+  \tag{Not}
+  \begin{prooftree}
+    \hypo{b_1: bool}
+    \hypo{b_2: bool = \lnot b_1}
+    \infer2{\texttt{not b_1} \to \texttt{b_2}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Equivalent}
+\begin{gather}
+  \tag{Equivalent}
+  \begin{prooftree}
+    \hypo{b_1, b_2: bool}
+    \hypo{b: bool = (b_1 \equiv b_2)}
+    \infer2{\texttt{b_1 == b_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Not equivalent}
+\begin{gather}
+  \tag{Not equivalent}
+  \begin{prooftree}
+    \hypo{b_1, b_2: bool}
+    \hypo{b: bool = (b_1 \not\equiv b_2)}
+    \infer2{\texttt{b_1 !== b_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Implies}
+\begin{gather}
+  \tag{Implies}
+  \begin{prooftree}
+    \hypo{b_1, b_2: bool}
+    \hypo{b: bool = (b_1 \implies b_2)}
+    \infer2{\texttt{b_1 => b_2} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{And}
+\begin{gather}
+  \tag{And}
+  \begin{prooftree}
+    \hypo{b_1, b_2: bool}
+    \hypo{b: bool = (b_1 \land b_2)}
+    \infer2{\texttt{b_1 and b_2} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  \tag{Undefined with false}
+  \begin{prooftree}
+    \hypo{b = \bot}
+    \infer1{\texttt{false and b} \to \texttt{false}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Or}
+\begin{gather}
+  \tag{Or}
+  \begin{prooftree}
+    \hypo{b_1, b_2: bool}
+    \hypo{b: bool = (b_1 \lor b_2)}
+    \infer2{\texttt{b_1 or b_2} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  \tag{Undefined with true}
+  \begin{prooftree}
+    \hypo{b = \bot}
+    \infer1{\texttt{true or b} \to \texttt{true}}
+  \end{prooftree}
+\end{gather}
 \paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
 \subparagraph{Less than}
 \subparagraph{Greater than}

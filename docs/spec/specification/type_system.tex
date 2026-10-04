@@ -375,7 +375,7 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \hypo{\Gamma, I_1:T_1, ..., I_n: T_n \vdash E:A, P: bool}
 \hypo{I_i \notin dom(\Gamma)}
 \hypo{i \neq j \implies I_i \neq I_j}
-\infer3{\Gamma \vdash (\lambda I_1, ..., I_n \cdot P \mid E): (T_1, ..., T_n) \pfun A}
+\infer3{\Gamma \vdash (\Lambda{I_1, ..., I_n}{P}{E}): (T_1, ..., T_n) \pfun A}
 \end{prooftree}
 \\
 \tag{Quantifier}
@@ -780,7 +780,7 @@ Let $\otimes = \Set{\cup, \cap, +, -}$
 \tag{Records - Type Definition}
 \begin{prooftree}
 \hypo{\Gamma \vdash A_1, ..., A_n}
-\hypo{\forall I_i, I_j \cdot I_i \neq I_j}
+\hypo{\Forall{I_i, I_j}{I_i \neq I_j}}
 \infer2{\Gamma \vdash Record[I_1: A_1, ..., I_n: A_n]}
 \end{prooftree}
 \\
