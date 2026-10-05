@@ -84,7 +84,25 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$, Further, $sequence[T] = relatio
 \end{grammar}
 where the constructor identifier is the same as the type identifier. Records act like a named, ordered tuple; effectively a $relation[str, T]$ where $T$ may be any combination of types. Let record $R'$ be defined with fields $f_1, f_2, ...$. Then the view $R': relation[str, T] = \Set{f_1 \mapsto v_1, f_2 \mapsto v_2, ...}$ can be used. The type is inherently ordered, so there is a another relational view: $R_{type}: relation[int, type[T]] = \Set{0 \mapsto v_{type_1}, 1 \mapsto v_{type_2}, ...}$. image on the type
 \paragraph{Base Operations}
-\subparagraph{Cast}
+\subparagraph{Cast} The below table shows allowed type casts (where the source type is on the left and the target type is on top), and judgements define how casting works. Casts that are marked with $\xmark$ result in an error value of $\bot$.
+\begin{center}
+\begin{longtable}{l c c c c c c c c c c c}
+    & none & bool & int & float & str & tuple & set & relation & bag & sequence & record\\
+    \endhead
+    none     & \cmark & \xmark & \xmark & \xmark & \cmark & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    bool     & \xmark & \cmark & \cmark & \xmark & \cmark & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    int      & \xmark & \cmark & \cmark & \cmark & \cmark & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    float    & \xmark & \cmark & \cmark & \cmark & \cmark & \xmark & \xmark & \xmark & \xmark & \xmark & \xmark \\
+    str      & \xmark & \cmark & \cmark & \cmark & \cmark & \cmark & \xmark & \xmark & \xmark & \cmark & \xmark \\
+    tuple    & \xmark & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark & \xmark & \cmark & \cmark & \cmark \\
+    set      & \xmark & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark & \xmark \\
+    relation & \xmark & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark & \cmark & \xmark & \cmark & \xmark \\
+    bag      & \xmark & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark & \xmark \\
+    sequence & \xmark & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark & \cmark & \cmark & \cmark & \xmark \\
+    record   & \xmark & \xmark & \xmark & \xmark & \cmark & \cmark & \cmark & \cmark & \xmark & \cmark & \cmark \\
+\end{longtable}
+\end{center}
+
 \begin{gather}
   \tag{Self typecast}
   \begin{prooftree}
@@ -95,6 +113,33 @@ where the constructor identifier is the same as the type identifier. Records act
   \\
   % ... TODO how can we show every type cast to every other type. We have:
   % - self-to-self
+  \tag{None-to-string typecast}
+  \begin{prooftree}
+    \infer0{\texttt{cast(none, str)} \to \texttt{``none"}}
+  \end{prooftree}
+  \\
+  % - bool b to:
+  %    - int: b ? 1 : 0
+  \tag{Bool-to-int typecast}
+  \begin{prooftree}
+    \hypo{b: bool}
+    \hypo{i: int}
+    \hypo{b \implies (i = 1)}
+    \hypo{\lnot b \implies (i = 0)}
+    \infer4{\texttt{cast(b, int)} \to \texttt{b}}
+  \end{prooftree}
+  \\
+  %    - str: b ? true : false
+  \tag{Bool-to-string typecast (True)}
+  \begin{prooftree}
+    \infer0{\texttt{cast(true, str)} \to \texttt{``true''}}
+  \end{prooftree}
+  \\
+   \tag{Bool-to-string typecast (False)}
+  \begin{prooftree}
+    \infer0{\texttt{cast(false, str)} \to \texttt{``false''}}
+  \end{prooftree}
+  \\
   % - int n to:
   %    - float: n
   \tag{Int-to-float typecast}
@@ -137,10 +182,11 @@ where the constructor identifier is the same as the type identifier. Records act
   %    - str: "n", up to 4 decimal places
   \tag{Float-to-string typecast}
   \begin{prooftree}
-    \hypo{f: float}
-    \hypo{f_4: float = \frac{\lfloor f \times 10^4 \rfloor}{10^4}}
+    \hypo{f, f_4: float}
+    \hypo{f > 0 \implies (f_4 = \frac{\lfloor f \times 10^4 \rfloor}{10^4})}
+    \hypo{f < 0 \implies (f_4 = \frac{\lceil f \times 10^4 \rceil}{10^4})}
     \hypo{q: str = ``f_4"}
-    \infer3{\texttt{cast(f, str)} \to \texttt{q}}
+    \infer4{\texttt{cast(f, str)} \to \texttt{q}}
   \end{prooftree}
   \\
   %    - bool: 0 -> false, anything else -> true
@@ -391,6 +437,12 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{cast(S, tuple)} \to \texttt{t}}
   \end{prooftree}
   \\
+  \tag{Sequence-to-bag typecast}
+  \begin{prooftree}
+    \hypo{S: sequence[T]}
+    \infer1{\texttt{cast(S, bag)} \to \texttt{cast(cast(S, tuple), bag)}}
+  \end{prooftree}
+  \\
   % - record r to:
   %    - str: record_name(field1: r.field1, field2: r.field2, ...)
   \tag{Record-to-string typecast}
@@ -431,7 +483,7 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{cast(R, tuple)} \to \texttt{t}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Equals}
+\subparagraph{Equals} For primitives, equality is calculated in the usual mathematical manner. We explicitly specify equality for collection types, although these also follow convention.
 \begin{gather}
   \tag{Primitives}
   \begin{prooftree}
@@ -536,7 +588,7 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{b_1 => b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{And}
+\subparagraph{And} To enable the optimizer to shuffle around $\land$-conditions within programs following discrete maths, we cannot use the programming-specific short-circuiting features. Conventional short-circuiting evaluates conditions from left to right, stopping at the first annihilating clause (false for $\land$, true for $\lor$). However, this can hide potentially $\bot$-valued clauses to the right of the annihilator. So, when the optimizer leans on commutativity to reorder clauses, behaviour would not be guaranteed. Optimistic short-circuiting keeps the same idea as short-circuiting, but extends it to recover from $\bot$-valued clauses when an annihilator is present in any clause. We only pay an efficiency penalty in the case where we would otherwise throw an error.
 \begin{gather}
   \tag{And}
   \begin{prooftree}
@@ -559,7 +611,7 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{v and false} \to \texttt{false}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Or}
+\subparagraph{Or} Similar optimistic short-circuiting as the And conditions above.
 \begin{gather}
   \tag{Or}
   \begin{prooftree}
