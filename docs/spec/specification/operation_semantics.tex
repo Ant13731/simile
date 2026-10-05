@@ -635,6 +635,7 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
 \end{gather}
 \paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
+Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Addition is commutative for pure-int operations (and thus can be used in the optimizer more freely), while floats remain bound by the written order because of precision limitations. Multiplication and exponentiation are semantically defined in terms of addition, and thus follow similar semantics: close to mathematics for ints, close to programming for floats.
 \subparagraph{Less than}
 \begin{gather}
   \tag{Less than}
@@ -839,7 +840,11 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer3{\texttt{i_1 .. i_2} \to \texttt{s}}
   \end{prooftree}
 \end{gather}
-\paragraph{String} % TODO define string operations? Leave out for now?
+\paragraph{String} % TODO define string operations? Leave out for now? Strings are not the focus right now, but can be treated/cast as a list of chars for manipulation.
+% TODO define a lib in terms of the char list representation. should be easier with comprehensions.
+% What operations should strings have?
+% - concat
+% - indexing, indexing with upto to get at the substr?
 \paragraph{Tuple}
 \subparagraph{Enumeration}
 \begin{gather}
