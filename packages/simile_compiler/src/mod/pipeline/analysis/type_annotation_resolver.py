@@ -23,27 +23,39 @@ from src.mod.data.types import (
     EnumType,
     NoneType_,
     AnyType_,
+    TraitType,
 )
+from src.mod.data.traits import Traits, MinTrait
 
 
 class TypeAnnotationResolver:
-    RESERVED_KEYWORDS_FOR_TYPES: list[str] = [
-        "int",
-        "float",
-        "string",
-        "bool",
-        "set",
-        "sequence",
-        "bag",
-        "relation",
-        "generic",
-        "tuple",
-        "type",
-        "enum",
-        "ℤ",
-        "ℕ",
-        "ℕ₁",
-    ]
+    BUILT_IN_TYPES = {
+        # primitive
+        "int": IntType(),
+        "float": FloatType(),
+        "string": StringType(),
+        "bool": BoolType(),
+        # set
+        "set": SetType(GenericType()),
+        "sequence": SequenceType(GenericType()),
+        "bag": BagType(GenericType()),
+        "relation": RelationType(GenericType(), GenericType()),
+        # meta
+        "generic": GenericType(),
+        "type": TypeOfType(GenericType()),
+        "enum": EnumType(GenericType()),
+        # variable length types, dont populate anything since they can take multiple (unknown) arguments
+        "tuple": TupleType([]),
+        "procedure": ProcedureType(TupleType([]), GenericType()),
+        "record": RecordType({}),
+        # type sugar
+        "ℤ": SetType(IntType()),
+        "ℕ": SetType(IntType(traits=Traits({MinTrait(0)}))),
+        "ℕ₁": SetType(IntType(traits=Traits({MinTrait(1)}))),
+        # traits as typed objects?
+        # TODO how should we handle traits as first-class objects? I suppose they should just be an expr?
+        "trait": TraitType(None),
+    }
 
     # limited form of the below type synthesizer (which should not need to encounter type annotations)
     # this should be accessible to populate_symbol_table though

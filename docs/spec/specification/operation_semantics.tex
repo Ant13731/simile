@@ -1,6 +1,15 @@
 
 \subsection{Operational Semantics}
-Let $\sigma$ represent the symbol table (data store) for assigned variables, defined types, and procedure definitions. Further, let $\bot$ represent an error state; any operations that do not explicitly handle the error state are expected to propagate the error. The following sections define small-step semantics for Simile in the form of inference statements from $\langle$Simile code, $\sigma \rangle \to \langle$Derived simile code, $\sigma' \rangle$. When $\sigma$ does not change between steps, it is excluded for brevity. Generally, notation in the hypothesis section of each statement will correspond to set theory; notation in the inference corresponds to Simile code.
+Let $\sigma$ represent the symbol table (data store) for assigned variables, defined types, and procedure definitions. Further, let $\bot$ represent an error state; any operations that do not explicitly handle the error state are expected to propagate the error. The following sections define small-step semantics for Simile in the form of inference statements from $\langle$Simile code, $\sigma \rangle \to \langle$Derived simile code, $\sigma' \rangle$.  Generally, notation in the hypothesis section of each statement will correspond to set theory; notation in the inference corresponds to Simile code.
+
+For brevity, declaring a variable in the hypothesis implicitly means that value is available within $\sigma$ prior to execution. As an example:
+\begin{gather*}
+  v_1: T_1, v_2: T_2, ... \equiv v_1 \in \sigma \land type(v_1) = T_1, v_2 \in \sigma \land type(v_2) = T_2 , ...
+\end{gather*}
+When $\sigma$ does not change between steps, it is also excluded. For example:
+\begin{gather*}
+  \texttt{v_1 + v_2} \equiv \langle \texttt{v_1 + v_2}, \sigma \rangle
+\end{gather*}
 %
 % Need to write out small step semantics for each operator in simile... Built-in functions too?
 % Ex:
@@ -83,6 +92,28 @@ where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$, Further, $sequence[T] = relatio
 <R> ::= <constructor> `()' | <constructor> `('<value> \{`,' <value>\}`)'
 \end{grammar}
 where the constructor identifier is the same as the type identifier. Records act like a named, ordered tuple; effectively a $relation[str, T]$ where $T$ may be any combination of types. Let record $R'$ be defined with fields $f_1, f_2, ...$. Then the view $R': relation[str, T] = \Set{f_1 \mapsto v_1, f_2 \mapsto v_2, ...}$ can be used. The type is inherently ordered, so there is a another relational view: $R_{type}: relation[int, type[T]] = \Set{0 \mapsto v_{type_1}, 1 \mapsto v_{type_2}, ...}$. image on the type
+\paragraph{Base Environment}
+\begin{gather}
+  \tag{Built-in types}
+  \begin{prooftree}
+    \infer0{\Set{int, float, string, bool, set, sequence, bag, relation, generic, type, enum, tuple, procedure, record, trait, \mathbb{Z}, \mathbb{N}, \mathbb{N}_1} \subseteq \sigma}
+  \end{prooftree}
+  \\
+  \tag{Built-in traits 1}
+  \begin{prooftree}
+    \infer0{\Set{immutable, undefined, orderable, expr\_procedure, one\_to\_many, many\_to\_one, one\_to\_one} \subseteq \sigma}
+  \end{prooftree}
+  \\
+  \tag{Built-in traits 2}
+  \begin{prooftree}
+    \infer0{\Set{total\_on\_domain, total\_on\_range, iterable, unique, empty, total, literal, minimum, maximum, domain, size, bound} \subseteq \sigma}
+  \end{prooftree}
+  % \\ % TODO standard library is part of the base env, add when done
+  % \tag{Standard library}
+  % \begin{prooftree}
+  %   \infer0{\Set{} \subseteq \sigma}
+  % \end{prooftree}
+\end{gather}
 \paragraph{Base Operations}
 \subparagraph{Cast} The below table shows allowed type casts (where the source type is on the left and the target type is on top), and judgements define how casting works. Casts that are marked with $\xmark$ result in an error value of $\bot$.
 \begin{center}
@@ -562,6 +593,7 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
 \end{gather}
 \subparagraph{Equivalent}
+Similar to equals, but lower precedence and only for booleans.
 \begin{gather}
   \tag{Equivalent}
   \begin{prooftree}
@@ -867,14 +899,28 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \end{prooftree}
 \end{gather}
 \paragraph{Record}
+\subparagraph{Definition} Records are represented internally as a relation from strings to any field-independent type.
+\begin{gather}
+  \tag{Empty}
+  \begin{prooftree}
+    \hypo{id(R) \not\in \sigma}
+    \infer1{\langle\texttt{record R: skip},\sigma\rangle \to \langle,\sigma\cup\Set{R \mapsto type[record\Set{}]}\rangle}
+  \end{prooftree}
+  \\
+  \tag{Fields}
+  \begin{prooftree}
+    \hypo{id(R) \not\in \sigma}
+    \infer1{\langle\texttt{record R: (f_1: T_1, f_2: T_2, ...)},\sigma\rangle \to \langle,\sigma\cup\Set{R \mapsto type[record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2}]}\rangle}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Access}
 \begin{gather}
   \tag{Access}
   \begin{prooftree}
-    \hypo{R: record[T_1, T_2, ...]}
-    \hypo{q: str}
-    \hypo{v = R[q]}
-    \infer3{\texttt{R.q} \to \texttt{v}}
+    \hypo{R_{type}: record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2} \in \sigma}
+    \hypo{R: R_{type}}
+    \hypo{R = R_{type}(v_1, v_2, ...)}
+    \infer3{\texttt{R.f_n} \to \texttt{v_n}}
   \end{prooftree}
 \end{gather}
 \paragraph{Set}
@@ -898,6 +944,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \end{gather}
 % \subparagraph{Is empty}
 \subparagraph{Add}
+% TODO ADD, REMOVE, and CLEAR operations should have a side effect on the value in sigma, not create an entirely new value!!!!!!!!!!!!!!!!
 \begin{gather}
   \tag{Add}
   \begin{prooftree}
@@ -1306,6 +1353,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \end{prooftree}
 \end{gather}
 \paragraph{Procedure}
+\subparagraph{Definition}
 \subparagraph{Call}
 % TODO procedures make their own env, how can we express pass-by-value vs pass-by-reference semantics formally?
 \paragraph{Quantifications}

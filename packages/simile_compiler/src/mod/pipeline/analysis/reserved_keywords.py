@@ -4,7 +4,7 @@ from typing import TypeVar
 
 from src.mod.pipeline.scanner import KEYWORD_TABLE
 from src.mod.data import ast_
-from src.mod.pipeline.analysis.populate_symbol_table import PopulateSymbolTable
+from src.mod.pipeline.analysis.type_annotation_resolver import TypeAnnotationResolver
 
 T = TypeVar("T", bound=ast_.ASTNode)
 RESERVED_KEYWORDS = list(KEYWORD_TABLE.keys())
@@ -24,7 +24,7 @@ class ReservedKeywordErr:
 
 
 def check_clash(node: ast_.ASTNode, name: str) -> ReservedKeywordErr | None:
-    if name in PopulateSymbolTable.BUILT_IN_TYPES:
+    if name in TypeAnnotationResolver.BUILT_IN_TYPES:
         return ReservedKeywordErr(node, name, "RESERVED_KEYWORDS_FOR_TYPES")
     if name in RESERVED_KEYWORDS:
         return ReservedKeywordErr(node, name, "RESERVED_KEYWORDS")

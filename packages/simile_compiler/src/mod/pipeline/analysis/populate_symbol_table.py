@@ -77,37 +77,9 @@ def make_symbol_table(ast: ast_.ASTNode) -> SymbolTable:
 class PopulateSymbolTable:
     symbol_table: SymbolTable
 
-    BUILT_IN_TYPES = {
-        # primitive
-        "int": IntType(),
-        "float": FloatType(),
-        "string": StringType(),
-        "bool": BoolType(),
-        # set
-        "set": SetType(GenericType()),
-        "sequence": SequenceType(GenericType()),
-        "bag": BagType(GenericType()),
-        "relation": RelationType(GenericType(), GenericType()),
-        # meta
-        "generic": GenericType(),
-        "type": TypeOfType(GenericType()),
-        "enum": EnumType(GenericType()),
-        # variable length types, dont populate anything since they can take multiple (unknown) arguments
-        "tuple": TupleType([]),
-        "procedure": ProcedureType(TupleType([]), GenericType()),
-        "record": RecordType({}),
-        # type sugar
-        "ℤ": SetType(IntType()),
-        "ℕ": SetType(IntType(traits=Traits({MinTrait(0)}))),
-        "ℕ₁": SetType(IntType(traits=Traits({MinTrait(1)}))),
-        # traits as typed objects?
-        # TODO how should we handle traits as first-class objects? I suppose they should just be an expr?
-        "trait": TraitType(None),
-    }
-
     def populate_base(self) -> None:
         self.symbol_table.add_scope(ScopeContext.BASE)
-        for type_name, type_ in self.BUILT_IN_TYPES.items():
+        for type_name, type_ in TypeAnnotationResolver.BUILT_IN_TYPES.items():
             self.symbol_table.add_symbol(
                 type_name,
                 IdentifierContext.BUILTIN_TYPE,
