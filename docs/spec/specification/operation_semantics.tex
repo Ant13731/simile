@@ -903,22 +903,23 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \begin{gather}
   \tag{Empty}
   \begin{prooftree}
-    \infer0{\langle\texttt{record R: skip},\sigma\rangle \to \langle,\sigma\oplus\Set{R \mapsto type[record\Set{}]}\rangle}
+    \hypo{i: int \in dom(\rho)}
+    \infer1{\langle\texttt{record R: skip},\sigma, \rho\rangle \to \langle \texttt{skip},\sigma\oplus\Set{R \mapsto i}, \rho\oplus\Set{i \mapsto type[record\Set{}]}\rangle}
   \end{prooftree}
   \\
   \tag{Fields}
   \begin{prooftree}
-    \infer0{\langle\texttt{record R: (f_1: T_1, f_2: T_2, ...)},\sigma\rangle \to \langle,\sigma\oplus\Set{R \mapsto type[record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2}]}\rangle}
+    \hypo{i: int \in dom(\rho)}
+    \infer1{\langle\texttt{record R: (f_1: T_1, f_2: T_2, ...)},\sigma, \rho \rangle \to \langle,\sigma\oplus\Set{R \mapsto i}, \rho \oplus \Set{i \mapsto type[record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2}]}\rangle}
   \end{prooftree}
 \end{gather}
 \subparagraph{Access}
 \begin{gather}
   \tag{Access}
   \begin{prooftree}
-    \hypo{R_{type}: record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2} \in \sigma}
-    \hypo{R: R_{type}}
+    \hypo{R_{type}: record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2} \in \sigma \circ \rho}
     \hypo{R = R_{type}(v_1, v_2, ...)}
-    \infer3{\texttt{R.f_n} \to \texttt{v_n}}
+    \infer2{\texttt{R.f_n} \to \texttt{v_n}}
   \end{prooftree}
 \end{gather}
 \paragraph{Set}
@@ -1353,12 +1354,24 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \paragraph{Procedure}
 \subparagraph{Definition}
 \begin{gather}
-  \tag{Procedure}
+  \tag{Procedure Definition}
   \begin{prooftree}
-    \infer0{}
+    \hypo{i: int \not\in dom(\rho)}
+    \hypo{T_1, ..., T_n \in dom(\rho)}
+    \hypo{T \in dom(\rho)}
+    \hypo{args = \Set{a_1 \mapsto T_1, ..., a_n \mapsto T_n}}
+    \infer4{\langle \texttt{procedure p(a_1: t_1, ..., a_n: t_n) -> T: } block(\texttt{C}) \rangle \to \langle\texttt{skip}, \sigma\oplus\Set{p \mapsto i}, \rho\oplus\Set{i \mapsto procedure(args, T, block(C), \sigma, \rho)} \rangle}
   \end{prooftree}
 \end{gather}
 \subparagraph{Call}
+\begin{gather}
+  \tag{Procedure call}
+  \begin{prooftree}
+    \hypo{p \mapsto procedure(args, T, block(C), \sigma_p, \rho_p) \in \sigma \circ \rho}
+    \hypo{a_1 \mapsto t_1, ..., a_n \mapsto t_n}
+    \infer2{\langle \texttt{p(v_1, ..., v_n)}, \sigma, \rho \rangle \to \langle block(\texttt{a_1 := v_1; ...; a_n := v_n; C}); restore(\sigma, \rho), \sigma_p, \rho_p \rangle}
+  \end{prooftree}
+\end{gather}
 % TODO procedures make their own env, how can we express pass-by-value vs pass-by-reference semantics formally?
 \paragraph{Quantifications}
 % TODO quantification body, multiple generators
@@ -1369,16 +1382,67 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \subparagraph{Union all}
 \subparagraph{Intersection all}
 \subparagraph{Comprehension}
+\begin{gather}
+  \tag{Comprehension}
+  \begin{prooftree}
+    \hypo{s = \Set{x \in S}{P}{E}}
+    \infer1{\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to s}
+  \end{prooftree}
+  \\
+  \tag{Nested}
+  \begin{prooftree}
+    \hypo{s = \Set{(x_1, ..., x_n) \in S_1 \times ... \times S_n}{P}{E}}
+    \infer1{\Set{\texttt{x_1 in S_1, ..., x_n in S_n}}{\texttt{P}}{\texttt{E}} \to s}
+  \end{prooftree}
+  \\
+  \tag{Joined}
+  \begin{prooftree}
+    \hypo{s = \Set{x_1 \in S_1}{P_1}{E_1} \cup ... \cup \Set{x_n \in S_n}{P_n}{E_n}}
+    \infer1{\Set{\Comprehension{}{}{\texttt{x_1 in S_1}}{\texttt{P_1}}{\texttt{E_1}} \texttt{` ... `} \Comprehension{}{}{\texttt{x_n in S_n}}{\texttt{P_n}}{\texttt{E_n}}} \to s}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Sum}
 \subparagraph{Product}
 \subparagraph{Map}
 \subparagraph{Map min}
 \subparagraph{Map max}
 \subparagraph{Iter}
+\begin{gather}
+  \tag{Fold}
+  \begin{prooftree}
+    \hypo{t = \Tuple{i \in 0..n}{a_i}}
+    \hypo{S \neq \Set{}}
+    \infer2{\Iter
+      {\texttt{x in S} \cdot \texttt{P}}
+      {\texttt{a_1 := x_1; ...; a_n := x_n}}
+      {\texttt{t}}
+      {block(\texttt{C})}
+    \to block(\texttt{x := choice(S); a_1 := x_1; ...; a_n := x_n; if P: C;} \Iter{\Comprehension{\texttt{x in S - }\Set{x}}{\texttt{P}}}{}{\texttt{t}}{block(\texttt{C})} \texttt{return t})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Fold}
+\begin{gather}
+  \tag{Fold}
+  \begin{prooftree}
+    \infer0{\Fold{\texttt{v := i}}{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \texttt{v := i; for x in S: } block(\texttt{if P: v := E})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Lambda}
 \paragraph{Simple Statements}
 \subparagraph{Assignment}
+\begin{gather}
+  \tag{Assignment}
+  \begin{prooftree}
+    \hypo{i \not\in dom(\rho)}
+    \infer1{\langle\texttt{v_1 := v_2}, \sigma, \rho\rangle \to \langle \texttt{skip}, \sigma \oplus \Set{v_1 \mapsto i}, \rho \oplus \Set{i \mapsto v_2} \rangle}
+  \end{prooftree}
+  \\
+  \tag{Dereferencing}
+  \begin{prooftree}
+    \hypo{v_1 \mapsto v_2 \in \sigma \circ \rho}
+    \infer1{\langle\texttt{v_1}, \sigma, \rho\rangle \to \langle \texttt{v_2}, \sigma, \rho\rangle}
+  \end{prooftree}
+\end{gather}
 % And relation/record assignment
 \subparagraph{Type Assignment}
 \subparagraph{Trait Application}
@@ -1386,19 +1450,113 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \subparagraph{Break} % TODO how will we even define these in context...
 \subparagraph{Continue}
 \subparagraph{Skip}
-\paragraph{Import Statmenets}
-\subparagraph{Module Import}
-\subparagraph{Unnamed Module Import}
-\subparagraph{Named Import}
+\paragraph{Import Statements}
+\begin{gather}
+  \tag{Module Import}
+  \begin{prooftree}
+    \hypo{q_{file} = [0-9A-Za-z\_ ]+}
+    \hypo{q = q_{file_0} \backslash ... \backslash q_{file_n}}
+    \hypo{i \not\in dom(\rho)}
+    \hypo{\sigma_q = parse(q)(\sigma)}
+    \hypo{\rho_q = parse(q)(\rho)}
+    \infer5{\langle \texttt{import q}, \sigma, \rho \rangle \to \langle skip, \sigma \oplus \Set{q_{file_n} \mapsto \sigma_q}, \rho \oplus \Set{q_{file_n} \mapsto \rho_q}\rangle}
+  \end{prooftree}
+  \\
+  \tag{Unnamed Module Import}
+  \begin{prooftree}
+    \hypo{q_{file} = [0-9A-Za-z\_ ]+}
+    \hypo{q = q_{file_0} \backslash ... \backslash q_{file_n}}
+    \hypo{i \not\in dom(\rho)}
+    \hypo{\sigma_q = parse(q)(\sigma)}
+    \hypo{\rho_q = parse(q)(\rho)}
+    \infer5{\langle \texttt{from q import *}, \sigma, \rho \rangle \to \langle skip, \sigma \oplus \sigma_q, \rho \oplus \rho_q\rangle}
+  \end{prooftree}
+  \\
+  \tag{Named Import}
+  \begin{prooftree}
+    \hypo{q_{file} = [0-9A-Za-z\_ ]+}
+    \hypo{q = q_{file_0} \backslash ... \backslash q_{file_n}}
+    \hypo{i \not\in dom(\rho)}
+    \hypo{\sigma_q = parse(q)(\sigma)}
+    \hypo{\rho_q = parse(q)(\rho)}
+    \infer5{\langle \texttt{from q import a_1, ..., a_n}, \sigma, \rho \rangle \to \langle skip, \sigma \oplus \Set{a_1 \mapsto \sigma_q(a_1), ..., a_n \mapsto \sigma_q(a_n)}, \rho \oplus \Set{a_1 \mapsto \rho_q(a_1), ..., a_n \mapsto \rho_q(a_n)}\rangle}
+  \end{prooftree}
+\end{gather}
+% import module
+% from module import *
+% from module import names
 \paragraph{Compound Statements}
 \subparagraph{If}
-\subparagraph{Else-If}
-\subparagraph{Else}
+\begin{gather}
+  \tag{If (true)}
+  \begin{prooftree}
+    \hypo{b = true}
+    \infer1{\texttt{if b: } block(\texttt{C}) \to block(\texttt{C})}
+  \end{prooftree}
+  \\
+  \tag{If (false)}
+  \begin{prooftree}
+    \hypo{b = false}
+    \infer1{\texttt{if b: } block(\texttt{C}) \to \texttt{skip}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{If-Else}
+\begin{gather}
+  \tag{If-Else (true)}
+  \begin{prooftree}
+    \hypo{b = true}
+    \infer1{\texttt{if b: } block(\texttt{C_1}) \texttt{ else: } block(\texttt{C_2}) \to block(\texttt{C_1})}
+  \end{prooftree}
+  \\
+  \tag{If-Else (false)}
+  \begin{prooftree}
+    \hypo{b = false}
+    \infer1{\texttt{if b: } block(\texttt{C_1}) \texttt{ else: } block(\texttt{C_2}) \to block(\texttt{C_2})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{For}
+\begin{gather}
+  \tag{For (empty)}
+  \begin{prooftree}
+    \hypo{S = \Set{}}
+    \infer1{\texttt{for x in S: } block(\texttt{C}) \to skip}
+  \end{prooftree}
+  \\
+  \tag{For}
+  \begin{prooftree}
+    \hypo{S \neq \Set{}}
+    \infer1{\texttt{for x in S: } block(\texttt{C}) \to block(\texttt{v := choice(S); C; for x in S: } block(\texttt{C}))}
+  \end{prooftree}
+\end{gather}
 \subparagraph{While}
+\begin{gather}
+  \tag{While (false)}
+  \begin{prooftree}
+    \hypo{b = false}
+    \infer1{\langle \texttt{while b: } block(\texttt{C}), \sigma,\rho\rangle \to \langle skip, \sigma,\rho\rangle}
+  \end{prooftree}
+  \\
+  \tag{While (true)}
+  \begin{prooftree}
+    \hypo{b = true}
+    \infer1{\langle \texttt{while b: } block(\texttt{C}), \sigma,\rho\rangle \to \langle block(\texttt{C; while b: } block(C)), \sigma,\rho\rangle}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Block}
-\paragraph{Definitions}
-\subparagraph{Record}
-\subparagraph{Procedure}
-
+\begin{gather}
+  \tag{Block}
+  \begin{prooftree}
+    \infer0{\langle block(\texttt{C}), \sigma, \rho \rangle \to \langle \texttt{C;}restore(\sigma), \sigma, \rho \rangle}
+  \end{prooftree}
+  \\
+  \tag{Restore}
+  \begin{prooftree}
+    \infer0{\langle restore(\sigma_0), \sigma, \rho \rangle \to \langle \texttt{skip}, \sigma_0, \rho \rangle}
+  \end{prooftree}
+  \\
+  \tag{Restore and return}
+  \begin{prooftree}
+    \infer0{\langle \texttt{return v;} restore(\sigma_0), \sigma, \rho \rangle \to \langle \texttt{v}, \sigma_0, \rho \rangle}
+  \end{prooftree}
+\end{gather}
 

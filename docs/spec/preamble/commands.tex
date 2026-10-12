@@ -47,11 +47,26 @@
 \newcommand{\Product}{\Quantifier{\prod}}
 
 \newcommand{\Sumttt}{\Quantifier{\texttt{sum}}}
-\newcommand{\Productttt}{\Quantifier{\texttt{product}}}
+\newcommand{\Producttt}{\Quantifier{\texttt{product}}}
 \newcommand{\Unionttt}{\Quantifier{\texttt{union}}}
 \newcommand{\Interttt}{\Quantifier{\texttt{intersection}}}
 \newcommand{\Min}{\Quantifier{\texttt{min}}}
 \newcommand{\Max}{\Quantifier{\texttt{max}}}
+
+\newcommand{\Fold}[4]{%
+  \texttt{fold } #1 : #2 \cdot #3 \mid #4%
+}
+
+\makeatletter
+\newcommand{\Iter}[3]{%
+  \@ifnextchar\bgroup
+    {\Iter@four{#1}{#2}{#3}}
+    {\texttt{iter } #1 : #2 \mid #3}%
+}
+\newcommand{\Iter@four}[4]{%
+  \texttt{iter } #1 : #2 \rightarrow #3 \mid #4%
+}
+\makeatother
 
 % Characters
 %% List concatenation
