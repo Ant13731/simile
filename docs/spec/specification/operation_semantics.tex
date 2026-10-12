@@ -1010,6 +1010,24 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{choice(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
+\subparagraph{Forall}
+\begin{gather}
+  \tag{Forall}
+  \begin{prooftree}
+    \hypo{s: set[bool]}
+    \hypo{b = \Forall{e \in s}}
+    \infer2{\texttt{forall(s)} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Exists}
+\begin{gather}
+  \tag{Exists}
+  \begin{prooftree}
+    \hypo{s: set[bool]}
+    \hypo{b = \Exists{e \in s}}
+    \infer2{\texttt{exists(s)} \to \texttt{b}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Min}
 \begin{gather}
   \tag{Min}
@@ -1070,6 +1088,38 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \hypo{s: set[set[T]]}
     \hypo{v: set[T] = \Inter{e \in s}{e}}
     \infer2{\texttt{intersection(s)} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Map}
+\begin{gather}
+  \tag{Map}
+  \begin{prooftree}
+    \hypo{s: set[T_1]}
+    \hypo{p: procedure[T_1, T_2]}
+    \hypo{v = \Set{x in s}{p(x)}}
+    \infer3{\texttt{map(p, s)} \to \texttt{v}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Map min}
+\begin{gather}
+  \tag{Map min}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{p: procedure[T, int]}
+    \hypo{v_1 = \Set{x in s}{p(x) \mapsto x}}
+    \hypo{v_2 = v_1(min(dom(v_1)))}
+    \infer4{\texttt{map_min(p, s)} \to \texttt{v_2}}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Map max}
+\begin{gather}
+  \tag{Map max}
+  \begin{prooftree}
+    \hypo{s: set[T]}
+    \hypo{p: procedure[T, int]}
+    \hypo{v_1 = \Set{x in s}{p(x) \mapsto x}}
+    \hypo{v_2 = v_1(max(dom(v_1)))}
+    \infer4{\texttt{map_max(p, s)} \to \texttt{v_2}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Union}
@@ -1376,11 +1426,61 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \paragraph{Quantifications}
 % TODO quantification body, multiple generators
 \subparagraph{Min}
+\begin{gather}
+  \tag{Min}
+  \begin{prooftree}
+    \infer0{\Min{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Min(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Max}
+\begin{gather}
+  \tag{Max}
+  \begin{prooftree}
+    \infer0{\Max{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Max(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Forall}
+\begin{gather}
+  \tag{Forall}
+  \begin{prooftree}
+    \infer0{\Forallttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Forallttt(\Set{\texttt{x in S}}{\texttt{P and E}})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Exists}
+\begin{gather}
+  \tag{Exists}
+  \begin{prooftree}
+    \infer0{\Existsttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Existsttt(\Set{\texttt{x in S}}{\texttt{P and E}})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Union all}
+\begin{gather}
+  \tag{Union}
+  \begin{prooftree}
+    \infer0{\Unionttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Unionttt(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Intersection all}
+\begin{gather}
+  \tag{Intersection}
+  \begin{prooftree}
+    \infer0{\Interttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Interttt(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Sum}
+\begin{gather}
+  \tag{Sum}
+  \begin{prooftree}
+    \infer0{\Sumttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Sumttt(\Bag{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
+  \end{prooftree}
+\end{gather}
+\subparagraph{Product}
+\begin{gather}
+  \tag{Product}
+  \begin{prooftree}
+    \infer0{\Producttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Producttt(\Bag{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Comprehension}
 \begin{gather}
   \tag{Comprehension}
@@ -1401,11 +1501,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\Set{\Comprehension{}{}{\texttt{x_1 in S_1}}{\texttt{P_1}}{\texttt{E_1}} \texttt{` ... `} \Comprehension{}{}{\texttt{x_n in S_n}}{\texttt{P_n}}{\texttt{E_n}}} \to s}
   \end{prooftree}
 \end{gather}
-\subparagraph{Sum}
-\subparagraph{Product}
-\subparagraph{Map}
-\subparagraph{Map min}
-\subparagraph{Map max}
+\subparagraph{Lambda}
 \subparagraph{Iter}
 \begin{gather}
   \tag{Fold}
@@ -1427,7 +1523,6 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer0{\Fold{\texttt{v := i}}{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \texttt{v := i; for x in S: } block(\texttt{if P: v := E})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Lambda}
 \paragraph{Simple Statements}
 \subparagraph{Assignment}
 \begin{gather}
@@ -1444,12 +1539,31 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \end{prooftree}
 \end{gather}
 % And relation/record assignment
-\subparagraph{Type Assignment}
+% \subparagraph{Type Assignment}
 \subparagraph{Trait Application}
-\subparagraph{Return}
+\begin{gather}
+  \tag{Trait Assignment}
+  \begin{prooftree}
+    \hypo{i \not\in dom(\rho)}
+    \infer1{\langle\texttt{v_1 := v_2 trait v_3}, \sigma, \rho\rangle \to \langle \texttt{skip}, \sigma \oplus \Set{v_1 \mapsto i}, \rho \oplus \Set{i \mapsto traits(v_2, v_3)} \rangle}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Return}
 \subparagraph{Break} % TODO how will we even define these in context...
+\begin{gather}
+  \tag{Break}
+  \begin{prooftree}
+    \infer0{\texttt{block(C_1;break;C_2)} \to \texttt{block(C_1)}}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Continue}
-\subparagraph{Skip}
+\begin{gather}
+  \tag{Break}
+  \begin{prooftree}
+    \infer0{\texttt{loop(C_1;continue;C_2)} \to \texttt{loop(C_1)}}
+  \end{prooftree}
+\end{gather}
+% \subparagraph{Skip}
 \paragraph{Import Statements}
 \begin{gather}
   \tag{Module Import}
