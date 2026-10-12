@@ -109,16 +109,14 @@ We follow the standard EBNF notation for describing the language structure.
     | \lit{$\tbij$}
 ) <RelSetExpr>]
 
-<SetExpr> ::= <IntervalExpr>
+<SetExpr> ::= <IntervalExpr> [\lit{$\domres$} | \lit{$\domsub$} | \lit{$\ranres$} | \lit{$\ransub$}] <IntervalExpr>
     \alt <IntervalExpr> \{\lit{$\cup$} <IntervalExpr>\}
     \alt <IntervalExpr> \{\lit{$\times$} <IntervalExpr>\}
     \alt <IntervalExpr> \{\lit{$\oplus$} <IntervalExpr>\}
     \alt <IntervalExpr> \{\lit{$\circ$} <IntervalExpr>\}
     \alt <IntervalExpr> \{\lit{$\cap$} <IntervalExpr>\}
+    \alt <IntervalExpr> \{\lit{$\setminus$} <IntervalExpr>\}
     \alt <IntervalExpr> \{\lit{$\concat$} <IntervalExpr>\}
-    \alt <IntervalExpr> (\lit{$\domsub$} | \lit{$\domres$}) <IntervalExpr> \{\lit{$\cap$} <IntervalExpr>\} [<RelSubExpr>]
-
-<RelSubExpr> ::= (\lit{$\setminus$} | \lit{$\ranres$} | \lit{$\ransub$}) <IntervalExpr>
 
 <IntervalExpr> ::= <ArithmeticExpr> [`..' <ArithmeticExpr>]
 
@@ -177,7 +175,7 @@ We follow the standard EBNF notation for describing the language structure.
         `skip' | <TypedName> \{(`,' [NEWLINE] | NEWLINE) <TypedName> \} \\
     ) NEWLINE DEDENT
 
-<ProcedureStmt> ::= `procedure' IDENTIFIER `(' <TypedName> \{`,' <TypedName> \} `)' \lit{$\rightarrow$} <TypeExpr> `:' <Block>
+<ProcedureStmt> ::= `procedure' IDENTIFIER `(' [<TypedName> \{`,' <TypedName> \}] `)' \lit{$\rightarrow$} <TypeExpr> `:' <Block>
 
 <Block> ::= <SimpleStatements>
     \alt NEWLINE INDENT <Statements> DEDENT

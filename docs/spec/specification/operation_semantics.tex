@@ -161,12 +161,12 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
   \\
   %    - str: b ? true : false
-  \tag{Bool-to-string typecast (True)}
+  \tag{Bool-to-string typecast (true)}
   \begin{prooftree}
     \infer0{\texttt{cast(true, str)} \to \texttt{``true''}}
   \end{prooftree}
   \\
-   \tag{Bool-to-string typecast (False)}
+   \tag{Bool-to-string typecast (false)}
   \begin{prooftree}
     \infer0{\texttt{cast(false, str)} \to \texttt{``false''}}
   \end{prooftree}
@@ -189,12 +189,12 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
   \\
   %    - bool: 0 -> false, anything else -> true
-  \tag{Int-to-bool typecast (False)}
+  \tag{Int-to-bool typecast (false)}
   \begin{prooftree}
     \infer0{\texttt{cast(0, bool)} \to \texttt{false}}
   \end{prooftree}
   \\
-  \tag{Int-to-bool typecast (True)}
+  \tag{Int-to-bool typecast (true)}
   \begin{prooftree}
     \hypo{i: int}
     \hypo{i \neq 0}
@@ -221,12 +221,12 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
   \\
   %    - bool: 0 -> false, anything else -> true
-  \tag{Float-to-bool typecast (False)}
+  \tag{Float-to-bool typecast (false)}
   \begin{prooftree}
     \infer0{\texttt{cast(0.0, bool)} \to \texttt{false}}
   \end{prooftree}
   \\
-  \tag{Float-to-bool typecast (True)}
+  \tag{Float-to-bool typecast (true)}
   \begin{prooftree}
     \hypo{f: float}
     \hypo{f \neq 0.0}
@@ -251,12 +251,12 @@ where the constructor identifier is the same as the type identifier. Records act
   \end{prooftree}
   \\
   %    - bool: "true" -> true, "false" -> false
-  \tag{String-to-bool typecast (False)}
+  \tag{String-to-bool typecast (false)}
   \begin{prooftree}
     \infer0{\texttt{cast("false", bool)} \to \texttt{false}}
   \end{prooftree}
   \\
-  \tag{String-to-bool typecast (True)}
+  \tag{String-to-bool typecast (true)}
   \begin{prooftree}
     \infer0{\texttt{cast("true", bool)} \to \texttt{true}}
   \end{prooftree}

@@ -428,7 +428,7 @@ Conditions to consider:
 %   &\leadsto
 %   \begin{minipage}[]{0.8\textwidth}
 %   \begin{algorithmic}
-%     \Loop\ $GSP(P_g, \bigwedge True):$
+%     \Loop\ $GSP(P_g, \bigwedge true):$
 %       \If{$\bigvee_{ P_i \neq GSP(...)} P_i$}
 %         \State body
 %       \EndIf
@@ -458,12 +458,12 @@ No change from previous, but the number of loop structures should not increase.
   \tag{Total membership elimination \footnote{$R$ is total and $x$ satisfies the type of $R$'s domain. Currently unused since it may eliminate some generators - move higher in the list?}}
   x \in dom(R)
   &\leadsto
-  True
+  true
   \\
   \tag{Surjective membership elimination \footnote{$R$ is surjective and $x$ satisfies the type of $R$'s range. Currently unused since it may eliminate some generators - move higher in the list? Or }}
   x \in ran(R)
   &\leadsto
-  True
+  true
 \end{align}
 \end{minipage}
 \noindent\begin{minipage}{\linewidth}
@@ -635,22 +635,22 @@ No change from previous, but the number of loop structures should not increase.
 \noindent\begin{minipage}{\linewidth}
 \begin{align}
   \tag{Simplify And-true}
-  P \land True
+  P \land true
   &\leadsto
   P
   \\
   \tag{Simplify And-false}
-  P \land False
+  P \land false
   &\leadsto
-  False
+  false
   \\
   \tag{Simplify Or-true}
-  P \lor True
+  P \lor true
   &\leadsto
-  True
+  true
   \\
   \tag{Simplify Or-false}
-  P \lor False
+  P \lor false
   &\leadsto
   P
   \\

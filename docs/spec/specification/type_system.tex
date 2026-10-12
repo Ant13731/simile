@@ -742,14 +742,14 @@ Let $\otimes = \Set{\cup, \cap, +, -}$
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
 \hypo{T_i \in \Set{int, nat, float}}
-\infer2{\Gamma \vdash a_1 * a_2: float}
+\infer2{\Gamma \vdash a_1 / a_2: float}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Multiplication}
 \begin{prooftree}
 \hypo{\Gamma \vdash a_1: T_1, a_2: T_2}
 \hypo{T_i \in \Set{int, nat, float}}
-\infer2{\Gamma \vdash a_1 \text{ div } a_2: max(T_1, T_2)}
+\infer2{\Gamma \vdash a_1 * a_2: max(T_1, T_2)}
 \end{prooftree}
 \\
 \tag{Numerical Operations - Negation}

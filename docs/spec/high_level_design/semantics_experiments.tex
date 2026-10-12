@@ -72,7 +72,7 @@ The TRS for this language primarily involves lowering collection data type expre
 %         \hline
 %         Empty Set & Creates a set with no elements.\\ %& $\emptyset: set[]$ &
 %         Set Enumeration & Literal collection of elements to create a set.\\ %& $\Set{x, y, ...}: set[T]$ &
-%         Set Membership & The term $x \in S$ is True if $x$ can be found somewhere in $S$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
+%         Set Membership & The term $x \in S$ is true if $x$ can be found somewhere in $S$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
 %         \hline
 %         Union & $S \cup T = \Set{x}{x \in S \lor x \in T}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
 %         Intersection & $S \cap T = \Set{x}{x \in S \land x \in T}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
@@ -104,7 +104,7 @@ The TRS for this language primarily involves lowering collection data type expre
 %         \hline
 %         Empty Set & Creates a set with no elements.\\ %& $\emptyset: set[]$ &
 %         Bag Enumeration & Literal collection of elements to create a set \\ & (for now, stored as a tuple of elements and number of occurrences).\\ %& $\Set{x, y, ...}: set[T]$ &
-%         Bag Membership & The term $x \in S$ is True if $S$ contains one or more occurrences of $x$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
+%         Bag Membership & The term $x \in S$ is true if $S$ contains one or more occurrences of $x$. \\ %& $\in: T \times set[T] \rightarrow bool$ &
 %         \hline
 %         Union & $S \cup T = \Bag{(x, a+b)}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cup: set[T] \times set[T] \rightarrow set[T]$ &
 %         Intersection & $S \cap T = \Bag{(x, min(a,b))}{(x,a) \in S \land (x,b) \in T}{a, b \geq 0}$ \\ %& $\cap: set[T] \times set[T] \rightarrow set[T]$ &
@@ -136,7 +136,7 @@ The TRS for this language primarily involves lowering collection data type expre
 %         Empty List & Creates a list with no elements.\\ %& $[]: list[]$ &
 %         List Enumeration & Literal collection of elements to create a list.\\ %& $[x, y, ...]: list[T]$ &
 %         Construction & Alternative form of List Enumeration.\\ %& $(:):T \times list[T] \rightarrow list[T]$ &
-%         List Membership & The term $x \texttt{ in } S$ is True if $x$ can be found somewhere in $S$. \\ %& $\texttt{in}: T \times list[T] \rightarrow bool$ &
+%         List Membership & The term $x \texttt{ in } S$ is true if $x$ can be found somewhere in $S$. \\ %& $\texttt{in}: T \times list[T] \rightarrow bool$ &
 %         \hline
 %         Append & $[s_1, s_2, ..., s_n] + t = [s_1, s_2, ..., s_n, t]$ \\ %& $+: list[T] \times T \rightarrow list[T]$ &
 %         Concatenate & $[s_1, ..., s_n] \concat [t_1, ..., t_n] = [s_1, ..., s_n, t_1, ... t_n]$ \\ %& $\concat: list[T] \times list[T] \rightarrow list[T]$ &

@@ -111,7 +111,7 @@ Some types are incompatible with some traits, and some types must have some trai
     Orderable  & \xmark & \xmark & \ccmark & \ccmark & \ccmark \\ % str uses lexicographic ordering
     Min  & \xmark & \xmark & \cmark & \cmark & \cmark \\
     Max  & \xmark & \xmark & \cmark & \cmark & \cmark \\
-    Domain  & \Set{None} & \Set{True, False} & \cmark & \cmark & \cmark \\
+    Domain  & \Set{None} & \Set{true, false} & \cmark & \cmark & \cmark \\
     Iterable  & \xmark & \xmark & \xmark & \xmark & \ccmark \\
     Unique  & \xmark & \xmark & \xmark & \xmark & \xmark \\
     Empty  & \xmark & \xmark & \xmark & \xmark & \cmark \\
@@ -1562,29 +1562,29 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
   \tag{Relational Subtype - Domain Restriction}
   \begin{prooftree}
     \hypo{s: set[T_1]}
-    \hypo{r: relation[T_1, T_2, [True, x, y, z]]}
-    \infer2{(s \domres r): relation[T_1, T_2, [False, x, y, z]]}
+    \hypo{r: relation[T_1, T_2, [true, x, y, z]]}
+    \infer2{(s \domres r): relation[T_1, T_2, [false, x, y, z]]}
   \end{prooftree}
   \\
   \tag{Relational Subtype - Domain Subtraction}
   \begin{prooftree}
     \hypo{s: set[T_1]}
-    \hypo{r: relation[T_1, T_2, [True, x, y, z]]}
-    \infer2{(s \domsub r): relation[T_1, T_2, [False, x, y, z]]}
+    \hypo{r: relation[T_1, T_2, [true, x, y, z]]}
+    \infer2{(s \domsub r): relation[T_1, T_2, [false, x, y, z]]}
   \end{prooftree}
   \\
   \tag{Relational Subtype - Range Restriction}
   \begin{prooftree}
     \hypo{s: set[T_2]}
-    \hypo{r: relation[T_1, T_2, [x, True, y, z]]}
-    \infer2{(r \ranres s): relation[T_1, T_2, [x, False, y, z]]}
+    \hypo{r: relation[T_1, T_2, [x, true, y, z]]}
+    \infer2{(r \ranres s): relation[T_1, T_2, [x, false, y, z]]}
   \end{prooftree}
   \\
   \tag{Relational Subtype - Range Subtraction}
   \begin{prooftree}
     \hypo{s: set[T_2]}
-    \hypo{r: relation[T_1, T_2, [x, True, y, z]]}
-    \infer2{(r \ransub s): relation[T_1, T_2, [x, False, y, z]]}
+    \hypo{r: relation[T_1, T_2, [x, true, y, z]]}
+    \infer2{(r \ransub s): relation[T_1, T_2, [x, false, y, z]]}
   \end{prooftree}
   \\
   \tag{Relational Subtype - Inverse}

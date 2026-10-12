@@ -6,10 +6,10 @@ Since Simile makes extensive use of Event-B-like set notation and otherwise non-
 Similar to Python, indentation and newline tokens are significant in Simile. In particular, nested code blocks, as in if-statements, for-loops, and procedure definitions, require the use of indentations to signify the beginning and end. Indentation/newlines may also be used within collection-type comprehensions or enumerations, similar to the style seen in JSON. Comments are single-lined and start with a pound symbol (\#). Indentation is ignored within bracketed expressions\footnote{Except for within the `iter' block. This is a special case handled post-lexing: ignore indentation when parenthesis/bracket/brace level $>1$ and we are not within the block portion of `iter'... VBAR NEWLINE INDENT `block' DEDENT.}.
 
 \subsubsection{Identifiers}
-Identifiers in Simile follow the standard regular expression, using only ASCII letters, underscores, and numbers: $[a-zA-Z\_][a-zA-Z\_0-9]$.
+Identifiers in Simile follow the standard regular expression, using only ASCII letters, underscores, and numbers: $[a-zA-Z\_][a-zA-Z\_0-9]*$.
 
 \subsubsection{Primitives}
-Integers and floating point numbers follow a similar style to modern programming languages. The dash character ($-$) may be used in either subtraction or as a unary negation. Superscript numbers may be used for constant exponentiation. Booleans (True/False) follow Python style, with capitalized first letters. Strings are delimited with double-quotes (") and may be multilined.
+Integers and floating point numbers follow a similar style to modern programming languages. The dash character ($-$) may be used in either subtraction or as a unary negation. Superscript numbers may be used for constant exponentiation. Booleans (true/false) follow Python style, with capitalized first letters. Strings are delimited with double-quotes (") and may be multilined.
 
 % TODO: escaped characters in strings?
 

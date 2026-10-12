@@ -805,71 +805,48 @@ class Parser:
     @store_derivation
     def set_expr(self) -> ast_.ASTNode:
         interval_expr = self.interval_expr()
-        match self.peek().type_:
+        match bin_token := self.peek().type_:
             case TokenType.UNION:
                 bin_op: type[ast_.BinaryOp] = ast_.Union
-                bin_token: TokenType = TokenType.UNION
             case TokenType.CARTESIAN_PRODUCT:
                 bin_op = ast_.CartesianProduct
-                bin_token = TokenType.CARTESIAN_PRODUCT
             case TokenType.RELATION_OVERRIDING:
                 bin_op = ast_.RelationOverriding
-                bin_token = TokenType.RELATION_OVERRIDING
             case TokenType.COMPOSITION:
                 bin_op = ast_.Composition
-                bin_token = TokenType.COMPOSITION
             case TokenType.INTERSECTION:
                 bin_op = ast_.Intersection
-                bin_token = TokenType.INTERSECTION
             case TokenType.CONCAT:
                 bin_op = ast_.Concat
-                bin_token = TokenType.CONCAT
+            case TokenType.SET_DIFFERENCE:
+                bin_op = ast_.Difference
             case TokenType.DOMAIN_SUBTRACTION:
-                self.advance()
-                right = self.left_associative_optional_parse(
-                    self.interval_expr,
-                    {TokenType.INTERSECTION: ast_.Intersection},
-                )
-                if self.peek().type_ in self.get_first_set("rel_sub_expr"):
-                    right = self.rel_sub_expr()(right)
-                return ast_.BinaryOp(interval_expr, right, ast_.BinaryOperator.DOMAIN_SUBTRACTION)
+                bin_op = ast_.DomainSubtraction
             case TokenType.DOMAIN_RESTRICTION:
-                self.advance()
-                right = self.left_associative_optional_parse(
-                    self.interval_expr,
-                    {TokenType.INTERSECTION: ast_.Intersection},
-                )
-                if self.peek().type_ in self.get_first_set("rel_sub_expr"):
-                    right = self.rel_sub_expr()(right)
-                return ast_.BinaryOp(interval_expr, right, ast_.BinaryOperator.DOMAIN_RESTRICTION)
-            case x if x in self.get_first_set("rel_sub_expr"):
-                return self.rel_sub_expr()(interval_expr)
+                bin_op = ast_.DomainRestriction
+            case TokenType.RANGE_SUBTRACTION:
+                bin_op = ast_.RangeSubtraction
+            case TokenType.RANGE_RESTRICTION:
+                bin_op = ast_.RangeRestriction
             case _:
                 return interval_expr
 
-        # self.advance()
+        if bin_token in {
+            ast_.BinaryOperator.DOMAIN_SUBTRACTION,
+            ast_.BinaryOperator.DOMAIN_RESTRICTION,
+            ast_.BinaryOperator.RANGE_SUBTRACTION,
+            ast_.BinaryOperator.RANGE_RESTRICTION,
+        }:
+            self.advance()
+            right = self.interval_expr()
+            return bin_op(interval_expr, right)  # type: ignore
+
         n = self.left_associative_optional_parse(
             self.interval_expr,
             {bin_token: bin_op},
             default_left=interval_expr,
         )
-
-        if bin_token == TokenType.INTERSECTION:
-            if self.peek().type_ in self.get_first_set("rel_sub_expr"):
-                n = self.rel_sub_expr()(n)
         return n
-
-    @store_derivation
-    def rel_sub_expr(self) -> Callable[[ast_.ASTNode], ast_.ASTNode]:
-        match self.advance().type_:
-            case TokenType.SET_DIFFERENCE:
-                return lambda n: ast_.BinaryOp(n, self.interval_expr(), ast_.BinaryOperator.DIFFERENCE)
-            case TokenType.RANGE_RESTRICTION:
-                return lambda n: ast_.BinaryOp(n, self.interval_expr(), ast_.BinaryOperator.RANGE_RESTRICTION)
-            case TokenType.RANGE_SUBTRACTION:
-                return lambda n: ast_.BinaryOp(n, self.interval_expr(), ast_.BinaryOperator.RANGE_SUBTRACTION)
-            case t:
-                self.error(f"Unexpected token {t}")
 
     @store_derivation
     def interval_expr(self) -> ast_.ASTNode:
