@@ -903,14 +903,12 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \begin{gather}
   \tag{Empty}
   \begin{prooftree}
-    \hypo{id(R) \not\in \sigma}
-    \infer1{\langle\texttt{record R: skip},\sigma\rangle \to \langle,\sigma\cup\Set{R \mapsto type[record\Set{}]}\rangle}
+    \infer0{\langle\texttt{record R: skip},\sigma\rangle \to \langle,\sigma\oplus\Set{R \mapsto type[record\Set{}]}\rangle}
   \end{prooftree}
   \\
   \tag{Fields}
   \begin{prooftree}
-    \hypo{id(R) \not\in \sigma}
-    \infer1{\langle\texttt{record R: (f_1: T_1, f_2: T_2, ...)},\sigma\rangle \to \langle,\sigma\cup\Set{R \mapsto type[record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2}]}\rangle}
+    \infer0{\langle\texttt{record R: (f_1: T_1, f_2: T_2, ...)},\sigma\rangle \to \langle,\sigma\oplus\Set{R \mapsto type[record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2}]}\rangle}
   \end{prooftree}
 \end{gather}
 \subparagraph{Access}
@@ -1020,7 +1018,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \hypo{v: T}
     \hypo{v \in s}
     \hypo{\Forall{e \in s}{v \leq e}}
-    \infer5{\texttt{\Min{s}} \to \texttt{v}}
+    \infer5{\texttt{min(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Max}
@@ -1032,7 +1030,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \hypo{v: T}
     \hypo{v \in s}
     \hypo{\Forall{e \in s}{v \geq e}}
-    \infer5{\texttt{\Max{s}} \to \texttt{v}}
+    \infer5{\texttt{max(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Sum}
@@ -1042,7 +1040,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \hypo{T :\in \Set{int, float}}
     \hypo{s: set[T]}
     \hypo{v: T = \Sum{e \in s}{e}}
-    \infer3{\texttt{\Sumttt{s}} \to \texttt{v}}
+    \infer3{\texttt{sum(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Product}
@@ -1052,7 +1050,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \hypo{T :\in \Set{int, float}}
     \hypo{s: set[T]}
     \hypo{v: T = \Product{e \in s}{e}}
-    \infer3{\texttt{\Productttt{s}} \to \texttt{v}}
+    \infer3{\texttt{product(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
 \subparagraph{General Union}
@@ -1061,7 +1059,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \begin{prooftree}
     \hypo{s: set[set[T]]}
     \hypo{v: set[T] = \Union{e \in s}{e}}
-    \infer2{\texttt{\Unionttt{s}} \to \texttt{v}}
+    \infer2{\texttt{union(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
 \subparagraph{General Intersection}
@@ -1070,7 +1068,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \begin{prooftree}
     \hypo{s: set[set[T]]}
     \hypo{v: set[T] = \Inter{e \in s}{e}}
-    \infer2{\texttt{\Interttt{s}} \to \texttt{v}}
+    \infer2{\texttt{intersection(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Union}
@@ -1354,6 +1352,12 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \end{gather}
 \paragraph{Procedure}
 \subparagraph{Definition}
+\begin{gather}
+  \tag{Procedure}
+  \begin{prooftree}
+    \infer0{}
+  \end{prooftree}
+\end{gather}
 \subparagraph{Call}
 % TODO procedures make their own env, how can we express pass-by-value vs pass-by-reference semantics formally?
 \paragraph{Quantifications}

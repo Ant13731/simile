@@ -177,7 +177,7 @@ We follow the standard EBNF notation for describing the language structure.
         `skip' | <TypedName> \{(`,' [NEWLINE] | NEWLINE) <TypedName> \} \\
     ) NEWLINE DEDENT
 
-<ProcedureStmt> ::= `procedure' IDENTIFIER `(' <TypedName> \{`,' <TypedName> \} `)' \lit{$\rightarrow$} <Expr> `:' <Block>
+<ProcedureStmt> ::= `procedure' IDENTIFIER `(' <TypedName> \{`,' <TypedName> \} `)' \lit{$\rightarrow$} <TypeExpr> `:' <Block>
 
 <Block> ::= <SimpleStatements>
     \alt NEWLINE INDENT <Statements> DEDENT
