@@ -707,7 +707,7 @@ Let $\otimes = \Set{\cup, \cap, +, -}$
 \end{gather}
 
 \subsubsection{Numerical Operations}
-\paragraph{Includes:} Addition, subtraction, multiplication, etc. on natrual numbers, integers, and floats.
+\paragraph{Includes:} Addition, subtraction, multiplication, etc. on natural numbers, integers, and floats.
 
 \begin{gather}
 \tag{Integer Operations - Division}
@@ -915,13 +915,13 @@ Let $\otimes = \Set{\cup, \cap, +, -}$
 \\
 \tag{Built-in - Domain}
 \begin{prooftree}
-\hypo{\Gamma \vdash T}
+\hypo{\Gamma \vdash T_1, T_2}
 \infer1{\Gamma \vdash dom: T_1 \rel T_2 \rightarrow set[T_1]}
 \end{prooftree}
 \\
 \tag{Built-in - Range}
 \begin{prooftree}
-\hypo{\Gamma \vdash T}
+\hypo{\Gamma \vdash T_1, T_2}
 \infer1{\Gamma \vdash ran: T_1 \rel T_2 \rightarrow set[T_2]}
 \end{prooftree}
 \\
@@ -947,12 +947,12 @@ Let $\otimes = \Set{\cup, \cap, +, -}$
 \tag{Built-in - Cast}
 \begin{prooftree}
 \hypo{\Gamma \vdash T_1, T_2}
-\infer1{\Gamma \vdash cast: type[T_1] \times T_1 \rightarrow T_2}
+\infer1{\Gamma \vdash cast: type[T_2] \times T_1 \rightarrow T_2}
 \end{prooftree}
 \\
 \tag{Built-in - Cast With \footnote{$E$ represents `with' expressions to tag onto a type}}
 \begin{prooftree}
 \hypo{\Gamma \vdash T_1, T_2, x: E}
-\infer1{\Gamma \vdash cast: type[T_1] \times T_1 \times set[E] \rightarrow T_2[\text{with } x: E]}
+\infer1{\Gamma \vdash cast: type[T_2] \times T_1 \times set[E] \rightarrow T_2[\text{with } x: E]}
 \end{prooftree}
 \end{gather}

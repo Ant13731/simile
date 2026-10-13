@@ -3,7 +3,7 @@ rule image:
         R: relation[T1, T2]
         B: bag[T1]
     rewrite:
-        R[B] ~> R ^ -1 <> B
+        R[B] ~> R~ <> B
 
 rule union:
     vars:

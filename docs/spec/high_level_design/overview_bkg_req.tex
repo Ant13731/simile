@@ -47,9 +47,9 @@ We can further refine another relationship: visitors can attend workshops, but v
 \end{gather*}
 With these relations, we can query for interesting information concisely. Let's say we want to throw a surprise dinner for all attendees in a specific room. We can compose the $attends$ relation with the $location$ relation to find the number of people expected in a specific room. For a specific $room$, we write:
 \begin{gather*}
-    card((location^{-1} \circ attends^{-1})[\Set{room}]
+    card((location^{-1} \circ attends^{-1})[\Set{room}])
 \end{gather*}
-A HashMap would be the first concrete data structure of choice for most programmers, but without knowledge of the refined relationships, we cannot guarantee that the relational inverse operation is guaranteed to work. We set aside HashMaps for now for the sole reason that they are limited in their representation capabilities; we cannot model a many-to-many relationship using the convential definition of the type.
+A HashMap would be the first concrete data structure of choice for most programmers, but without knowledge of the refined relationships, we cannot guarantee that the relational inverse operation is guaranteed to work. We set aside HashMaps for now for the sole reason that they are limited in their representation capabilities; we cannot model a many-to-many relationship using the conventional definition of the type.
 
 If we were to build a compiler for this specification language, a naive implementation might only see the broad connection between these sets and choose to safely model them as a HashSet of tuples (which can represent many-to-many relations). In this case, we concretize the types of $location$ and $attends$ like so:
 \begin{gather*}

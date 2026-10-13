@@ -214,7 +214,7 @@ Conditions to consider:
 
 \noindent\begin{minipage}{\linewidth}
 \begin{align}
-  \tag{GSP Wrapping \footnote{GSP is a tuple-like structure, where all entries can be flattened into an AND. The LH term must occur inside a quantifier's predicate - one generator per top-level or-clause. Chained generators may be necessary to allow for nested loop operations (ie. non-top-level clauses may require generators). $P_g$ is a list of chained generators, specific set membership clauses (of form $x \in S$) distinguished from the rest of $\bigwedge P_i$. Currently, the selection of $P_g$ is arbitrary (and thus the rewrite system is not confluent), but heurestics may be added later to choose better generators.}}
+  \tag{GSP Wrapping \footnote{GSP is a tuple-like structure, where all entries can be flattened into an AND. The LH term must occur inside a quantifier's predicate - one generator per top-level or-clause. Chained generators may be necessary to allow for nested loop operations (ie. non-top-level clauses may require generators). $P_g$ is a list of chained generators, specific set membership clauses (of form $x \in S$) distinguished from the rest of $\bigwedge P_i$. Currently, the selection of $P_g$ is arbitrary (and thus the rewrite system is not confluent), but heuristics may be added later to choose better generators.}}
   \bigwedge P_i
   &\leadsto
   GSP(\bigwedge P_{g_i}, \bigwedge_{P_i \notin P_g} P_i)

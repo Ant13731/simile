@@ -45,7 +45,7 @@ rule inverse:
         y: T2
         R: relation[T2, T1]
     rewrite:
-        x |-> y in R ^ -1
+        x |-> y in R~
         ~>
         y |-> x in R
 
@@ -56,7 +56,7 @@ rule inverse_generator:
         R: relation[T2, T1]
         P: bool
     rewrite:
-        ast_.Generator(x |-> y, R ^ -1, P)
+        ast_.Generator(x |-> y, R~, P)
         ~>
         ast_.Generator(y |-> x, R, P)
     when:

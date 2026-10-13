@@ -975,7 +975,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \end{gather}
 \subparagraph{Not in}
 \begin{gather}
-  \tag{In}
+  \tag{Not In}
   \begin{prooftree}
     \hypo{s: set[T]}
     \hypo{v: T}
@@ -1201,7 +1201,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \tag{Not subset}
   \begin{prooftree}
     \hypo{s_1, s_2: set[T]}
-    \infer1{\texttt{s_1 !<{}<: s_2} \to \texttt{!(s_2 <{}<: s_1)}}
+    \infer1{\texttt{s_1 !<{}<: s_2} \to \texttt{!(s_1 <{}<: s_2)}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Not subset equals}
@@ -1209,7 +1209,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \tag{Not subset equals}
   \begin{prooftree}
     \hypo{s_1, s_2: set[T]}
-    \infer1{\texttt{s_1 !<: s_2} \to \texttt{!(s_2 <: s_1)}}
+    \infer1{\texttt{s_1 !<: s_2} \to \texttt{!(s_1 <: s_2)}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Not superset}
@@ -1217,7 +1217,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \tag{Not superset}
   \begin{prooftree}
     \hypo{s_1, s_2: set[T]}
-    \infer1{\texttt{s_1 !:>{}> s_2} \to \texttt{!(s_2 :>{}> s_1)}}
+    \infer1{\texttt{s_1 !:>{}> s_2} \to \texttt{!(s_1 :>{}> s_2)}}
   \end{prooftree}
 \end{gather}
 \subparagraph{Not superset equals}
@@ -1225,7 +1225,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \tag{Not superset equals}
   \begin{prooftree}
     \hypo{s_1, s_2: set[T]}
-    \infer1{\texttt{s_1 !:> s_2} \to \texttt{!(s_2 :> s_1)}}
+    \infer1{\texttt{s_1 !:> s_2} \to \texttt{!(s_1 :> s_2)}}
   \end{prooftree}
 \end{gather}
 \paragraph{Relation}

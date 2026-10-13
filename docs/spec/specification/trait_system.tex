@@ -26,7 +26,7 @@ The compiler may see that this integer is restricted to a very small range and t
 \begin{algorithmic}
   \State $x := 5$
 \end{algorithmic}
-This assumption breaks and does not fit into the general type. We may be able to spot such hardcoded misuses of the trait system, but if $5$ was instead an I/O function, we can only provide runtime checks that slow down the system (and may turn out to be slower than just using a normal i32 type in the first place.
+This assumption breaks and does not fit into the general type. We may be able to spot such hardcoded misuses of the trait system, but if $5$ was instead an I/O function, we can only provide runtime checks that slow down the system (and may turn out to be slower than just using a normal i32 type in the first place).
 
 Given the power and danger of using traits, programs without traits by default should behave as expected. Note that this danger happens only on assignment, since traits are assumed correct for the variable to which they are assigned. When performing operations, the compiler will widen or narrow traits as is needed to remain in a good state.
 

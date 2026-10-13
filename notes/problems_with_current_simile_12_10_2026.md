@@ -1,0 +1,14 @@
+# Simile Improvements
+- [ ] How can we disambiguate the expression [[a, b], [a]] - the double "[[" and "]]" will be parsed as a bag, when this should be a seq of seq. What should `f [1]` represent - relational image or `f` beside a seq literal?
+- [ ] Allow (x |-> y in S | x |-> y) to represent the comprehension of an ordered relation (similar to how we have seq for sets)
+- [ ] Make maplet use "->" instead of "|->" so it doesnt look clunky in comprehensions? then function arrows would need to be "-->"
+- [ ] No side effects allowed in comprehensions - treat as pure expressions, only iter can have side effects - how to express that?
+- [ ] Give typeExpr relational arrows
+- [ ] Ambiguity with `:` in fold/iter statements (assignments can define types)
+- [ ] Remove "is" and "is not"? only compare equality of values
+- [ ] Finalize quantifiers list somewhere - make sure they have types, traits, semantics, etc.
+- [ ] Bag image needs to sum equal counts: a[b] : bag[T2] is defined as a⁻¹ ◦ b (2.3.12, 2.5, 5.1). With a = {1↦x, 2↦x} and b = {1↦1, 2↦3} the result is {x↦1, x↦3}, which is not a function. Equal counts collapse: b = {1↦2, 2↦2} gives {x↦2}, where a bag image should give 4. Counts need to be summed.
+- [ ] Bags shouldn't allow items with a count of 0 (they should instead be removed)
+- [ ] How do we know types, trait, and semantic rules are sound?
+- [ ] UpTo should be exclusive of the top number
+- [ ] Use lean for the compiler/source of truth about semantics?
