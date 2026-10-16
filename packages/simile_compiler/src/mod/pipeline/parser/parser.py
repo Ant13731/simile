@@ -112,10 +112,10 @@ class Parser:
     first_sets: ClassVar[dict[str, set[str | TokenType]]] = {
         "start": {TokenType.EOF, "statements"},
         "statements": {"simple_statements", "compound_stmt"},
-        "simple_statements": {"assignment_or_expr", "control_flow_stmt", "import_stmt"},
+        "simple_statements": {"simple_stmt"},
         "simple_stmt": {"assignment_or_expr", "control_flow_stmt", "import_stmt"},
         "assignment_or_expr": {"expr"},
-        "trait_stmt": {TokenType.INDENT},
+        "trait_stmt": {TokenType.NEWLINE, TokenType.TRAIT},
         "expr": {"quantification", "predicate"},
         "quantification": {
             TokenType.GENERAL_UNION,
@@ -189,7 +189,7 @@ class Parser:
         "for_stmt": {TokenType.FOR},
         "while_stmt": {TokenType.WHILE},
         "record_stmt": {TokenType.RECORD},
-        "procedure_stmt": {TokenType.PROCEDURE},
+        "procedure_stmt": {TokenType.PROCEDURE, TokenType.TRAIT},
         "block": {"simple_statements", TokenType.INDENT},
         "typed_name": {TokenType.IDENTIFIER},
         "type_expr": {
@@ -334,44 +334,11 @@ class Parser:
 
     @store_derivation
     def simple_statements(self) -> ast_.Statements:
-        if self.peek().type_ in self.get_first_set("assignment_or_expr"):
-            assignment_or_expr = self.assignment_or_expr()
-            if self.peek().type_ == TokenType.SEMICOLON:
-                statements = self.simple_statements_continuation()
-                return ast_.Statements([assignment_or_expr] + statements)
-            self.consume(TokenType.NEWLINE, "Expected NEWLINE after parsing assignment or expression (and before possible traits)")
-            if self.peek().type_ in self.get_first_set("trait_stmt"):
-                trait_stmts = self.trait_stmt()
-                return ast_.Statements([ast_.TraitApplication(target=assignment_or_expr, traits=trait_stmts)])
-            return ast_.Statements([assignment_or_expr])
-        elif self.peek().type_ in self.get_first_set("control_flow_stmt"):
-            control_flow_stmt = self.control_flow_stmt()
-            statements = self.simple_statements_continuation()
-            return ast_.Statements([control_flow_stmt] + statements)
-        elif self.peek().type_ in self.get_first_set("import_stmt"):
-            import_stmt = self.import_stmt()
-            statements = self.simple_statements_continuation()
-            return ast_.Statements([import_stmt] + statements)
-        else:
-            self.error("Unexpected statement starter")
-
-    @store_derivation
-    def simple_statements_continuation(self) -> list[ast_.ASTNode]:
-        statements = []
+        statements = [self.simple_stmt()]
         while self.match(TokenType.SEMICOLON):
             statements.append(self.simple_stmt())
         self.consume(TokenType.NEWLINE, "Expected end of simple statements continuation")
-        return statements
-
-    @store_derivation
-    def trait_stmt(self) -> list[ast_.ASTNode]:
-        self.consume(TokenType.INDENT, "Expected indent after assignment or expression newline before trait statement")
-        with_clauses = []
-        while not self.match(TokenType.DEDENT):
-            self.consume(TokenType.TRAIT, "Each refinement line in an assignment block must start with 'trait'")
-            with_clauses.append(self.expr())
-            self.consume(TokenType.NEWLINE, "Expected newline after with clause expression")
-        return with_clauses
+        return ast_.Statements(statements)
 
     @store_derivation
     def simple_stmt(self) -> ast_.SimpleStmt | ast_.ASTNode:
@@ -407,7 +374,41 @@ class Parser:
                 self.error("Unexpected token after type annotation in assignment or expr rule")
 
         value = self.expr()
-        return ast_.Assignment(target=expr, value=value, choice_assignment=choice_assignment)
+        assignment = ast_.Assignment(target=expr, value=value, choice_assignment=choice_assignment)
+        if self.peek().type_ not in self.get_first_set("trait_stmt"):
+            return assignment
+
+        # Since trait statements can start with a newline and assignments can end with a newline,
+        # we need backtracking to determine the correct parsing route. Since traits are more restrictive
+        # parse those first
+        starting_index = self.current_index
+        try:
+            attempted_traits_parse = self.trait_stmt()
+            return ast_.TraitApplication(assignment, attempted_traits_parse)
+        except ParseException:
+            logger.debug(f"Failed to parse trait statement. Backtracking out of assignment. Parse error was: {self.errors[-1]}")
+            self.errors.pop()
+        self.current_index = starting_index
+        return assignment
+
+    @store_derivation
+    def trait_stmt(self) -> list[ast_.ASTNode]:
+        match self.advance().type_:
+            case TokenType.TRAIT:
+                traits = [self.expr()]
+                while self.match(TokenType.TRAIT):
+                    traits.append(self.expr())
+                return traits
+            case TokenType.NEWLINE:
+                self.consume(TokenType.INDENT, "Expected indent after assignment or expression newline before trait statement")
+                traits = []
+                while not self.match(TokenType.DEDENT):
+                    self.consume(TokenType.TRAIT, "Each refinement line in an assignment block must start with 'trait'")
+                    traits.append(self.expr())
+                    self.consume(TokenType.NEWLINE, "Expected newline after with clause expression")
+                return traits
+            case _:
+                self.error("Trait statement must start with 'trait' or a newline after an assignment or expression")
 
     @store_derivation
     def assignment(self) -> ast_.Assignment:
@@ -1153,18 +1154,22 @@ class Parser:
 
     @store_derivation
     def compound_stmt(self) -> ast_.ASTNode:
-        match self.advance().type_:
+        match t := self.peek().type_:
             case TokenType.IF:
+                self.advance()
                 return self.if_stmt()
             case TokenType.FOR:
+                self.advance()
                 return self.for_stmt()
             case TokenType.WHILE:
+                self.advance()
                 return self.while_stmt()
             case TokenType.RECORD:
+                self.advance()
                 return self.record_stmt()
             # case TokenType.ENUM:
             #     return self.enum_stmt()
-            case TokenType.PROCEDURE:
+            case _ if t in self.get_first_set("procedure_stmt"):
                 return self.procedure_stmt()
             case _:
                 self.error("Invalid start to compound statement")
@@ -1246,6 +1251,12 @@ class Parser:
 
     @store_derivation
     def procedure_stmt(self) -> ast_.ProcedureDefIdentifier:
+        traits = []
+        while self.match(TokenType.TRAIT):
+            traits.append(self.expr())
+            self.consume(TokenType.NEWLINE, "Expected newline after TRAIT in procedure definition")
+        self.consume(TokenType.PROCEDURE, "Expected PROCEDURE keyword in procedure definition (possibly after traits)")
+
         t = self.advance()
         if t.type_ != TokenType.IDENTIFIER:
             self.error("Expected identifier after DEF keyword")

@@ -5,25 +5,26 @@ We follow the standard EBNF notation for describing the language structure.
 \begin{grammar}
 <Start> ::= <Statements>
 
-<Statements> ::= \{ <SimpleStatements> | <CompoundStmt>\}
+<Statements> ::= \{<SimpleStatements> | <CompoundStmt>\}
 
 % Small hack needed with trait statements hijacking assignment or expr since lots of productions would share the `first' set
-<SimpleStatements> ::= <AssignmentOrExpr> (`;' <SimpleStmt> \{`;' <SimpleStmt>\} NEWLINE | NEWLINE [<TraitStmt>])
-    \alt (<ControlFlowStmt> | <ImportStmt>) \{`;' <SimpleStmt>\} NEWLINE
 
-<SimpleStmt> ::= <AssignmentOrExpr>
-    \alt <ControlFlowStmt>
-    \alt <ImportStmt>
+<SimpleStatements> ::= <SimpleStmt> \{`;' <SimpleStmt>\} NEWLINE
+% <AssignmentOrExpr> (`;' <SimpleStmt> \{`;' <SimpleStmt>\} NEWLINE | NEWLINE [<TraitStmt>])
+%     \alt (<ControlFlowStmt> | <ImportStmt>) \{`;' <SimpleStmt>\} NEWLINE
 
-<AssignmentOrExpr> ::= <Expr> [`:' <TypeExpr>] [(\lit{$\coloneqq$} | \lit{$:\in$}) <Expr>]
+<SimpleStmt> ::= <AssignmentOrExpr> | <ControlFlowStmt> | <ImportStmt>
 
-<TraitStmt> ::= INDENT `trait' <Expr> NEWLINE \{`trait' <Expr> NEWLINE\} DEDENT
+<AssignmentOrExpr> ::= <Expr> [`:' <TypeExpr>] [(\lit{$\coloneqq$} | \lit{$:\in$}) <Expr> [<TraitStmt>]]
+
+<TraitStmt> ::= `trait' <Expr> \{`trait' <Expr>\}
+    \alt NEWLINE INDENT `trait' <Expr> NEWLINE \{`trait' <Expr> NEWLINE\} DEDENT
 
 <Expr> ::= <Quantification> | <Predicate> | <LambdaDef>
 
 <LambdaDef> ::= \lit{$\lambda$} [<FlatTupleIdentifier>] \lit{$\cdot$} <Predicate> `|' <Expr>
 
-<Quantification> ::= (\lit{$\sum$} | \lit{$\prod$} | \lit{$\bigcup$} | \lit{$\bigcap$} | \lit{$\exists$} | \lit{$\forall$} | `max' | `min') (<AtomFollow> | <QuantificationBody>)
+<Quantification> ::= (\lit{$\sum$} | \lit{$\prod$} | \lit{$\bigcup$} | \lit{$\bigcap$} | \lit{$\exists$} | \lit{$\forall$} | \lit{$\uparrow$} | \lit{$\downarrow$}) (<AtomFollow> | <QuantificationBody>)
     % fold requires a generator, an accumulator assignment with an initial value, and an update expr (no need to explicitly assign to the accumulator var)
     \alt `fold' (<AtomFollow> | <Assignment> `:' <QuantificationBody>)
     % iter requires a generator, initialization values, maybe a return value/identifier/tupleIdentifier, then some statements to modify the init values
@@ -75,8 +76,6 @@ We follow the standard EBNF notation for describing the language structure.
 <AtomBool> ::= <PairExpr> [(
         \lit{$=$}
       | \lit{$\neq$}
-      % | \lit{is}
-      % | \lit{is not}
       | `<'
       | `>'
       | \lit{$\leq$}
@@ -176,7 +175,7 @@ We follow the standard EBNF notation for describing the language structure.
         `skip' | <TypedName> \{(`,' [NEWLINE] | NEWLINE) <TypedName> \} \\
     ) NEWLINE DEDENT
 
-<ProcedureStmt> ::= `procedure' IDENTIFIER `(' [<TypedName> \{`,' <TypedName> \}] `)' \lit{$\rightarrow$} <TypeExpr> `:' <Block>
+<ProcedureStmt> ::= \{`trait' <Expr> NEWLINE\} `procedure' IDENTIFIER `(' [<TypedName> \{`,' <TypedName> \}] `)' \lit{$\rightarrow$} <TypeExpr> `:' <Block>
 
 <Block> ::= <SimpleStatements>
     \alt NEWLINE INDENT <Statements> DEDENT
