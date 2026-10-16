@@ -1250,7 +1250,7 @@ class Parser:
         return ast_.RecordDefIdentifier(name, items)
 
     @store_derivation
-    def procedure_stmt(self) -> ast_.ProcedureDefIdentifier:
+    def procedure_stmt(self) -> ast_.ASTNode:
         traits = []
         while self.match(TokenType.TRAIT):
             traits.append(self.expr())
@@ -1276,7 +1276,11 @@ class Parser:
         return_type = self.type_expr()
         self.consume(TokenType.COLON, "Expected colon after procedure type")
         block = self.block()
-        return ast_.ProcedureDefIdentifier(name, params, block, return_type)
+
+        procedure_def = ast_.ProcedureDefIdentifier(name, params, block, return_type)
+        if not traits:
+            return procedure_def
+        return ast_.TraitApplication(procedure_def, traits)
 
     @store_derivation
     def typed_name(self) -> ast_.TypedName:
