@@ -450,3 +450,7 @@ def scan(text: str) -> list[Token]:
         return scanner.scanned_tokens
 
     raise ScannerError(scanning_errors, scanner.scanned_tokens)
+
+
+# This doesnt scan, although ">" and "-" are proper tokens
+# print(scan(">-"))

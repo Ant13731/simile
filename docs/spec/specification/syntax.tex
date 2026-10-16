@@ -19,14 +19,15 @@ We follow the standard EBNF notation for describing the language structure.
 
 <TraitStmt> ::= INDENT `trait' <Expr> NEWLINE \{`trait' <Expr> NEWLINE\} DEDENT
 
-<Expr> ::= <Quantification> | <Predicate>
+<Expr> ::= <Quantification> | <Predicate> | <LambdaDef>
 
-<Quantification> ::= \lit{$\lambda$} [<FlatTupleIdentifier>] \lit{$\cdot$} <Predicate> `|' <Expr>
-    \alt (\lit{$\sum$} | \lit{$\prod$} | \lit{$\bigcup$} | \lit{$\bigcap$} | \lit{$\exists$} | \lit{$\forall$} | `max' | `min') <QuantificationBody>
+<LambdaDef> ::= \lit{$\lambda$} [<FlatTupleIdentifier>] \lit{$\cdot$} <Predicate> `|' <Expr>
+
+<Quantification> ::= (\lit{$\sum$} | \lit{$\prod$} | \lit{$\bigcup$} | \lit{$\bigcap$} | \lit{$\exists$} | \lit{$\forall$} | `max' | `min') (<AtomFollow> | <QuantificationBody>)
     % fold requires a generator, an accumulator assignment with an initial value, and an update expr (no need to explicitly assign to the accumulator var)
-    \alt `fold' <Assignment> `:' <QuantificationBody>
+    \alt `fold' (<AtomFollow> | <Assignment> `:' <QuantificationBody>)
     % iter requires a generator, initialization values, maybe a return value/identifier/tupleIdentifier, then some statements to modify the init values
-    \alt `iter' <IterQuantificationBody>
+    \alt `iter' (<AtomFollow> | <IterQuantificationBody>)
 
 <QuantificationBody> ::= <BranchQuantificationBody>
     % Generator trees all end in expr eventually (even if that expr is nested within branches)

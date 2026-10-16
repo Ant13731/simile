@@ -35,21 +35,19 @@ ASCII tokens will be provided as an alternative to unicode format where suitable
     \lexentry{}{]}{Right Bracket (Alternative)}
     \lexentry{\{}{}{Left Brace}
     \lexentry{\}}{}{Right Brace}
-    \lexentry{\llbracket}{[[}{Left Double Bracket}
-    \lexentry{\rrbracket}{]]}{Right Double Bracket}
+    \lexentry{\llbracket}{<[}{Left Double Bracket}
+    \lexentry{\rrbracket}{]>}{Right Double Bracket}
     \lexentry{=}{}{Equals}
     \lexentry{\neq}{!=}{Not Equals}
     \lexentry{\lnot}{not}{Not}
     \lexentry{}{!}{Not (Alternative)}
     \lexentry{\land}{and}{And}
     \lexentry{\lor}{or}{Or}
-    \lexentry{\Rightarrow}{=>}{Implies}
+    \lexentry{\Rightarrow}{==>}{Implies}
     % \lexentry{\Leftarrow}{<==}{Reverse Implies}
     \lexentry{\equiv}{==}{Equivalent}
     % \lexentry{\equiv}{}{Equivalent (Alternative)}
     \lexentry{\not\equiv}{!==}{Not Equivalent}
-    \lexentry{\forall}{forall}{For All}
-    \lexentry{\exists}{exists}{There Exists}
     \lexentry{}{+}{Plus}
     \lexentry{}{-}{Minus}
     \lexentry{}{*}{Multiplication}
@@ -76,8 +74,6 @@ ASCII tokens will be provided as an alternative to unicode format where suitable
     \lexentry{\not\subseteq}{!<:}{Not Subset or Equal}
     \lexentry{\not\supset}{!:>{}>}{Not Superset}
     \lexentry{\not\supseteq}{!:>}{Not Superset or Equal}
-    \lexentry{\bigcup}{union}{General Union}
-    \lexentry{\bigcap}{intersection}{General Intersection}
     \lexentry{\mapsto}{|->}{Maplet}
     \lexentry{\oplus}{<+>}{Relation Overriding} % Old: \ovl \footnote{This unicode symbol requires a specific font available from Rodin: Brave Sans Mono, U+E103}}
     \lexentry{\circ}{<>}{Composition}
@@ -99,10 +95,18 @@ ASCII tokens will be provided as an alternative to unicode format where suitable
     \lexentry{\tsur}{-{}->{}>}{Total Surjection}
     \lexentry{\tbij}{>->{}>}{Bijection}
     \lexentry{\upto}{}{Upto}
-    \lexentry{\pow}{powerset}{Powerset}
-    \lexentry{\pown}{powerset1}{Non-Empty Powerset}
+    % \lexentry{\pow}{powerset}{Powerset}
+    % \lexentry{\pown}{powerset1}{Non-Empty Powerset}
+    \lexentry{\bigcup}{union}{General Union}
+    \lexentry{\bigcap}{intersection}{General Intersection}
     \lexentry{\sum}{sum}{Summation}
     \lexentry{\prod}{product}{Product}
+    \lexentry{\forall}{forall}{For All}
+    \lexentry{\exists}{exists}{There Exists}
+    \lexentry{\uparrow}{max}{Max}
+    \lexentry{\downarrow}{min}{Min}
+    \lexentry{}{fold}{Fold}
+    \lexentry{}{iter}{Iter}
 \end{longtable}
 \end{center}
 
@@ -118,15 +122,14 @@ The following are symbols used for programming constructs:
 \end{center}
 
 \subsubsection{Reserved Keywords}
-The following list of symbols and identifiers are reserved for programming constructs:
+The following list of symbols and identifiers are reserved for programming constructs (in addition to the above expression symbols):
 
 \begin{center}
 \begin{tabular}{c c c c c c}
 true & false & if & else & for\\
 while & record & enum & procedure & is\\
 is not & return & break & continue & from\\
-import & skip & trait & type & iter \\
-iter\_or & iter\_and
+import & skip & trait & type
 \end{tabular}
 \end{center}
 
@@ -153,22 +156,18 @@ And built-in procedures:
 
 \begin{center}
 \begin{tabular}{c c c c c c}
-min &
 map\_min &
-max &
 map\_max &
 choice &
 dom \\
 ran &
 card &
 size &
-sum &
 cast &
 cast\_with \\
 print &
 map &
 heads &
-tails &
-fold
+tails
 \end{tabular}
 \end{center}

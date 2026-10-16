@@ -10,7 +10,7 @@ from termcolor import colored
 from loguru import logger
 
 
-from src.mod.pipeline.scanner import Token, TokenType, scan, TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS, TOKENS_THAT_CAN_ACT_AS_FUNC_IDENTIFIERS
+from src.mod.pipeline.scanner import Token, TokenType, scan, TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS
 from src.mod.data import ast_
 
 T = TypeVar("T")
@@ -118,18 +118,18 @@ class Parser:
         "trait_stmt": {TokenType.INDENT},
         "expr": {"quantification", "predicate"},
         "quantification": {
-            TokenType.LAMBDA,
             TokenType.GENERAL_UNION,
             TokenType.GENERAL_INTERSECTION,
             TokenType.FORALL,
             TokenType.EXISTS,
             TokenType.PRODUCT,
             TokenType.SUM,
-            TokenType.FOLD,
-            TokenType.ITER,
             TokenType.MAX,
             TokenType.MIN,
+            TokenType.FOLD,
+            TokenType.ITER,
         },
+        "lambda_def": {TokenType.LAMBDA},
         "quantification_body": {"branch_quantification_body", "generator"},
         "branch_quantification_body": {TokenType.L_PAREN},
         "generator": {"ident_list"},
@@ -450,12 +450,7 @@ class Parser:
             while self.match(TokenType.COMMA):
                 generic_parameters.append(self.type_expr())
 
-            # FIXME: Horrible hack but the scanner parses double r brackets as bag notation
-            ending_token = self.peek()
-            if ending_token.type_ == TokenType.R_DOUBLE_BRACKET:
-                ending_token.type_ = TokenType.R_BRACKET
-            else:
-                self.consume(TokenType.R_BRACKET, "Expected closing bracket when parsing generic type parameters")
+            self.consume(TokenType.R_BRACKET, "Expected closing bracket when parsing generic type parameters")
             self.ignore_whitespace(set_whitespace_back_to)
             return ast_.Type_(base, generic_parameters)
 
@@ -612,24 +607,43 @@ class Parser:
             return self.quantification()
         if t.type_ in self.get_first_set("predicate"):
             return self.predicate()
-        # if t.type_ in self.get_first_set("pair_expr"):
-        # return self.pair_expr()
+        if t.type_ in self.get_first_set("lambda_def"):
+            return self.lambda_def()
         self.error("Invalid start to expr")
 
     @store_derivation
-    def quantification(self) -> ast_.ASTNode:
-        t = self.advance()
-        match t.type_:
-            case TokenType.LAMBDA:
-                params = ast_.TupleIdentifier(())
-                if self.peek().type_ not in (TokenType.DOT, TokenType.CDOT):
-                    params = self.flat_tuple_identifier()
+    def lambda_def(self) -> ast_.ASTNode:
+        self.consume(TokenType.LAMBDA, "lambda expression must begin with a LAMBDA token (likely a parser source error)")
+        params = ast_.TupleIdentifier(())
+        if self.peek().type_ not in (TokenType.DOT, TokenType.CDOT):
+            params = self.flat_tuple_identifier()
 
-                if not self.match(TokenType.DOT):
-                    self.consume(TokenType.CDOT, "Expected LAMBDA quantification separator")
-                predicate = self.predicate()
-                self.consume(TokenType.VBAR, "Expected LAMBDA quantification predicate separator")
-                return ast_.LambdaDef(params, predicate, self.expr())
+        if not self.match(TokenType.DOT):
+            self.consume(TokenType.CDOT, "Expected LAMBDA quantification separator")
+        predicate = self.predicate()
+        self.consume(TokenType.VBAR, "Expected LAMBDA quantification predicate separator")
+        return ast_.LambdaDef(params, predicate, self.expr())
+
+    @store_derivation
+    def quantification(self) -> ast_.ASTNode:
+        op_type: ast_.QuantifierOperator | None = None
+        t = self.advance()
+
+        # Attempt to parse as a func call first. If we see "|" or the expr parse fails,
+        # we know this is a quantification, so backtrack and try again
+        quantification_token_as_identifier = ast_.Identifier(t.value)
+        starting_index = self.current_index
+        try:
+            # Small hack, but allows us to use both `forall (x,y) in S | x` and `forall(S)`
+            attempted_expr_parse = self.atom_follow(quantification_token_as_identifier)
+            if self.peek().type_ != TokenType.VBAR:
+                return attempted_expr_parse
+        except ParseException:
+            logger.debug(f"Failed to parse quantification IDENTIFIER as an atom (func call), attempting to parse as a quantification. Parse error was: {self.errors[-1]}")
+            self.errors.pop()
+        self.current_index = starting_index
+
+        match t.type_:
             case TokenType.FOLD:
                 initializing_assignment = self.assignment()
                 self.consume(TokenType.COLON, "Expected FOLD quantification separator `:' between generator and initializing assignment")
@@ -637,39 +651,28 @@ class Parser:
                 return ast_.Fold(initializing_assignment, body)
             case TokenType.ITER:
                 return ast_.Iter(self.iter_quantification_body())
-            case _ if t.type_ in {
-                TokenType.GENERAL_UNION,
-                TokenType.GENERAL_INTERSECTION,
-                TokenType.FORALL,
-                TokenType.EXISTS,
-                TokenType.SUM,
-                TokenType.PRODUCT,
-                TokenType.MAX,
-                TokenType.MIN,
-            }:
-                op_type: ast_.QuantifierOperator | None = None
-                match t.type_:
-                    case TokenType.GENERAL_UNION:
-                        op_type = ast_.QuantifierOperator.UNION_ALL
-                    case TokenType.GENERAL_INTERSECTION:
-                        op_type = ast_.QuantifierOperator.INTERSECTION_ALL
-                    case TokenType.FORALL:
-                        op_type = ast_.QuantifierOperator.FORALL
-                    case TokenType.EXISTS:
-                        op_type = ast_.QuantifierOperator.EXISTS
-                    case TokenType.SUM:
-                        op_type = ast_.QuantifierOperator.SUM
-                    case TokenType.PRODUCT:
-                        op_type = ast_.QuantifierOperator.PRODUCT
-                    case TokenType.MAX:
-                        op_type = ast_.QuantifierOperator.MAX
-                    case TokenType.MIN:
-                        op_type = ast_.QuantifierOperator.MIN
-                assert op_type is not None, "op_type should have been defined in above mapping"
-                body = self.quantification_body()
-                return ast_.Quantifier3(body, op_type)
+            case TokenType.GENERAL_UNION:
+                op_type = ast_.QuantifierOperator.UNION_ALL
+            case TokenType.GENERAL_INTERSECTION:
+                op_type = ast_.QuantifierOperator.INTERSECTION_ALL
+            case TokenType.FORALL:
+                op_type = ast_.QuantifierOperator.FORALL
+            case TokenType.EXISTS:
+                op_type = ast_.QuantifierOperator.EXISTS
+            case TokenType.SUM:
+                op_type = ast_.QuantifierOperator.SUM
+            case TokenType.PRODUCT:
+                op_type = ast_.QuantifierOperator.PRODUCT
+            case TokenType.MAX:
+                op_type = ast_.QuantifierOperator.MAX
+            case TokenType.MIN:
+                op_type = ast_.QuantifierOperator.MIN
             case _:
                 self.error("Invalid start to quantification")
+        assert op_type is not None, "op_type should have been defined in above mapping"
+
+        body = self.quantification_body()
+        return ast_.Quantifier3(body, op_type)
 
     @store_derivation
     def quantification_body(self) -> ast_.QuantifierBody:
@@ -902,6 +905,10 @@ class Parser:
     def primary(self) -> ast_.ASTNode:
         # TODO match grammar - attempt to parse primary as left recursive?
         atom = self.atom()
+        return self.atom_follow(atom)
+
+    @store_derivation
+    def atom_follow(self, atom: ast_.ASTNode) -> ast_.ASTNode:
         while self.peek().type_ in [TokenType.DOT, TokenType.L_PAREN, TokenType.L_BRACKET]:
             match self.peek().type_:
                 case TokenType.DOT:
@@ -984,9 +991,6 @@ class Parser:
 
             case TokenType.IDENTIFIER:
                 return ast_.Identifier(t.value)
-            # FIXME The below tokens should be reserved for quantification. What should we do about the function versions?
-            case x if x in TOKENS_THAT_CAN_ACT_AS_FUNC_IDENTIFIERS:
-                return ast_.Identifier(TOKENS_THAT_CAN_ACT_AS_FUNC_IDENTIFIERS[x])
             case _:
                 self.error("Failed to interpret first token of expected atom")
 
