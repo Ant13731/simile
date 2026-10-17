@@ -1,5 +1,5 @@
 
-\subsection{Static Analysis - Type System Extensions with Traits}
+\subsection{Type System Extensions with Traits}
 
 % What are traits?
 Traits extend Simile's type system by giving programmers the ability to provide additional context for the intended use of a defined variable. Traits never override Simile's set theoretic semantics; a program with no user-defined traits is assumed to be correct and functional. However, traits can influence the optimization process and concretization of abstract data structures.  With user-provided context, static analysis becomes more complete and the optimizer may choose more aggressive rewrites. In a sense, traits in Simile are akin to pragmas in other languages, but closer to type refinements rather than direct compiler commands.
