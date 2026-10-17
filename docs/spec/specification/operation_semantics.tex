@@ -34,20 +34,20 @@ The following are models of value sets in Simile. Although we try to follow set 
 \begin{grammar}
 <v> ::= <a> | <b> | <i> | <f> | <q> | <t> | <s> | <r> | <B> | <S> | <R>
 \end{grammar}
-\subparagraph{None}
+\paragraph{None}
 \begin{grammar}
 <a> ::= `none'
 \end{grammar}
-\subparagraph{Bool}
+\paragraph{Bool}
 \begin{grammar}
 <b> ::= `true' | `false'
 \end{grammar}
-\subparagraph{Int}
+\paragraph{Int}
 \begin{grammar}
 <i> ::= [-][0-9]+
 \end{grammar}
 where $i \in -\infty \upto \infty$
-\subparagraph{Float}
+\paragraph{Float}
 Let $i_N$ be an int constrained such that $-2^{N-1}+1 \leq i_N \leq 2^{N-1}$. Then,
 \begin{grammar}
 <f> ::= [-][0-9]*`.'[0-9]+
@@ -55,7 +55,7 @@ Let $i_N$ be an int constrained such that $-2^{N-1}+1 \leq i_N \leq 2^{N-1}$. Th
 64-bit floats following IEEE-754 %TODO cite
 with variables $e_{bits} = 11, m_{bits} = 52, e = 2^{e_{bits}}-1023, m = 2 \times 2^{m_{bits}}$
 where $-2^e\times m \leq f \leq 2^e\times m$. Effectively, floats follow $ -1.79\times 10^{308} \leq f \leq 1.79\times 10^{308}$.
-\subparagraph{String}
+\paragraph{String}
 \begin{grammar}
 <q> ::= `"' [\^{}`"']* `"'
 \end{grammar}
@@ -64,35 +64,35 @@ with additional semantics like:
 <q'> ::= `\{\}' | `\{'<i> \lit{$\mapsto$} <q> \{`,' <i> \lit{$\mapsto$} <q> \}`\}'
 \end{grammar}
 where $min(dom(q')) = 0$ and $max(dom(q')) = |q'|$ (ie. it is a sequence of characters).
-\subparagraph{Tuple}
+\paragraph{Tuple}
 \begin{grammar}
 <t> ::= `()' | `(' <value> `,)' | `(' <value> `,' <value> \{`,' <value>\}`)'
 \end{grammar}
-\subparagraph{Set}
+\paragraph{Set}
 \begin{grammar}
 <s> ::= `\{\}' | `\{' <value> \{`,' <value>\}`\}'
 \end{grammar}
-\subparagraph{Relation}
+\paragraph{Relation}
 \begin{grammar}
 <r> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <value> \{`,' <value> \lit{$\mapsto$} <value>\}`\}'
 \end{grammar}
 Further, $relation[T_1, T_2] = set[(T_1, T_2)]$ and carry all semantics associated with that type.
-\subparagraph{Bag}
+\paragraph{Bag}
 \begin{grammar}
 <B> ::= `\{\}' | `\{' <value> \lit{$\mapsto$} <i> \{`,' <value> \lit{$\mapsto$} <i>\}`\}'
 \end{grammar}
 where $\forall i \in ran(B) | i \geq 0$. Further, $bag[T] = relation[T, int]$ and carry all semantics associated with that type.
-\subparagraph{Sequence}
+\paragraph{Sequence}
 \begin{grammar}
 <S> ::= `\{\}' | `\{' <i> \lit{$\mapsto$} <value> \{`,' <i> \lit{$\mapsto$} <value>\}`\}'
 \end{grammar}
 where $min(dom(S)) = 0$ and $max(dom(S)) = |S|$, Further, $sequence[T] = relation[int, T]$ and carry all semantics associated with that type.
-\subparagraph{Record}
+\paragraph{Record}
 \begin{grammar}
 <R> ::= <constructor> `()' | <constructor> `('<value> \{`,' <value>\}`)'
 \end{grammar}
 where the constructor identifier is the same as the type identifier. Records act like a named, ordered tuple; effectively a $relation[str, T]$ where $T$ may be any combination of types. Let record $R'$ be defined with fields $f_1, f_2, ...$. Then the view $R': relation[str, T] = \Set{f_1 \mapsto v_1, f_2 \mapsto v_2, ...}$ can be used. The type is inherently ordered, so there is a another relational view: $R_{type}: relation[int, type[T]] = \Set{0 \mapsto v_{type_1}, 1 \mapsto v_{type_2}, ...}$. image on the type
-\paragraph{Base Environment}
+\subsubsection{Base Environment}
 \begin{gather}
   \tag{Built-in types}
   \begin{prooftree}
@@ -114,8 +114,8 @@ where the constructor identifier is the same as the type identifier. Records act
   %   \infer0{\Set{} \subseteq \sigma}
   % \end{prooftree}
 \end{gather}
-\paragraph{Base Operations}
-\subparagraph{Cast} The below table shows allowed type casts (where the source type is on the left and the target type is on top), and judgements define how casting works. Casts that are marked with $\xmark$ result in an error value of $\bot$.
+\subsubsection{Base Operations}
+\paragraph{Cast} The below table shows allowed type casts (where the source type is on the left and the target type is on top), and judgements define how casting works. Casts that are marked with $\xmark$ result in an error value of $\bot$.
 \begin{center}
 \begin{longtable}{l c c c c c c c c c c c}
     & none & bool & int & float & str & tuple & set & relation & bag & sequence & record\\
@@ -514,7 +514,7 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{cast(R, tuple)} \to \texttt{t}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Equals} For primitives, equality is calculated in the usual mathematical manner. We explicitly specify equality for collection types, although these also follow convention.
+\paragraph{Equals} For primitives, equality is calculated in the usual mathematical manner. We explicitly specify equality for collection types, although these also follow convention.
 \begin{gather}
   \tag{Primitives}
   \begin{prooftree}
@@ -573,7 +573,7 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer3{\texttt{R_1 = R_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not equals}
+\paragraph{Not equals}
 \begin{gather}
   \tag{Not equals}
   \begin{prooftree}
@@ -582,8 +582,8 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{v_1 != v_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\paragraph{Bool}
-\subparagraph{Not}
+\subsubsection{Bool}
+\paragraph{Not}
 \begin{gather}
   \tag{Not}
   \begin{prooftree}
@@ -592,7 +592,7 @@ where the constructor identifier is the same as the type identifier. Records act
     \infer2{\texttt{not b_1} \to \texttt{b_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Equivalent}
+\paragraph{Equivalent}
 Similar to equals, but lower precedence and only for booleans.
 \begin{gather}
   \tag{Equivalent}
@@ -602,7 +602,7 @@ Similar to equals, but lower precedence and only for booleans.
     \infer2{\texttt{b_1 == b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not equivalent}
+\paragraph{Not equivalent}
 \begin{gather}
   \tag{Not equivalent}
   \begin{prooftree}
@@ -611,7 +611,7 @@ Similar to equals, but lower precedence and only for booleans.
     \infer2{\texttt{b_1 !== b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Implies}
+\paragraph{Implies}
 \begin{gather}
   \tag{Implies}
   \begin{prooftree}
@@ -620,7 +620,7 @@ Similar to equals, but lower precedence and only for booleans.
     \infer2{\texttt{b_1 => b_2} \to \texttt{b_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{And} To enable the optimizer to shuffle around $\land$-conditions within programs following discrete maths, we cannot use the programming-specific short-circuiting features. Conventional short-circuiting evaluates conditions from left to right, stopping at the first annihilating clause (false for $\land$, true for $\lor$). However, this can hide potentially $\bot$-valued clauses to the right of the annihilator. So, when the optimizer leans on commutativity to reorder clauses, behaviour would not be guaranteed. Optimistic short-circuiting keeps the same idea as short-circuiting, but extends it to recover from $\bot$-valued clauses when an annihilator is present in any clause. We only pay an efficiency penalty in the case where we would otherwise throw an error.
+\paragraph{And} To enable the optimizer to shuffle around $\land$-conditions within programs following discrete maths, we cannot use the programming-specific short-circuiting features. Conventional short-circuiting evaluates conditions from left to right, stopping at the first annihilating clause (false for $\land$, true for $\lor$). However, this can hide potentially $\bot$-valued clauses to the right of the annihilator. So, when the optimizer leans on commutativity to reorder clauses, behaviour would not be guaranteed. Optimistic short-circuiting keeps the same idea as short-circuiting, but extends it to recover from $\bot$-valued clauses when an annihilator is present in any clause. We only pay an efficiency penalty in the case where we would otherwise throw an error.
 \begin{gather}
   \tag{And}
   \begin{prooftree}
@@ -643,7 +643,7 @@ Similar to equals, but lower precedence and only for booleans.
     \infer2{\texttt{v and false} \to \texttt{false}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Or} Similar optimistic short-circuiting as the And conditions above.
+\paragraph{Or} Similar optimistic short-circuiting as the And conditions above.
 \begin{gather}
   \tag{Or}
   \begin{prooftree}
@@ -666,9 +666,9 @@ Similar to equals, but lower precedence and only for booleans.
     \infer2{\texttt{v or true} \to \texttt{true}}
   \end{prooftree}
 \end{gather}
-\paragraph{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
+\subsubsection{Arithmetic} % TODO what about precision? Do we define a max precision? See how WASM does it
 Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Addition is commutative for pure-int operations (and thus can be used in the optimizer more freely), while floats remain bound by the written order because of precision limitations. Multiplication and exponentiation are semantically defined in terms of addition, and thus follow similar semantics: close to mathematics for ints, close to programming for floats.
-\subparagraph{Less than}
+\paragraph{Less than}
 \begin{gather}
   \tag{Less than}
   \begin{prooftree}
@@ -680,7 +680,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 < v_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Greater than}
+\paragraph{Greater than}
 \begin{gather}
   \tag{Greater than}
   \begin{prooftree}
@@ -692,7 +692,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 > v_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Less than or equals}
+\paragraph{Less than or equals}
 \begin{gather}
   \tag{Less than or equals}
   \begin{prooftree}
@@ -704,7 +704,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 <= v_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Greater than or equals}
+\paragraph{Greater than or equals}
 \begin{gather}
   \tag{Greater than or equals}
   \begin{prooftree}
@@ -716,7 +716,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 >= v_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Negate}
+\paragraph{Negate}
 \begin{gather}
   \tag{Int}
   \begin{prooftree}
@@ -732,7 +732,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{-f_1} \to \texttt{f_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Int divide}
+\paragraph{Int divide}
 \begin{gather}
   \tag{Int divide}
   \begin{prooftree}
@@ -742,7 +742,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{i_1 div i_2} \to \texttt{i_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Modulo}
+\paragraph{Modulo}
 \begin{gather}
   \tag{Modulo}
   \begin{prooftree}
@@ -752,7 +752,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{i_1 mod i_2} \to \texttt{i_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Add}
+\paragraph{Add}
 \begin{gather}
   \tag{Int and Int}
   \begin{prooftree}
@@ -784,7 +784,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{f_1 + f_2} \to \texttt{f_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Subtract}
+\paragraph{Subtract}
 \begin{gather}
   \tag{Subtract}
   \begin{prooftree}
@@ -796,7 +796,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 - v_2} \to \texttt{v_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Divide}
+\paragraph{Divide}
 \begin{gather}
   \tag{Subtract}
   \begin{prooftree}
@@ -808,7 +808,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 / v_2} \to \texttt{f}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Multiply}
+\paragraph{Multiply}
 \begin{gather}
   \tag{Int and Int}
   \begin{prooftree}
@@ -840,7 +840,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{f_1 * f_2} \to \texttt{f_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Power}
+\paragraph{Power}
 \begin{gather}
   \tag{Int exponent}
   \begin{prooftree}
@@ -862,7 +862,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{v_1 \^{} f} \to \texttt{v_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Upto}
+\paragraph{Upto}
 \begin{gather}
   \tag{Upto}
   \begin{prooftree}
@@ -872,13 +872,13 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{i_1 .. i_2} \to \texttt{s}}
   \end{prooftree}
 \end{gather}
-\paragraph{String} % TODO define string operations? Leave out for now? Strings are not the focus right now, but can be treated/cast as a list of chars for manipulation.
+\subsubsection{String} % TODO define string operations? Leave out for now? Strings are not the focus right now, but can be treated/cast as a list of chars for manipulation.
 % TODO define a lib in terms of the char list representation. should be easier with comprehensions.
 % What operations should strings have?
 % - concat
 % - indexing, indexing with upto to get at the substr?
-\paragraph{Tuple}
-\subparagraph{Enumeration}
+\subsubsection{Tuple}
+\paragraph{Enumeration}
 \begin{gather}
   \tag{Enumeration}
   \begin{prooftree}
@@ -888,7 +888,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{\Tuple{v_1, v_2, ...}} \to \texttt{t}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Maplet}
+\paragraph{Maplet}
 \begin{gather}
   \tag{Maplet}
   \begin{prooftree}
@@ -898,8 +898,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{v_1 |-> v_2} \to \texttt{t}}
   \end{prooftree}
 \end{gather}
-\paragraph{Record}
-\subparagraph{Definition} Records are represented internally as a relation from strings to any field-independent type.
+\subsubsection{Record}
+\paragraph{Definition} Records are represented internally as a relation from strings to any field-independent type.
 \begin{gather}
   \tag{Empty}
   \begin{prooftree}
@@ -913,7 +913,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\langle\texttt{record R: (f_1: T_1, f_2: T_2, ...)},\sigma, \rho \rangle \to \langle,\sigma\oplus\Set{R \mapsto i}, \rho \oplus \Set{i \mapsto type[record\Set{f_1 \mapsto T_1, f_2 \mapsto T_2}]}\rangle}
   \end{prooftree}
 \end{gather}
-\subparagraph{Access}
+\paragraph{Access}
 \begin{gather}
   \tag{Access}
   \begin{prooftree}
@@ -922,8 +922,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{R.f_n} \to \texttt{v_n}}
   \end{prooftree}
 \end{gather}
-\paragraph{Set}
-\subparagraph{Enumeration}
+\subsubsection{Set}
+\paragraph{Enumeration}
 \begin{gather}
   \tag{Enumeration}
   \begin{prooftree}
@@ -932,7 +932,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{\Set{v_1, v_2, ...}} \to \texttt{s}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Clear}
+\paragraph{Clear}
 \begin{gather}
   \tag{Clear}
   \begin{prooftree}
@@ -941,8 +941,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{clear(s_1)} \to \texttt{s_2}}
   \end{prooftree}
 \end{gather}
-% \subparagraph{Is empty}
-\subparagraph{Add}
+% \paragraph{Is empty}
+\paragraph{Add}
 % TODO ADD, REMOVE, and CLEAR operations should have a side effect on the value in sigma, not create an entirely new value!!!!!!!!!!!!!!!!
 \begin{gather}
   \tag{Add}
@@ -953,7 +953,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{add(s_1)} \to \texttt{s_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Remove}
+\paragraph{Remove}
 \begin{gather}
   \tag{Remove}
   \begin{prooftree}
@@ -963,7 +963,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{remove(s_1, v)} \to \texttt{s_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{In}
+\paragraph{In}
 \begin{gather}
   \tag{In}
   \begin{prooftree}
@@ -973,7 +973,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{v in s} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not in}
+\paragraph{Not in}
 \begin{gather}
   \tag{Not In}
   \begin{prooftree}
@@ -983,7 +983,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{v not in s} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Cardinality}
+\paragraph{Cardinality}
 \begin{gather}
   \tag{Cardinality}
   \begin{prooftree}
@@ -992,7 +992,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{card(s)} \to \texttt{i}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Choice}
+\paragraph{Choice}
 \begin{gather}
   \tag{Normal execution}
   \begin{prooftree}
@@ -1010,7 +1010,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{choice(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Forall}
+\paragraph{Forall}
 \begin{gather}
   \tag{Forall}
   \begin{prooftree}
@@ -1019,7 +1019,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{forall(s)} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Exists}
+\paragraph{Exists}
 \begin{gather}
   \tag{Exists}
   \begin{prooftree}
@@ -1028,7 +1028,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{exists(s)} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Min}
+\paragraph{Min}
 \begin{gather}
   \tag{Min}
   \begin{prooftree}
@@ -1040,7 +1040,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{min(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Max}
+\paragraph{Max}
 \begin{gather}
   \tag{Max}
   \begin{prooftree}
@@ -1052,7 +1052,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer5{\texttt{max(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Sum}
+\paragraph{Sum}
 \begin{gather}
   \tag{Sum}
   \begin{prooftree}
@@ -1062,7 +1062,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{sum(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Product}
+\paragraph{Product}
 \begin{gather}
   \tag{Product}
   \begin{prooftree}
@@ -1072,7 +1072,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{product(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{General Union}
+\paragraph{General Union}
 \begin{gather}
   \tag{Union}
   \begin{prooftree}
@@ -1081,7 +1081,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{union(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{General Intersection}
+\paragraph{General Intersection}
 \begin{gather}
   \tag{Intersection}
   \begin{prooftree}
@@ -1090,7 +1090,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{intersection(s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Map}
+\paragraph{Map}
 \begin{gather}
   \tag{Map}
   \begin{prooftree}
@@ -1100,7 +1100,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{map(p, s)} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Map min}
+\paragraph{Map min}
 \begin{gather}
   \tag{Map min}
   \begin{prooftree}
@@ -1111,7 +1111,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer4{\texttt{map_min(p, s)} \to \texttt{v_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Map max}
+\paragraph{Map max}
 \begin{gather}
   \tag{Map max}
   \begin{prooftree}
@@ -1122,7 +1122,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer4{\texttt{map_max(p, s)} \to \texttt{v_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Union}
+\paragraph{Union}
 \begin{gather}
   \tag{Union}
   \begin{prooftree}
@@ -1131,7 +1131,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{s_1 \textbackslash{}/ s_2} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Intersection}
+\paragraph{Intersection}
 \begin{gather}
   \tag{Intersection}
   \begin{prooftree}
@@ -1140,7 +1140,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{s_1 /\textbackslash{} s_2} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Difference}
+\paragraph{Difference}
 \begin{gather}
   \tag{Difference}
   \begin{prooftree}
@@ -1149,8 +1149,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{s_1 \textbackslash{} s_2} \to \texttt{v}}
   \end{prooftree}
 \end{gather}
-% \subparagraph{Symmetric difference} % TODO if we add this, make sure we add to the op-trait and type defs. Leaving out for now bc I dont think we have syntax for it. Same with SetType.is_disjoint
-\subparagraph{Cartesian product}
+% \paragraph{Symmetric difference} % TODO if we add this, make sure we add to the op-trait and type defs. Leaving out for now bc I dont think we have syntax for it. Same with SetType.is_disjoint
+\paragraph{Cartesian product}
 \begin{gather}
   \tag{Cartesian product}
   \begin{prooftree}
@@ -1160,7 +1160,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{s_1 >< s_2} \to \texttt{r}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Subset}
+\paragraph{Subset}
 \begin{gather}
   \tag{Subset}
   \begin{prooftree}
@@ -1170,7 +1170,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{s_1 <{}<: s_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Subset equals}
+\paragraph{Subset equals}
 \begin{gather}
   \tag{Subset equals}
   \begin{prooftree}
@@ -1180,7 +1180,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{s_1 <: s_2} \to \texttt{b}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Superset}
+\paragraph{Superset}
 \begin{gather}
   \tag{Superset}
   \begin{prooftree}
@@ -1188,7 +1188,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{s_1 :>{}> s_2} \to \texttt{s_2 <{}<: s_1}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Superset equals}
+\paragraph{Superset equals}
 \begin{gather}
   \tag{Superset equals}
   \begin{prooftree}
@@ -1196,7 +1196,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{s_1 :> s_2} \to \texttt{s_2 <: s_1}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not subset}
+\paragraph{Not subset}
 \begin{gather}
   \tag{Not subset}
   \begin{prooftree}
@@ -1204,7 +1204,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{s_1 !<{}<: s_2} \to \texttt{!(s_1 <{}<: s_2)}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not subset equals}
+\paragraph{Not subset equals}
 \begin{gather}
   \tag{Not subset equals}
   \begin{prooftree}
@@ -1212,7 +1212,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{s_1 !<: s_2} \to \texttt{!(s_1 <: s_2)}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not superset}
+\paragraph{Not superset}
 \begin{gather}
   \tag{Not superset}
   \begin{prooftree}
@@ -1220,7 +1220,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{s_1 !:>{}> s_2} \to \texttt{!(s_1 :>{}> s_2)}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Not superset equals}
+\paragraph{Not superset equals}
 \begin{gather}
   \tag{Not superset equals}
   \begin{prooftree}
@@ -1228,8 +1228,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{s_1 !:> s_2} \to \texttt{!(s_1 :> s_2)}}
   \end{prooftree}
 \end{gather}
-\paragraph{Relation}
-\subparagraph{Inverse}
+\subsubsection{Relation}
+\paragraph{Inverse}
 \begin{gather}
   \tag{Inverse}
   \begin{prooftree}
@@ -1238,7 +1238,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{r_1 \^{} -1} \to \texttt{r_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Function call}
+\paragraph{Function call}
 \begin{gather}
   \tag{Function call}
   \begin{prooftree}
@@ -1247,7 +1247,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{r(v)} \to \texttt{choice(r[\Set{v}])}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Image}
+\paragraph{Image}
 \begin{gather}
   \tag{Image}
   \begin{prooftree}
@@ -1257,7 +1257,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{r[v]} \to \texttt{s}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Overriding}
+\paragraph{Overriding}
 \begin{gather}
   \tag{Overriding}
   \begin{prooftree}
@@ -1266,7 +1266,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{r_1 <+ r_2} \to \texttt{r_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Domain}
+\paragraph{Domain}
 \begin{gather}
   \tag{Domain}
   \begin{prooftree}
@@ -1275,7 +1275,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{dom(r)} \to \texttt{s}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Range}
+\paragraph{Range}
 \begin{gather}
   \tag{Range}
   \begin{prooftree}
@@ -1284,7 +1284,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{ran(r)} \to \texttt{s}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Domain restriction}
+\paragraph{Domain restriction}
 \begin{gather}
   \tag{Domain restriction}
   \begin{prooftree}
@@ -1294,7 +1294,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{s <| r_1} \to \texttt{r_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Domain subtraction}
+\paragraph{Domain subtraction}
 \begin{gather}
   \tag{Domain subtraction}
   \begin{prooftree}
@@ -1304,7 +1304,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{s <{}<| r_1} \to \texttt{r_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Range restriction}
+\paragraph{Range restriction}
 \begin{gather}
   \tag{Range restriction}
   \begin{prooftree}
@@ -1314,7 +1314,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{r_1 |> s} \to \texttt{r_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Range subtraction}
+\paragraph{Range subtraction}
 \begin{gather}
   \tag{Range subtraction}
   \begin{prooftree}
@@ -1324,7 +1324,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{r_1 |>{}> s} \to \texttt{r_2}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Composition}
+\paragraph{Composition}
 \begin{gather}
   \tag{Composition}
   \begin{prooftree}
@@ -1334,7 +1334,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer3{\texttt{r_1 <> r_2} \to \texttt{r_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Bag Image}
+\paragraph{Bag Image}
 \begin{gather}
   \tag{Bag image}
   \begin{prooftree}
@@ -1345,8 +1345,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer4{\texttt{r[B_1]} \to \texttt{B_2}}
   \end{prooftree}
 \end{gather}
-\paragraph{Bag}
-\subparagraph{Bag union}
+\subsubsection{Bag}
+\paragraph{Bag union}
 \begin{gather}
   \tag{Bag union}
   \begin{prooftree}
@@ -1355,7 +1355,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{B_1 \textbackslash{}/ B_2} \to \texttt{B_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Bag intersection}
+\paragraph{Bag intersection}
 \begin{gather}
   \tag{Bag intersection}
   \begin{prooftree}
@@ -1364,7 +1364,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{B_1 /\textbackslash{} B_2} \to \texttt{B_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Bag add}
+\paragraph{Bag add}
 \begin{gather}
   \tag{Bag add}
   \begin{prooftree}
@@ -1373,7 +1373,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{B_1 + B_2} \to \texttt{B_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Bag difference}
+\paragraph{Bag difference}
 \begin{gather}
   \tag{Bag difference}
   \begin{prooftree}
@@ -1382,7 +1382,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{B_1 - B_2} \to \texttt{B_3}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Size}
+\paragraph{Size}
 \begin{gather}
   \tag{Size}
   \begin{prooftree}
@@ -1391,8 +1391,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{size(B)} \to \texttt{i}}
   \end{prooftree}
 \end{gather}
-\paragraph{Sequence}
-\subparagraph{Concat}
+\subsubsection{Sequence}
+\paragraph{Concat}
 \begin{gather}
   \tag{Concat}
   \begin{prooftree}
@@ -1401,8 +1401,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer2{\texttt{S_1 ++ S_2} \to \texttt{S_3}}
   \end{prooftree}
 \end{gather}
-\paragraph{Procedure}
-\subparagraph{Definition}
+\subsubsection{Procedure}
+\paragraph{Definition}
 \begin{gather}
   \tag{Procedure Definition}
   \begin{prooftree}
@@ -1413,7 +1413,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer4{\langle \texttt{procedure p(a_1: t_1, ..., a_n: t_n) -> T: } block(\texttt{C}) \rangle \to \langle\texttt{skip}, \sigma\oplus\Set{p \mapsto i}, \rho\oplus\Set{i \mapsto procedure(args, T, block(C), \sigma, \rho)} \rangle}
   \end{prooftree}
 \end{gather}
-\subparagraph{Call}
+\paragraph{Call}
 \begin{gather}
   \tag{Procedure call}
   \begin{prooftree}
@@ -1423,65 +1423,65 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \end{prooftree}
 \end{gather}
 % TODO procedures make their own env, how can we express pass-by-value vs pass-by-reference semantics formally?
-\paragraph{Quantifications}
+\subsubsection{Quantifications}
 % TODO quantification body, multiple generators
-\subparagraph{Min}
+\paragraph{Min}
 \begin{gather}
   \tag{Min}
   \begin{prooftree}
     \infer0{\Min{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Min(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Max}
+\paragraph{Max}
 \begin{gather}
   \tag{Max}
   \begin{prooftree}
     \infer0{\Max{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Max(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Forall}
+\paragraph{Forall}
 \begin{gather}
   \tag{Forall}
   \begin{prooftree}
     \infer0{\Forallttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Forallttt(\Set{\texttt{x in S}}{\texttt{P and E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Exists}
+\paragraph{Exists}
 \begin{gather}
   \tag{Exists}
   \begin{prooftree}
     \infer0{\Existsttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Existsttt(\Set{\texttt{x in S}}{\texttt{P and E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Union all}
+\paragraph{Union all}
 \begin{gather}
   \tag{Union}
   \begin{prooftree}
     \infer0{\Unionttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Unionttt(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Intersection all}
+\paragraph{Intersection all}
 \begin{gather}
   \tag{Intersection}
   \begin{prooftree}
     \infer0{\Interttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Interttt(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Sum}
+\paragraph{Sum}
 \begin{gather}
   \tag{Sum}
   \begin{prooftree}
     \infer0{\Sumttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Sumttt(\Bag{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Product}
+\paragraph{Product}
 \begin{gather}
   \tag{Product}
   \begin{prooftree}
     \infer0{\Producttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Producttt(\Bag{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Comprehension}
+\paragraph{Comprehension}
 \begin{gather}
   \tag{Comprehension}
   \begin{prooftree}
@@ -1501,8 +1501,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\Set{\Comprehension{}{}{\texttt{x_1 in S_1}}{\texttt{P_1}}{\texttt{E_1}} \texttt{` ... `} \Comprehension{}{}{\texttt{x_n in S_n}}{\texttt{P_n}}{\texttt{E_n}}} \to s}
   \end{prooftree}
 \end{gather}
-\subparagraph{Lambda}
-\subparagraph{Iter}
+\paragraph{Lambda}
+\paragraph{Iter}
 \begin{gather}
   \tag{Fold}
   \begin{prooftree}
@@ -1516,15 +1516,15 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \to block(\texttt{x := choice(S); a_1 := x_1; ...; a_n := x_n; if P: C;} \Iter{\Comprehension{\texttt{x in S - }\Set{x}}{\texttt{P}}}{}{\texttt{t}}{block(\texttt{C})} \texttt{return t})}
   \end{prooftree}
 \end{gather}
-\subparagraph{Fold}
+\paragraph{Fold}
 \begin{gather}
   \tag{Fold}
   \begin{prooftree}
     \infer0{\Fold{\texttt{v := i}}{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \texttt{v := i; for x in S: } block(\texttt{if P: v := E})}
   \end{prooftree}
 \end{gather}
-\paragraph{Simple Statements}
-\subparagraph{Assignment}
+\subsubsection{Simple Statements}
+\paragraph{Assignment}
 \begin{gather}
   \tag{Assignment}
   \begin{prooftree}
@@ -1539,8 +1539,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
   \end{prooftree}
 \end{gather}
 % And relation/record assignment
-% \subparagraph{Type Assignment}
-\subparagraph{Trait Application}
+% \paragraph{Type Assignment}
+\paragraph{Trait Application}
 \begin{gather}
   \tag{Trait Assignment}
   \begin{prooftree}
@@ -1548,23 +1548,23 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\langle\texttt{v_1 := v_2 trait v_3}, \sigma, \rho\rangle \to \langle \texttt{skip}, \sigma \oplus \Set{v_1 \mapsto i}, \rho \oplus \Set{i \mapsto traits(v_2, v_3)} \rangle}
   \end{prooftree}
 \end{gather}
-% \subparagraph{Return}
-\subparagraph{Break} % TODO how will we even define these in context...
+% \paragraph{Return}
+\paragraph{Break} % TODO how will we even define these in context...
 \begin{gather}
   \tag{Break}
   \begin{prooftree}
     \infer0{\texttt{block(C_1;break;C_2)} \to \texttt{block(C_1)}}
   \end{prooftree}
 \end{gather}
-\subparagraph{Continue}
+\paragraph{Continue}
 \begin{gather}
   \tag{Break}
   \begin{prooftree}
     \infer0{\texttt{loop(C_1;continue;C_2)} \to \texttt{loop(C_1)}}
   \end{prooftree}
 \end{gather}
-% \subparagraph{Skip}
-\paragraph{Import Statements}
+% \paragraph{Skip}
+\subsubsection{Import Statements}
 \begin{gather}
   \tag{Module Import}
   \begin{prooftree}
@@ -1599,8 +1599,8 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 % import module
 % from module import *
 % from module import names
-\paragraph{Compound Statements}
-\subparagraph{If}
+\subsubsection{Compound Statements}
+\paragraph{If}
 \begin{gather}
   \tag{If (true)}
   \begin{prooftree}
@@ -1614,7 +1614,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{if b: } block(\texttt{C}) \to \texttt{skip}}
   \end{prooftree}
 \end{gather}
-\subparagraph{If-Else}
+\paragraph{If-Else}
 \begin{gather}
   \tag{If-Else (true)}
   \begin{prooftree}
@@ -1628,7 +1628,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{if b: } block(\texttt{C_1}) \texttt{ else: } block(\texttt{C_2}) \to block(\texttt{C_2})}
   \end{prooftree}
 \end{gather}
-\subparagraph{For}
+\paragraph{For}
 \begin{gather}
   \tag{For (empty)}
   \begin{prooftree}
@@ -1642,7 +1642,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\texttt{for x in S: } block(\texttt{C}) \to block(\texttt{v := choice(S); C; for x in S: } block(\texttt{C}))}
   \end{prooftree}
 \end{gather}
-\subparagraph{While}
+\paragraph{While}
 \begin{gather}
   \tag{While (false)}
   \begin{prooftree}
@@ -1656,7 +1656,7 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \infer1{\langle \texttt{while b: } block(\texttt{C}), \sigma,\rho\rangle \to \langle block(\texttt{C; while b: } block(C)), \sigma,\rho\rangle}
   \end{prooftree}
 \end{gather}
-\subparagraph{Block}
+\paragraph{Block}
 \begin{gather}
   \tag{Block}
   \begin{prooftree}
