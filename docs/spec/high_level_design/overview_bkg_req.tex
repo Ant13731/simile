@@ -153,7 +153,7 @@ def compute(S, T, V):
     ret = set()
     for x in s_union_t:
         ret.add(x)
-    for x in ret:
+    for x in copy(ret):
         if x not in V:
             ret.remove(x)
     # len(ret) <= len(V)

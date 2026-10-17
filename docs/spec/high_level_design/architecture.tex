@@ -30,6 +30,9 @@ Like most compiled programming languages, Simile follows the usual workflow of p
 Below sections will discuss each component.
 
 \subsubsection{Parser}
+Simile's lexer uses a maximal munch approach to tokenization for extensibility and straightforward handling of a large symbolic language. However, this comes with the caveat that reuse of underlying characters may be limited. For example, consider the symbol for an injective relation: \texttt{>->}, which combines the conventional "greater-than" and "negative" symbols from integer arithmetic. Since our scanner does not implement backtracking, the expression \texttt{2>-1} may see the combined \texttt{>-} as an incomplete formation of \texttt{>->}, rather than the expected $2 > -1$. To fix this, we require spaces before and after overloaded characters (until backtracking is implemented). The full list of symbols is contained in Section 2.1.
+
+Parsing follows a conventional recursive descent style, hand-rolled for better error messages compared to parser generators. The full grammar is in Section 2.2 - note that left-recursive productions are parsed as right-recursive, then reformed into the expected left-recursive structures. Pretty printers are available and re-parsable for the AST throughout the optimization process that convert ASCII symbols into their unicode counterparts.
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
@@ -45,6 +48,21 @@ Below sections will discuss each component.
 \end{figure}
 
 \subsubsection{Static Analysis}
+Static analysis is the backbone of type and trait resolution.
+
+First, the AST is normalized from generic ``BinaryOp'' and ``UnaryOp'' classes with operation fields into proper operation classes; this has the dual effect of simplifying match statements from generic \texttt{BinaryOp(...)} cases to a specific operation and guaranteeing that we explicitly define an AST node for each operator, especially considering Python's dynamic type system. After each AST-modifying pass, we rerun normalization to strengthen the above pipeline guarantees.
+
+Simile's standard library is then prepended to the input AST as a wildcard import, containing function definitions referenced throughout this document (ex. \texttt{min}, \texttt{max}, \texttt{min_map}).
+
+The symbol table contains two supporting mappings: a scope map to capture the environment a symbol is located in (with references to the parent scope and available symbols), and a large symbol map assigning an identifier, scope, and type to each declared name. Scoping rules are captured formally by typing and operational semantic judgements in Section 2, but in plain terms, procedures, quantifications (and comprehensions), conditional statements, lambdas, imports, and records create a static scope based on the environment at declaration time. The symbol table is populated when a fresh variable is declared, either by a quantifier, procedure/record/lambda definition, or assignment. Once the symbol table has been populated, the AST should no longer contain plain-string references to identifiers, rather they should contain pointers to entries in the symbol table.
+
+The type resolver is made up of 3 components: the type annotation resolver, the trait resolver, and the expression resolver. Annotation resolution happens simultaneously with symbol table population, since declared types may be used after declaration. Type annotations may consist of built-in types, record types, tuples of types, and instantiated generic types. Traits are similar, with most appearing as flag options, but specific traits can also be disabled or concretized to effectively control optimization paths. With this information, the expression resolver can derive the type of any expression on-the-fly.
+
+The symbol table, expression resolver, and modified AST are bundled together as an output.
+
+One caveat: The type resolution algorithm follows a direct bottom-up approach as opposed to a more thorough Hindley-Milner system. All declared Simile variables must have an explicit type at definition time, we do not provide implicit types. Future work will relax this hard constraint.
+
+
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
@@ -76,6 +94,26 @@ Below sections will discuss each component.
 \end{figure}
 
 \subsubsection{General Rewrites}
+Following in the footsteps of formal languages and theorem provers, Simile defines transformations of terms through a syntactic rewrite system. %TODO cite
+In its most basic form, rewrites are mappings from one term structure (AST node) to another, applied in a non-deterministic order. For example, a valid rewrite may look like: $x + x \leadsto 2\times x$. Simile uses an altered form, where rewrite rules are grouped into collections and may have additional conditions before matching. While simple, rewrite systems are turing complete and thus system developers are concerned with termination and consistent outputs (confluence). However, it retains the ability to formalize and prove that rules are behaviour preserving, ensuring compiler correctness.
+
+Because Simile is focused on abstract data types as the primary compute vehicle, the rewrite optimizer has been split: one section for abstract rewrites, and another for concrete data type rewrites. For example, a relation may be represented as a hashset of tuples or a bi-directional hashmap, but these data structures have differing atomic actions and algorithmic advantages. Thus, the first collection of rewrites is more for high-level concerns and can be written in Simile itself. Standardization and partial algorithmic computation are the focus, where rewrites are only concerned with the abstract definitions of types rather than concrete demands.
+
+To simplify the process of creating a rewrite library, we developed a small DSL (called SimRW) to structure rewrite rules. We declare variables, the rewrite rule itself, and any additional guards required to pass before we can execute a rewrite. For example, simplifying a constant sum can be written as:
+\begin{lstlisting}
+rule constant_sum:
+  vars:
+    c: int
+    s: set[int]
+  rewrite:
+    sum x in s | c
+    ~>
+    card(S) * c
+  when:
+    does_not_occur_in(x, c)
+\end{lstlisting}
+Rules are applied in groups, with complete type and trait information available in guard conditions.
+
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
@@ -100,6 +138,8 @@ Below sections will discuss each component.
 \end{figure}
 
 \subsubsection{Concretization}
+Once preliminary optimizations are complete, we must lower the AST into something closer to executable code. We perform more semantic passes over the symbol table, with rudimentary operator counts and trait analysis. Then, from an extensible collection of abstract-to-concrete data type mappings, we use all available semantic information to direct the concrete representation. For example, an abstract set of integers with a tight range and intersection-only operations may be best represented as a bitset.
+
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
@@ -137,6 +177,9 @@ Below sections will discuss each component.
 \end{figure}
 
 \subsubsection{Specialized Rewrites}
+Specialized rewrites are similar to the generic counterpart, but combines operation lowering with concrete-specific optimizations. Generally, concrete data types have a set of ``atomic'' operations used to build towards the abstract types programmers use. For example, the union of two hashsets may involve looping over one hashset and inserting the other's data one-by-one, whereas the intersection of bitsets require one bitwise-AND operation.
+
+Where possible, rules will be written in SimRW, but since concrete types often have unique mutating operations, most of these rewrites will be encoded into Python match statements.
 \begin{figure}[H]
   \centering
   \begin{tikzpicture}[]
@@ -157,18 +200,18 @@ Below sections will discuss each component.
   \caption{Component Diagram: Concrete-specific Rewrite Optimizations}
   \label{fig:componentConcreteRewrite}
 \end{figure}
-\subsubsection{SSA Lowering}
-\subsubsection{LLVM Lowering}
+\subsubsection{SSA + LLVM Lowering}
+After the optimization dust settles, we perform the necessary transformations to convert concretized Simile directly into LLVM output, with no additional optimization efforts.
 
-\subsection{Data Architecture}
-\subsubsection{Source}
-% - Generators
-% - Iter/Fold
-% - Parser, Symb Table, Optimizer-specific nodes
-\subsubsection{Symbol Table}
-\subsubsection{Abstract Types}
+% \subsection{Data Architecture}
+% \subsubsection{Source}
+% % - Generators
+% % - Iter/Fold
+% % - Parser, Symb Table, Optimizer-specific nodes
+% \subsubsection{Symbol Table}
+% \subsubsection{Abstract Types}
 
-\subsubsection{Traits}
-\subsubsection{Concrete Types}
-\subsubsection{SimRW}
-\subsubsection{SSA IR}
+% \subsubsection{Traits}
+% \subsubsection{Concrete Types}
+% \subsubsection{SimRW}
+% \subsubsection{SSA IR}
