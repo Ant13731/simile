@@ -30,7 +30,6 @@ def AST_to_lean():
     pre_symbol_table_asts = [
         ast_.Identifier,
         ast_.TupleIdentifier,
-        ast_.TupleIdentifier,
         ast_.RecordDefIdentifier,
         ast_.ProcedureDefIdentifier,
     ]
@@ -49,8 +48,8 @@ def AST_to_lean():
     ]
     common_asts = [
         ast_.Int,
-        # Float,
-        # String,
+        ast_.Float,
+        ast_.String,
         ast_.True_,
         ast_.False_,
         ast_.None_,
@@ -67,7 +66,7 @@ def AST_to_lean():
         ast_.Enumeration,
         ast_.Type_,
         ast_.LambdaDef,
-        # ast_.RecordAccess,
+        ast_.RecordAccess,
         ast_.Call,
         ast_.TypedName,
         ast_.Image,
