@@ -13,12 +13,12 @@ procedure iteration(living: Cells) -> Cells:
 
 procedure does_living_cell_live(cell: Point, living: Cells) -> bool:
     if cell not in living:
-        return False
+        return false
     num_living_neighbours: int := card(neighbours[{cell}] /\ living)
     return num_neighbours == 2
 
 procedure living_cells_from_neighbour_of_living(cell: Point, living: Cells) -> Cells:
     if cell not in neighbours[living]:
-        return False
+        return false
     num_living_neighbours: int := card(neighbours[{cell}] /\ living)
     return num_neighbours == 3

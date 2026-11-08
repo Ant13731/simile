@@ -2,7 +2,7 @@
     "name": "sim",
     "displayName": "Simile",
     "description": "Syntax highlighting for Simile",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "publisher": "ant13731",
     "repository": "https://github.com/Ant13731/simile",
     "engines": {

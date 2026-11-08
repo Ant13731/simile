@@ -7,95 +7,41 @@
     ],
     "patterns": [
         {
-            "include": "#interpretIdentifiersAsTypes"
+            "include": "#procedureDefinition"
         },
         {
-            "include": "#types"
-        },
-        {
-            "include": "#keywords"
-        },
-        {
-            "include": "#builtins"
-        },
-        {
-            "include": "#quantifiers"
-        },
-        {
-            "include": "#operators"
-        },
-        {
-            "include": "#literals"
-        },
-        {
-            "include": "#comments"
-        },
-        {
-            "include": "#boolean"
-        },
-        {
-            "include": "#setOperators"
-        },
-        {
-            "include": "#relations"
-        },
-        {
-            "include": "#logicOperators"
-        },
-        {
-            "include": "#identifiers"
+            "include": "#code"
         }
     ],
     "repository": {
-        "comments": {
+        "code": {
             "patterns": [
                 {
-                    "match": "#.*$",
-                    "name": "comment.line.number-sign.simile"
-                }
-            ]
-        },
-        "keywords": {
-            "patterns": [
-                {
-                    "match": "\\b(if|else|for|while|record|enum|procedure|return|break|continue|from|import|skip|trait|type|iter)\\b",
-                    "name": "keyword.control.simile"
-                }
-            ]
-        },
-        "boolean": {
-            "patterns": [
-                {
-                    "match": "\\b(true|false)\\b",
-                    "name": "constant.language.boolean.simile"
-                }
-            ]
-        },
-        "types": {
-            "patterns": [
-                {
-                    "match": "\\b(int|float|string|bool|set|sequence|bag|relation|tuple|generic|Z|N|N1)\\b",
-                    "name": "storage.type.simile"
-                }
-            ]
-        },
-        "interpretIdentifiersAsTypes": {
-            "begin": "\\b([a-zA-Z_][a-zA-Z0-9_]*):[ \t]*",
-            "end": "$",
-            "beginCaptures": {
-                "0": {
-                    "name": "variable.other.simile"
-                }
-            },
-            "patterns": [
-                {
-                    "include": "#keywordsAsTypes"
+                    "include": "#comments"
                 },
                 {
-                    "include": "#types"
+                    "include": "#strings"
+                },
+                {
+                    "include": "#traitExpression"
+                },
+                {
+                    "include": "#typeDeclaration"
+                },
+                {
+                    "include": "#typeAnnotation"
+                },
+                {
+                    "include": "#numbers"
+                },
+                {
+                    "include": "#builtinTypes"
                 },
                 {
                     "include": "#keywords"
+                },
+                {
+                    "include": "#boolean"
                 },
                 {
                     "include": "#builtins"
@@ -104,104 +50,407 @@
                     "include": "#quantifiers"
                 },
                 {
-                    "include": "#operators"
-                },
-                {
-                    "include": "#literals"
-                },
-                {
-                    "include": "#comments"
-                },
-                {
-                    "include": "#boolean"
-                },
-                {
-                    "include": "#setOperators"
+                    "include": "#wordOperators"
                 },
                 {
                     "include": "#relations"
                 },
                 {
-                    "include": "#logicOperators"
+                    "include": "#setOperators"
+                },
+                {
+                    "include": "#brackets"
+                },
+                {
+                    "include": "#operators"
+                },
+                {
+                    "include": "#fieldAccess"
+                },
+                {
+                    "include": "#punctuation"
                 },
                 {
                     "include": "#identifiers"
                 }
             ]
         },
-        "keywordsAsTypes": {
-            "patterns": [
-                {
-                    "match": "\\b(procedure|trait|type)\\b",
-                    "name": "storage.type.simile"
-                }
-            ]
+        "comments": {
+            "match": "#.*$",
+            "name": "comment.line.number-sign.simile"
+        },
+        "strings": {
+            "match": "\"([^\"\\\\]|\\\\.)*\"",
+            "name": "string.quoted.double.simile"
+        },
+        "numbers": {
+            "match": "\\b[0-9]+(\\.[0-9]+)?\\b",
+            "name": "constant.numeric.simile"
+        },
+        "boolean": {
+            "match": "\\b(true|false)\\b",
+            "name": "constant.language.boolean.simile"
+        },
+        "keywords": {
+            "match": "\\b(if|else|for|while|record|enum|procedure|return|break|continue|from|import|skip|trait|type)\\b",
+            "name": "keyword.control.simile"
+        },
+        "builtinTypes": {
+            "match": "\\b(int|float|string|bool|set|sequence|bag|relation|tuple|generic|Z|N|N1)\\b|ℤ|ℕ₁|ℕ",
+            "name": "support.type.builtin.simile"
         },
         "builtins": {
-            "patterns": [
-                {
-                    "match": "\\b(min|map_min|max|map_max|choice|dom|ran|card|size|cast|cast_with|print|map|heads|tails)\\b",
-                    "name": "support.function.simile"
-                }
-            ]
+            "match": "\\b(min|map_min|max|map_max|choice|dom|ran|card|size|cast|cast_with|print|map|heads|tails)\\b",
+            "name": "support.function.simile"
         },
         "quantifiers": {
-            "patterns": [
-                {
-                    "match": "\\b(lambda|forall|exists|union|intersection|sum|product|min|max|fold|iter)\\b",
-                    "name": "keyword.control.quantifier.simile"
-                }
-            ]
+            "match": "\\b(lambda|forall|exists|union|intersection|sum|product|fold|iter)\\b|[λ∀∃⋃⋂∑∏]",
+            "name": "keyword.control.quantifier.simile"
         },
-        "operators": {
+        "wordOperators": {
             "patterns": [
                 {
-                    "match": "(\\|->|:=|::|->|=>|!==|==|!=|<=|>=|<|>|\\+|\\-|\\*|/|\\^|.:)",
-                    "name": "keyword.operator.simile"
-                }
-            ]
-        },
-        "setOperators": {
-            "patterns": [
+                    "match": "\\b(and|or|not|in|is)\\b|[¬∧∨⇒≡≢≠∈∉]",
+                    "name": "keyword.operator.logical.simile"
+                },
                 {
-                    "match": "(∪|∩|×|⊕|∘|\\/|\\/\\\\|><|<\\+>|<>)",
-                    "name": "keyword.operator.set.simile"
+                    "match": "\\b(div|mod)\\b",
+                    "name": "keyword.operator.arithmetic.simile"
                 }
             ]
         },
         "relations": {
-            "patterns": [
-                {
-                    "match": "(<->|<<->|<->>|<<->>|\\+->|-\\->|>\\+>|>->|->>)",
-                    "name": "keyword.operator.relation.simile"
-                }
-            ]
+            "comment": "Relation/function arrows, maplet and domain/range restriction. Longest tokens first so they win over their prefixes.",
+            "match": "\\|->|<<->>|<->>|<<->|<->|>->>|-->>|\\+->>|>->|-->|\\+->|>\\+>|<<\\||<\\||\\|>>|\\|>|[↔⇸→⤔↣⤀↠⤖↦◁▷⩤⩥]",
+            "name": "keyword.operator.relation.simile"
         },
-        "literals": {
+        "setOperators": {
+            "match": "!<<:|!<:|!:>>|!:>|<<:|<:|:>>|:>|<\\+>|<>|><|\\\\/|/\\\\|\\+\\+|\\\\|[∪∩×⊕∘◦⊂⊆⊃⊇⊄⊈⊅⊉]",
+            "name": "keyword.operator.set.simile"
+        },
+        "brackets": {
+            "comment": "Two-character brackets; must come before the single < and > operators.",
+            "match": "<<|>>|<\\[|\\]>|[⟨⟩⟦⟧]",
+            "name": "punctuation.section.bracket.simile"
+        },
+        "operators": {
             "patterns": [
                 {
-                    "match": "\\b[0-9]+(\\.[0-9]+)?\\b",
-                    "name": "constant.numeric.simile"
+                    "match": ":∈|:=|::|==>|!==|==|!=|=>|<=|>=|->|\\+|-|\\*|/|\\^|ˆ|~|˜|=|<|>|!|[≤≥↑↓]",
+                    "name": "keyword.operator.simile"
                 },
                 {
-                    "match": "\"([^\"\\\\]|\\\\.)*\"",
-                    "name": "string.quoted.double.simile"
+                    "match": "\\.\\.",
+                    "name": "keyword.operator.range.simile"
                 }
             ]
         },
-        "logicOperators": {
+        "fieldAccess": {
+            "comment": "a.b is record field access. A bare . (or ·) elsewhere is the quantifier separator.",
+            "match": "(?<=[A-Za-z0-9_)\\]])(\\.)(?!\\.)([A-Za-z_][A-Za-z0-9_]*)",
+            "captures": {
+                "1": {
+                    "name": "punctuation.accessor.simile"
+                },
+                "2": {
+                    "name": "variable.other.property.simile"
+                }
+            }
+        },
+        "punctuation": {
             "patterns": [
                 {
-                    "match": "\\b(and|or|not|in)\\b",
-                    "name": "keyword.operator.logical.simile"
+                    "match": "[()\\[\\]{}]",
+                    "name": "punctuation.section.bracket.simile"
+                },
+                {
+                    "match": ",",
+                    "name": "punctuation.separator.comma.simile"
+                },
+                {
+                    "match": ";",
+                    "name": "punctuation.separator.semicolon.simile"
+                },
+                {
+                    "match": ":",
+                    "name": "punctuation.separator.colon.simile"
+                },
+                {
+                    "match": "\\|",
+                    "name": "punctuation.separator.bar.simile"
+                },
+                {
+                    "match": "[·.]",
+                    "name": "keyword.operator.quantifier.separator.simile"
                 }
             ]
         },
         "identifiers": {
+            "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b",
+            "name": "variable.other.simile"
+        },
+        "procedureDefinition": {
+            "begin": "\\b(procedure)\\b(?:\\s+([A-Za-z_][A-Za-z0-9_]*))?",
+            "end": "$",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.simile"
+                },
+                "2": {
+                    "name": "entity.name.function.simile"
+                }
+            },
             "patterns": [
                 {
-                    "match": "\\b[a-zA-Z_][a-zA-Z0-9_]*\\b",
+                    "include": "#returnType"
+                },
+                {
+                    "include": "#code"
+                }
+            ]
+        },
+        "returnType": {
+            "begin": "(->)\\s*",
+            "end": "(?=[:=#{|]|$)",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.operator.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#typeContent"
+                }
+            ]
+        },
+        "traitExpression": {
+            "comment": "trait FLAG  /  trait NAME = value  (several may be comma-separated). Trait names are blue; values are ordinary expressions, never type-green.",
+            "begin": "\\b(trait)\\b",
+            "end": "(?=[)\\]}⟩⟧|·#]|:=|::|\\s\\.\\s|$)",
+            "beginCaptures": {
+                "1": {
+                    "name": "keyword.control.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#traitSingle"
+                },
+                {
+                    "include": "#traitFlag"
+                },
+                {
+                    "include": "#code"
+                }
+            ]
+        },
+        "traitFlag": {
+            "match": "\\b(immutable|undefined|orderable|expr_procedure|one_to_many|many_to_one|one_to_one|total_on_domain|total_on_range|iterable|unique|empty|total)\\b",
+            "name": "storage.modifier.trait.simile"
+        },
+        "traitSingle": {
+            "begin": "\\b(literal|minimum|maximum|domain|size|bound)\\b\\s*(=)(?![=>])\\s*",
+            "end": "(?=,|[)\\]}⟩⟧|·#]|:=|::|\\s\\.\\s|$)",
+            "beginCaptures": {
+                "1": {
+                    "name": "storage.modifier.trait.simile"
+                },
+                "2": {
+                    "name": "keyword.operator.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#traitValueContent"
+                }
+            ]
+        },
+        "traitValueContent": {
+            "patterns": [
+                {
+                    "include": "#traitGroupParen"
+                },
+                {
+                    "include": "#traitGroupBracket"
+                },
+                {
+                    "include": "#traitGroupBrace"
+                },
+                {
+                    "include": "#code"
+                }
+            ]
+        },
+        "traitGroupParen": {
+            "begin": "\\(",
+            "end": "\\)",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#traitValueContent"
+                }
+            ]
+        },
+        "traitGroupBracket": {
+            "begin": "\\[",
+            "end": "\\]",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#traitValueContent"
+                }
+            ]
+        },
+        "traitGroupBrace": {
+            "begin": "\\{",
+            "end": "\\}",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#traitValueContent"
+                }
+            ]
+        },
+        "typeDeclaration": {
+            "match": "\\b(record|enum|type)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+            "captures": {
+                "1": {
+                    "name": "keyword.control.simile"
+                },
+                "2": {
+                    "name": "entity.name.type.simile"
+                }
+            }
+        },
+        "typeAnnotation": {
+            "comment": "name: Type  (parameters, declarations, quantifier bindings). The type ends at , ) ] } | · = := :: a spaced . or end of line.",
+            "begin": "\\b(?!(?:if|else|elif|for|while|iter|return|skip|break|continue|from|import)\\b)([A-Za-z_][A-Za-z0-9_]*)[ \\t]*(:)(?![:=>∈])[ \\t]*",
+            "end": "(?=[,)\\]}⟩⟧|·=#]|:=|::|>>|\\s\\.\\s|$)",
+            "beginCaptures": {
+                "1": {
                     "name": "variable.other.simile"
+                },
+                "2": {
+                    "name": "punctuation.separator.colon.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#typeContent"
+                }
+            ]
+        },
+        "typeContent": {
+            "patterns": [
+                {
+                    "include": "#comments"
+                },
+                {
+                    "include": "#typeGroupParen"
+                },
+                {
+                    "include": "#typeGroupBracket"
+                },
+                {
+                    "include": "#traitExpression"
+                },
+                {
+                    "include": "#builtinTypes"
+                },
+                {
+                    "include": "#typeKeywords"
+                },
+                {
+                    "include": "#relations"
+                },
+                {
+                    "include": "#setOperators"
+                },
+                {
+                    "include": "#operators"
+                },
+                {
+                    "include": "#numbers"
+                },
+                {
+                    "include": "#strings"
+                },
+                {
+                    "match": ",",
+                    "name": "punctuation.separator.comma.simile"
+                },
+                {
+                    "match": "[A-Za-z_][A-Za-z0-9_]*",
+                    "name": "entity.name.type.simile"
+                }
+            ]
+        },
+        "typeKeywords": {
+            "match": "\\b(procedure|type)\\b",
+            "name": "support.type.builtin.simile"
+        },
+        "typeGroupParen": {
+            "begin": "\\(",
+            "end": "\\)",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#typeContent"
+                }
+            ]
+        },
+        "typeGroupBracket": {
+            "begin": "\\[",
+            "end": "\\]",
+            "beginCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "endCaptures": {
+                "0": {
+                    "name": "punctuation.section.bracket.simile"
+                }
+            },
+            "patterns": [
+                {
+                    "include": "#typeContent"
                 }
             ]
         }
