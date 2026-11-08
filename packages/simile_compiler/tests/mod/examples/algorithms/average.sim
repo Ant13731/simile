@@ -1,2 +1,2 @@
 procedure average(xs: set[int]) -> int:
-    return sum_(S) / card(S)
+    return sum(S) / card(S)

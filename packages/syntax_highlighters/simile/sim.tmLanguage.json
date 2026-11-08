@@ -66,7 +66,7 @@
         "boolean": {
             "patterns": [
                 {
-                    "match": "\\b(True|False)\\b",
+                    "match": "\\b(true|false)\\b",
                     "name": "constant.language.boolean.simile"
                 }
             ]
@@ -140,7 +140,7 @@
         "builtins": {
             "patterns": [
                 {
-                    "match": "\\b(min|map_min|max|map_max|choice|dom|ran|card|size|sum|cast|cast_with|print|map|heads|tails|fold)\\b",
+                    "match": "\\b(min|map_min|max|map_max|choice|dom|ran|card|size|cast|cast_with|print|map|heads|tails)\\b",
                     "name": "support.function.simile"
                 }
             ]
@@ -148,7 +148,7 @@
         "quantifiers": {
             "patterns": [
                 {
-                    "match": "\\b(lambda|forall|exists|union|intersection|sum|product|min|max)\\b",
+                    "match": "\\b(lambda|forall|exists|union|intersection|sum|product|min|max|fold|iter)\\b",
                     "name": "keyword.control.quantifier.simile"
                 }
             ]
@@ -156,7 +156,7 @@
         "operators": {
             "patterns": [
                 {
-                    "match": "(\\|->|:=|::|->|=>|!==|==|!=|<=|>=|<|>|\\+|\\-|\\*|/|\\^)",
+                    "match": "(\\|->|:=|::|->|=>|!==|==|!=|<=|>=|<|>|\\+|\\-|\\*|/|\\^|.:)",
                     "name": "keyword.operator.simile"
                 }
             ]
@@ -164,7 +164,7 @@
         "setOperators": {
             "patterns": [
                 {
-                    "match": "(∪|∩|×|⊕|∘|\\/|\\/\\\\|><|<\\+>|circ)",
+                    "match": "(∪|∩|×|⊕|∘|\\/|\\/\\\\|><|<\\+>|<>)",
                     "name": "keyword.operator.set.simile"
                 }
             ]

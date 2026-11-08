@@ -1,0 +1,24 @@
+height: int := 100
+width: int := 100
+
+Point: type := tuple[int, int]
+# initial configuration
+Cells: type := set[Point]
+
+cells: Cells := {x in 0..width, y in 0..height | (x,y)}
+neighbours: Cells := {(x,y) in cells, x_n in (x-1)..(x+1), y_n in (y-1)..(y+1) .: x != x_n and y != y_n | (x,y) |-> (x_n, y_n)}
+
+procedure iteration(living: Cells) -> Cells:
+    return {c in cells .: does_living_cell_live(c, living) or living_cells_from_neighbour_of_living(c, living) | c}
+
+procedure does_living_cell_live(cell: Point, living: Cells) -> bool:
+    if cell not in living:
+        return False
+    num_living_neighbours: int := card(neighbours[{cell}] /\ living)
+    return num_neighbours == 2
+
+procedure living_cells_from_neighbour_of_living(cell: Point, living: Cells) -> Cells:
+    if cell not in neighbours[living]:
+        return False
+    num_living_neighbours: int := card(neighbours[{cell}] /\ living)
+    return num_neighbours == 3

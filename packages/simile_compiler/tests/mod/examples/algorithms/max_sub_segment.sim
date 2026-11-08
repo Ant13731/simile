@@ -1,0 +1,2 @@
+procedure max_sub_segment_sum(xs: sequence[int]) -> int:
+    return max_map(sum, segments(xs))

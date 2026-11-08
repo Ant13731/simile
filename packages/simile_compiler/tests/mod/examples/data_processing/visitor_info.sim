@@ -1,0 +1,15 @@
+Visitor: enum := {Kevin, Michael, Adrian, Charlie, Ryan, Steven}
+Meeting: enum := {Lecture1, Lecture2, Lecture3, Workshop, Tutorial, Keynote}
+Room: enum := {100, 101, 102, 103, 200, 201}
+
+# attends: Visitor -/-> Meeting := {}
+attends: relation[Visitor, Meeting] := {}
+    trait one_to_many
+    trait partial
+#locations: Meeting >-> Room := {}
+locations: relation[Meeting, Room] := {}
+    trait one_to_one
+    trait total
+
+procedure mealsToPrep(room: Room) -> int:
+    return card((location~ <> attends~)[{room}])

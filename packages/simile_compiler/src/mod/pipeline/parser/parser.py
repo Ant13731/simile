@@ -644,36 +644,45 @@ class Parser:
             self.errors.pop()
         self.current_index = starting_index
 
-        match t.type_:
-            case TokenType.FOLD:
-                initializing_assignment = self.assignment()
-                self.consume(TokenType.COLON, "Expected FOLD quantification separator `:' between generator and initializing assignment")
-                body = self.quantification_body()
-                return ast_.Fold(initializing_assignment, body)
-            case TokenType.ITER:
-                return ast_.Iter(self.iter_quantification_body())
-            case TokenType.GENERAL_UNION:
-                op_type = ast_.QuantifierOperator.UNION_ALL
-            case TokenType.GENERAL_INTERSECTION:
-                op_type = ast_.QuantifierOperator.INTERSECTION_ALL
-            case TokenType.FORALL:
-                op_type = ast_.QuantifierOperator.FORALL
-            case TokenType.EXISTS:
-                op_type = ast_.QuantifierOperator.EXISTS
-            case TokenType.SUM:
-                op_type = ast_.QuantifierOperator.SUM
-            case TokenType.PRODUCT:
-                op_type = ast_.QuantifierOperator.PRODUCT
-            case TokenType.MAX:
-                op_type = ast_.QuantifierOperator.MAX
-            case TokenType.MIN:
-                op_type = ast_.QuantifierOperator.MIN
-            case _:
-                self.error("Invalid start to quantification")
-        assert op_type is not None, "op_type should have been defined in above mapping"
+        # Then attempt to parse as a quantification
+        try:
+            match t.type_:
+                case TokenType.FOLD:
+                    initializing_assignment = self.assignment()
+                    self.consume(TokenType.COLON, "Expected FOLD quantification separator `:' between generator and initializing assignment")
+                    body = self.quantification_body()
+                    return ast_.Fold(initializing_assignment, body)
+                case TokenType.ITER:
+                    return ast_.Iter(self.iter_quantification_body())
+                case TokenType.GENERAL_UNION:
+                    op_type = ast_.QuantifierOperator.UNION_ALL
+                case TokenType.GENERAL_INTERSECTION:
+                    op_type = ast_.QuantifierOperator.INTERSECTION_ALL
+                case TokenType.FORALL:
+                    op_type = ast_.QuantifierOperator.FORALL
+                case TokenType.EXISTS:
+                    op_type = ast_.QuantifierOperator.EXISTS
+                case TokenType.SUM:
+                    op_type = ast_.QuantifierOperator.SUM
+                case TokenType.PRODUCT:
+                    op_type = ast_.QuantifierOperator.PRODUCT
+                case TokenType.MAX:
+                    op_type = ast_.QuantifierOperator.MAX
+                case TokenType.MIN:
+                    op_type = ast_.QuantifierOperator.MIN
+                case _:
+                    self.error("Invalid start to quantification")
+            assert op_type is not None, "op_type should have been defined in above mapping"
 
-        body = self.quantification_body()
-        return ast_.Quantifier3(body, op_type)
+            body = self.quantification_body()
+            return ast_.Quantifier3(body, op_type)
+        except ParseException:
+            logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier. Parse error was: {self.errors[-1]}")
+            self.errors.pop()
+        self.current_index = starting_index
+
+        # If all else fails, treat as an identifier
+        return quantification_token_as_identifier
 
     @store_derivation
     def quantification_body(self) -> ast_.QuantifierBody:

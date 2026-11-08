@@ -279,6 +279,20 @@ class CollectionOperator(Enum):
         quantifier_op_version = QuantifierOperator.from_collection_operator(self)
         return quantifier_op_version.to_source() if quantifier_op_version else self.name
 
+    @classmethod
+    def from_quantifier_operator(cls, other: QuantifierOperator) -> CollectionOperator | None:
+        match other:
+            case QuantifierOperator.SEQUENCE:
+                return CollectionOperator.SEQUENCE
+            case QuantifierOperator.SET:
+                return CollectionOperator.SET
+            case QuantifierOperator.RELATION:
+                return CollectionOperator.RELATION
+            case QuantifierOperator.BAG:
+                return CollectionOperator.BAG
+            case _:
+                return None
+
 
 class ImportOperator(Enum):
     ALL_NAMES = auto()

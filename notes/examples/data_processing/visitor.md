@@ -87,7 +87,7 @@ procedure diningRooms (m : Meeting)
     else print(“no such meeting”)
 
 procedure diningRoomOccupancy(d : DiningRoom)
-    print(card((eats⁻ ¹ ◦ attends⁻ ¹)[{d}])
+    print(card((eats⁻ ¹ ◦ attends⁻ ¹)[{d}]))
 ```
 
 # Derivation of SYNT Rewrite Rules applied to `diningRoomOccupancy`

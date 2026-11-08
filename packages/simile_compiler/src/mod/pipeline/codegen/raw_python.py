@@ -1,15 +1,20 @@
 from dataclasses import dataclass
 from functools import singledispatchmethod
+from typing import ClassVar
 
 from src.mod.data import ast_, types, traits
 from src.mod.data.symbol_table import SymbolTable
 from src.mod.pipeline.analysis import SemanticAnalysis
 
+SIMILE_LIBRARY_NAME = "simile_python_raw"
 
-@dataclass
-class RawSimileToPythonCodeGenerator:
-    symbol_table: SymbolTable
-    lib_lookup: dict = {
+
+class CodegenError(Exception):
+    pass
+
+
+class BuiltinOperations:
+    lib_lookup: ClassVar[dict] = {
         ast_.RelationOperator.RELATION: "relation_generator",
         ast_.RelationOperator.TOTAL_RELATION: "total_relation_generator",
         ast_.RelationOperator.SURJECTIVE_RELATION: "surjective_relation_generator",
@@ -79,13 +84,28 @@ class RawSimileToPythonCodeGenerator:
         #
         ast_.BinaryOperator.CONCAT: "concat",
     }
-    custom_counter = 0
 
-    def lower_type(self, typ: types.BaseType) -> str:
-        raise NotImplementedError
+    @classmethod
+    def lookup(cls, op_type: ast_.Operators) -> str:
+        if op_type in cls.lib_lookup:
+            return f"{SIMILE_LIBRARY_NAME}.{cls.lib_lookup[op_type]}"
+        raise NotImplementedError(f"Builtin function not implemented for {op_type}")
 
-    def lower_op(self, typ: types.BaseType) -> str:
-        raise NotImplementedError
+
+@dataclass
+class ASTLowering:
+    symbol_table: SymbolTable
+
+    quantification_op_lookup = {
+        ast_.QuantifierOperator.FORALL: "forall",
+        ast_.QuantifierOperator.EXISTS: "exists",
+        ast_.QuantifierOperator.UNION_ALL: "union",
+        ast_.QuantifierOperator.INTERSECTION_ALL: "intersection",
+        ast_.QuantifierOperator.SUM: "sum",
+        ast_.QuantifierOperator.PRODUCT: "product",
+        ast_.QuantifierOperator.MAX: "max",
+        ast_.QuantifierOperator.MIN: "min",
+    }
 
     @singledispatchmethod
     def lower_ast(self, ast: ast_.ASTNode) -> ast_.ASTNode:
@@ -96,7 +116,31 @@ class RawSimileToPythonCodeGenerator:
         return ast
 
     @lower_ast.register
-    def _(self, ast: ast_.Quantifier3) -> ast_.ASTNode: ...
+    def _(self, ast: ast_.Quantifier3) -> ast_.ASTNode:
+        if not ast.op_type.is_collection_operator():
+            return ast_.Call(
+                ast_.Symbol(
+                    self.symbol_table.lookup_identifier(self.quantification_op_lookup[ast.op_type]),
+                ),
+                [ast_.SetComprehension(ast.body)],
+            )
+        end = ast.body.end_or_branch
+        if isinstance(end, list):
+            union_op_type = ast_.CollectionOperator.from_quantifier_operator(ast.op_type)
+            if union_op_type is None:
+                raise CodegenError(f"Failed to convert {ast.op_type} to a collection operator")
+            union_components = ast_.Enumeration(
+                list(map(lambda x: self.lower_ast(ast_.SetComprehension(x)), end)),
+                union_op_type,
+            )
+            end = ast_.Call(
+                ast_.Symbol(
+                    self.symbol_table.lookup_identifier(self.quantification_op_lookup[ast_.QuantifierOperator.UNION_ALL]),
+                ),
+                [union_components],
+            )
+        assert isinstance(end, ast_.ASTNode)
+        return ast_.Quantifier3(ast_.QuantifierBody(ast.body.generators, end), ast.op_type)
 
     @lower_ast.register
     def _(self, ast: ast_.Fold) -> ast_.ASTNode:
@@ -171,6 +215,59 @@ class RawSimileToPythonCodeGenerator:
             )
         return ast
 
+
+@dataclass
+class Printer:
+    symbol_table: SymbolTable
+
+    @singledispatchmethod
+    def lower_type(self, typ: types.BaseType) -> str:
+        raise NotImplementedError(f"Lowering not implemented for type {typ}")
+
+    @lower_type.register
+    def _(self, typ: types.BoolType) -> str:
+        return "bool"
+
+    @lower_type.register
+    def _(self, typ: types.AnyType_) -> str:
+        return "Any"
+
+    @lower_type.register
+    def _(self, typ: types.NoneType_) -> str:
+        return "None"
+
+    @lower_type.register
+    def _(self, typ: types.StringType) -> str:
+        return "str"
+
+    @lower_type.register
+    def _(self, typ: types.IntType) -> str:
+        return "int"
+
+    @lower_type.register
+    def _(self, typ: types.FloatType) -> str:
+        return "float"
+
+    @lower_type.register
+    def _(self, typ: types.SetType | types.RelationType) -> str:
+        return "set"
+
+    @lower_type.register
+    def _(self, typ: types.BagType) -> str:
+        return "Counter"
+
+    @lower_type.register
+    def _(self, typ: types.SequenceType | types.TupleType) -> str:
+        return "tuple"
+
+    @lower_type.register
+    def _(self, typ: types.GenericType) -> str:
+        return f"T_sc{typ.scope_id}_sy{typ.symbol_id}"
+
+    @lower_type.register
+    def _(self, typ: types.TypeOfType) -> str:
+        return "type"
+
     #### PRINTING ####
     def i(self, indent: int) -> str:
         # indentation
@@ -235,16 +332,16 @@ class RawSimileToPythonCodeGenerator:
     def _(self, ast: ast_.BinaryOp | ast_.RelationOp, i: int) -> str:
         left = self._print(ast.left, i)
         right = self._print(ast.right, i)
-        return f"simile.{self.lib_lookup[ast.op_type]}({left}, {right})"
+        return f"{BuiltinOperations.lookup(ast.op_type)}({left}, {right})"
 
     @_print.register
     def _(self, ast: ast_.UnaryOp, i: int) -> str:
-        return f"simile.{self.lib_lookup[ast.op_type]}({ast.value})"
+        return f"{BuiltinOperations.lookup(ast.op_type)}({ast.value})"
 
     @_print.register
     def _(self, ast: ast_.ListOp, i: int) -> str:
         ast_items = [self._print(item, i) for item in ast.items]
-        return f"simile.{self.lib_lookup[ast.op_type]}([{', '.join(ast_items)}])"
+        return f"{BuiltinOperations.lookup(ast.op_type)}([{', '.join(ast_items)}])"
 
     @_print.register
     def _(self, ast: ast_.ControlFlowStmt, i: int) -> str:
@@ -258,19 +355,32 @@ class RawSimileToPythonCodeGenerator:
 
     @_print.register
     def _(self, ast: ast_.Enumeration, i: int) -> str:
-        match ast.op_type:
+        l, r = self.collection_brackets(ast.op_type)
+        return f"{l}{', '.join([self._print(item, i) for item in ast.items])}{r}"
+
+    def collection_brackets(self, op_type: ast_.CollectionOperator) -> tuple[str, str]:
+        match op_type:
             case ast_.CollectionOperator.SET | ast_.CollectionOperator.RELATION:
-                items = [self._print(item, i) for item in ast.items]
-                return f"{{{', '.join(items)}}}"
+                return "{", "}"
             case ast_.CollectionOperator.SEQUENCE:
-                items = [self._print(item, i) for item in ast.items]
-                return f"[{', '.join(items)}]"
+                return "[", "]"
             case ast_.CollectionOperator.TUPLE:
-                items = [self._print(item, i) for item in ast.items]
-                return f"({', '.join(items)})"
+                return "(", ")"
             case ast_.CollectionOperator.BAG:
-                items = [self._print(item, i) for item in ast.items]
-                return f"Counter([{', '.join(items)}])"
+                return "Counter([", "])"
+
+    @_print.register
+    def _(self, ast: ast_.Quantifier3, i: int) -> str:
+        py_generators = ""
+        conditions = "True"
+        for generator in ast.body.generators:
+            py_generators += f" for {self._print(generator.identifiers, i)} in {SIMILE_LIBRARY_NAME}.iter({self._print(generator.set_, i)})"
+            conditions += f" and {self._print(generator.predicate, i)}"
+        op_type = ast_.CollectionOperator.from_quantifier_operator(ast.op_type)
+        if op_type is None:
+            raise CodegenError(f"Failed to convert quantifier operator {ast.op_type} to collection operator (expected python-compatible ASTs at this point)")
+        l, r = self.collection_brackets(op_type)
+        return f"{l}{self._print(ast.body.end_or_branch, i)}{py_generators} if {conditions}{r}"
 
     @_print.register
     def _(self, ast: ast_.Type_, i: int) -> str:
@@ -302,7 +412,7 @@ class RawSimileToPythonCodeGenerator:
     def _(self, ast: ast_.Image, i: int) -> str:
         indices = self._print(ast.indices, i)
         target = self._print(ast.target, i)
-        return f"simile.image({target}, {indices})"
+        return f"{SIMILE_LIBRARY_NAME}.image({target}, {indices})"
 
     @_print.register
     def _(self, ast: ast_.Assignment, i: int) -> str:
@@ -339,7 +449,7 @@ class RawSimileToPythonCodeGenerator:
     @_print.register
     def _(self, ast: ast_.For, i: int) -> str:
         iterable = self._print(ast.iterable, i)
-        return f"{self.i(i)}for {self._print(ast.iterable_names, i)} in simile.iter({iterable}):\n{self._print(ast.body, i + 1)}"
+        return f"{self.i(i)}for {self._print(ast.iterable_names, i)} in {SIMILE_LIBRARY_NAME}.iter({iterable}):\n{self._print(ast.body, i + 1)}"
 
     @_print.register
     def _(self, ast: ast_.While, i: int) -> str:
@@ -354,9 +464,11 @@ class RawSimileToPythonCodeGenerator:
     def _(self, ast: ast_.Start, i: int) -> str:
         main_body = self._print(ast.body, i + 1)
         return f"""
+from typing import Any
+
 from dataclasses import dataclass
 from collections import Counter
-import simile
+import {SIMILE_LIBRARY_NAME}
 
 def main():
 {main_body}

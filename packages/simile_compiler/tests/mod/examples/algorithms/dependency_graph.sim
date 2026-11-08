@@ -1,0 +1,10 @@
+record Package:
+    id: str
+    version: int
+    dependencies: set[Package]
+
+procedure dependencies_conflict(pkg1: Package, pkg2: Package) -> bool:
+    if pkg1.id = pkg2.id:
+        return pkg1.version = pkg2.version
+
+    return forall dep1 |-> dep2 in pkg1.dependencies >< pkg2.dependencies | dependencies_conflict(dep1, dep2)

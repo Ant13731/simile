@@ -1443,14 +1443,14 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
 \begin{gather}
   \tag{Forall}
   \begin{prooftree}
-    \infer0{\Forallttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Forallttt(\Set{\texttt{x in S}}{\texttt{P and E}})}
+    \infer0{\Forallttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Forallttt(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
 \paragraph{Exists}
 \begin{gather}
   \tag{Exists}
   \begin{prooftree}
-    \infer0{\Existsttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Existsttt(\Set{\texttt{x in S}}{\texttt{P and E}})}
+    \infer0{\Existsttt{\texttt{x in S}}{\texttt{P}}{\texttt{E}} \to \Existsttt(\Set{\texttt{x in S}}{\texttt{P}}{\texttt{E}})}
   \end{prooftree}
 \end{gather}
 \paragraph{Union all}

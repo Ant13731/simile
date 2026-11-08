@@ -28,3 +28,6 @@ procedure tails(S: sequence[T]) -> set[sequence[T]]:
 
 procedure heads(S: sequence[T]) -> set[sequence[T]]:
     return {i in 0..length(S) | i..length(S) <<| S}
+
+procedure segments(S: sequence[T]) -> set[sequence[T]]:
+    return {sub_S in tails(S), sub_sub_S in heads(sub_S) | sub_sub_S}
