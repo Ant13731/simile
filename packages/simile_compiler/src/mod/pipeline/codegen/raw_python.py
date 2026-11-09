@@ -7,6 +7,7 @@ from src.mod.data.symbol_table import SymbolTable
 from src.mod.pipeline.analysis import SemanticAnalysis
 
 SIMILE_LIBRARY_NAME = "simile_python_raw"
+SIMILE_LIBRARY_PATH = "simile_compiler.src.mod.pipeline.codegen.simile_python_raw_library"
 
 
 class CodegenError(Exception):
@@ -16,27 +17,27 @@ class CodegenError(Exception):
 class BuiltinOperations:
     lib_lookup: ClassVar[dict] = {
         ast_.RelationOperator.RELATION: "relation_generator",
-        ast_.RelationOperator.TOTAL_RELATION: "total_relation_generator",
-        ast_.RelationOperator.SURJECTIVE_RELATION: "surjective_relation_generator",
-        ast_.RelationOperator.TOTAL_SURJECTIVE_RELATION: "total_surjective_relation_generator",
-        ast_.RelationOperator.PARTIAL_FUNCTION: "partial_function_generator",
-        ast_.RelationOperator.TOTAL_FUNCTION: "total_function_generator",
-        ast_.RelationOperator.PARTIAL_INJECTION: "partial_injection_generator",
-        ast_.RelationOperator.TOTAL_INJECTION: "total_injection_generator",
-        ast_.RelationOperator.PARTIAL_SURJECTION: "partial_surjection_generator",
-        ast_.RelationOperator.TOTAL_SURJECTION: "total_surjection_generator",
-        ast_.RelationOperator.BIJECTION: "bijection_generator",
+        ast_.RelationOperator.TOTAL_RELATION: "relation_generator",
+        ast_.RelationOperator.SURJECTIVE_RELATION: "relation_generator",
+        ast_.RelationOperator.TOTAL_SURJECTIVE_RELATION: "relation_generator",
+        ast_.RelationOperator.PARTIAL_FUNCTION: "relation_generator",
+        ast_.RelationOperator.TOTAL_FUNCTION: "relation_generator",
+        ast_.RelationOperator.PARTIAL_INJECTION: "relation_generator",
+        ast_.RelationOperator.TOTAL_INJECTION: "relation_generator",
+        ast_.RelationOperator.PARTIAL_SURJECTION: "relation_generator",
+        ast_.RelationOperator.TOTAL_SURJECTION: "relation_generator",
+        ast_.RelationOperator.BIJECTION: "relation_generator",
         #
-        ast_.ListOperator.AND: "and",
-        ast_.ListOperator.OR: "or",
+        ast_.ListOperator.AND: "and_",
+        ast_.ListOperator.OR: "or_",
         #
-        ast_.UnaryOperator.NOT: "not",
+        ast_.UnaryOperator.NOT: "not_",
         ast_.UnaryOperator.NEGATIVE: "negative",
         ast_.UnaryOperator.INVERSE: "inverse",
         #
         ast_.BinaryOperator.IMPLIES: "implies",
-        ast_.BinaryOperator.EQUIVALENT: "equivalent",
-        ast_.BinaryOperator.NOT_EQUIVALENT: "not_equivalent",
+        # ast_.BinaryOperator.EQUIVALENT: "equivalent",
+        # ast_.BinaryOperator.NOT_EQUIVALENT: "not_equivalent",
         #
         ast_.BinaryOperator.ADD: "add",
         ast_.BinaryOperator.SUBTRACT: "subtract",
@@ -53,10 +54,10 @@ class BuiltinOperations:
         #
         ast_.BinaryOperator.EQUAL: "equal",
         ast_.BinaryOperator.NOT_EQUAL: "not_equal",
-        ast_.BinaryOperator.IS: "is",
-        ast_.BinaryOperator.IS_NOT: "is_not",
+        # ast_.BinaryOperator.IS: "is",
+        # ast_.BinaryOperator.IS_NOT: "is_not",
         #
-        ast_.BinaryOperator.IN: "in",
+        ast_.BinaryOperator.IN: "in_",
         ast_.BinaryOperator.NOT_IN: "not_in",
         ast_.BinaryOperator.UNION: "union",
         ast_.BinaryOperator.INTERSECTION: "intersection",
@@ -75,7 +76,7 @@ class BuiltinOperations:
         ast_.BinaryOperator.RELATION_OVERRIDING: "relation_overriding",
         ast_.BinaryOperator.COMPOSITION: "composition",
         ast_.BinaryOperator.CARTESIAN_PRODUCT: "cartesian_product",
-        ast_.BinaryOperator.UPTO: "..",
+        ast_.BinaryOperator.UPTO: "upto",
         #
         ast_.BinaryOperator.DOMAIN_SUBTRACTION: "domain_subtraction",
         ast_.BinaryOperator.DOMAIN_RESTRICTION: "domain_restriction",
@@ -468,7 +469,7 @@ from typing import Any
 
 from dataclasses import dataclass
 from collections import Counter
-import {SIMILE_LIBRARY_NAME}
+import {SIMILE_LIBRARY_PATH} as {SIMILE_LIBRARY_NAME}
 
 def main():
 {main_body}

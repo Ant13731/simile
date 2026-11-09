@@ -1,6 +1,7 @@
 # Simile Improvements
-- [ ] How can we disambiguate the expression [[a, b], [a]] - the double "[[" and "]]" will be parsed as a bag, when this should be a seq of seq. What should `f [1]` represent - relational image or `f` beside a seq literal?
-- [ ] Allow (x |-> y in S | x |-> y) to represent the comprehension of an ordered relation (similar to how we have seq for sets)
+- [x] How can we disambiguate the expression [[a, b], [a]] - the double "[[" and "]]" will be parsed as a bag, when this should be a seq of seq. What should `f [1]` represent - relational image or `f` beside a seq literal?
+    - [x] Fixed by using non-overlapping symbols: `<[` and `]>`
+- [ ] Allow [x |-> y in S | x |-> y] to represent the comprehension of an ordered relation (similar to how we have seq for sets)
 - [ ] Make maplet use "->" instead of "|->" so it doesnt look clunky in comprehensions? then function arrows would need to be "-->"
 - [ ] No side effects allowed in comprehensions - treat as pure expressions, only iter can have side effects - how to express that?
 - [ ] Give typeExpr relational arrows
