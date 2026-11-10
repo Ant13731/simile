@@ -58,8 +58,12 @@ class ParseError(Exception):
     """Raised with all parse errors formatted as clear stdout output"""
 
     def __init__(self, parser: Parser):
-        err_str = f"Failed to parse input, found {len(parser.errors)} error(s).\n"
+        err_str = f"Failed to parse input, found {len(parser.errors)} error(s) ({len(parser.errors_from_alternate_paths)} alternative path error(s)).\n"
         for err in parser.errors:
+            err_str += f"{err}\n"
+
+        err_str += "\nAlternate error paths:\n"
+        for err in parser.errors_from_alternate_paths:
             err_str += f"{err}\n"
 
         err_str += "\nParser info:\n"
@@ -102,6 +106,7 @@ class Parser:
     source_file_path: Path | None
     current_index: int = 0
     errors: list[ParseErr] = field(default_factory=list)
+    errors_from_alternate_paths: list[ParseErr] = field(default_factory=list)
     derivation: list[str] = field(default_factory=list)
 
     # Idea: store the first sets and the corresponding functions (that would otherwise be "matched" when making decisions)
@@ -116,7 +121,7 @@ class Parser:
         "simple_stmt": {"assignment_or_expr", "control_flow_stmt", "import_stmt"},
         "assignment_or_expr": {"expr"},
         "trait_stmt": {TokenType.NEWLINE, TokenType.TRAIT},
-        "expr": {"quantification", "predicate"},
+        "expr": {"quantification", "predicate", "lambda_def"},
         "quantification": {
             TokenType.GENERAL_UNION,
             TokenType.GENERAL_INTERSECTION,
@@ -301,13 +306,15 @@ class Parser:
     def prep_backtrack(self) -> tuple[int, int]:
         return self.current_index, len(self.derivation)
 
-    def backtrack_from_error(self, starting_index: int, starting_derivation: int, error_count: int = 1) -> list[ParseErr]:
+    def backtrack_from_error(self, starting_index: int, starting_derivation: int, error_count: int = 1, add_errs_to_alt=True) -> list[ParseErr]:
         self.current_index = starting_index
         self.derivation = self.derivation[:starting_derivation]
         parse_errs = []
         for _ in range(error_count):
             if self.errors:
                 parse_errs.append(self.errors.pop())
+        if add_errs_to_alt:
+            self.errors_from_alternate_paths.extend(parse_errs)
         return parse_errs
 
     # Parsing based (loosely) on the grammar in the specification
@@ -414,7 +421,7 @@ class Parser:
                 self.consume(TokenType.INDENT, "Expected indent after assignment or expression newline before trait statement")
                 traits = []
                 while not self.match(TokenType.DEDENT):
-                    self.consume(TokenType.TRAIT, "Each refinement line in an assignment block must start with 'trait'")
+                    self.consume(TokenType.TRAIT, "Each line in a trait block must start with 'trait'")
                     traits.append(self.expr())
                     t = self.peek()
                     self.consume(TokenType.NEWLINE, "Expected newline after with clause expression")
@@ -519,11 +526,13 @@ class Parser:
 
     @store_derivation
     def ident_list_item_non_maplet(self) -> ast_.IdentifierListTypes:
-        match (t := self.advance()).type_:
+        match (t := self.peek()).type_:
             case TokenType.IDENTIFIER:
                 item: ast_.IdentifierListTypes = ast_.Identifier(t.value)
+                self.advance()
             case TokenType.L_PAREN:
                 set_whitespace_back_to = self.ignore_whitespace(True)
+                self.advance()
                 item = self.ident_list()
                 self.consume(TokenType.R_PAREN, "Expected end to identifier item sub-list")
                 self.ignore_whitespace(set_whitespace_back_to)
@@ -710,7 +719,7 @@ class Parser:
             logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body. Parse error was: {self.errors[-1]}")
             # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
             # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
-            parse_errs = self.backtrack_from_error(*backtrack_ctx)
+            parse_errs = self.backtrack_from_error(*backtrack_ctx, add_errs_to_alt=False)
             if self.peek().type_ in self.get_first_set("branch_quantification_body"):
                 return ast_.QuantifierBody([], self.branch_quantification_body())
             # Add back in the original generator errors if the quantification body also failed
@@ -724,7 +733,7 @@ class Parser:
                 logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body. Parse error was: {self.errors[-1]}")
                 # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
                 # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
-                parse_errs = self.backtrack_from_error(*backtrack_ctx)
+                parse_errs = self.backtrack_from_error(*backtrack_ctx, add_errs_to_alt=False)
                 if self.peek().type_ in self.get_first_set("branch_quantification_body"):
                     return ast_.QuantifierBody(generators, self.branch_quantification_body())
                 # Add back in the original generator errors if the quantification body also failed
@@ -990,33 +999,42 @@ class Parser:
 
     @store_derivation
     def atom(self) -> ast_.ASTNode:
-        match (t := self.advance()).type_:
+        match (t := self.peek()).type_:
             case TokenType.INTEGER:
+                self.advance()
                 return ast_.Int(t.value)
             case TokenType.FLOAT:
+                self.advance()
                 return ast_.Float(t.value)
             case TokenType.STRING:
+                self.advance()
                 return ast_.String(t.value)
             case TokenType.TRUE:
+                self.advance()
                 return ast_.True_()
             case TokenType.FALSE:
+                self.advance()
                 return ast_.False_()
             case TokenType.L_BRACE:
+                self.advance()
                 set_whitespace_back_to = self.ignore_whitespace(True)
                 set_ = self.set_()
                 self.ignore_whitespace(set_whitespace_back_to)
                 return set_
             case TokenType.L_BRACKET:
+                self.advance()
                 set_whitespace_back_to = self.ignore_whitespace(True)
                 sequence = self.sequence()
                 self.ignore_whitespace(set_whitespace_back_to)
                 return sequence
             case TokenType.L_DOUBLE_BRACKET:
+                self.advance()
                 set_whitespace_back_to = self.ignore_whitespace(True)
                 bag = self.bag()
                 self.ignore_whitespace(set_whitespace_back_to)
                 return bag
             case TokenType.L_PAREN:
+                self.advance()
                 set_whitespace_back_to = self.ignore_whitespace(True)
                 if self.peek().type_ == TokenType.R_PAREN:
                     self.advance()
@@ -1038,6 +1056,7 @@ class Parser:
                 return ast_.TupleLiteral(exprs)
 
             case TokenType.IDENTIFIER:
+                self.advance()
                 return ast_.Identifier(t.value)
             case _:
                 self.error("Failed to interpret first token of expected atom")
@@ -1124,17 +1143,21 @@ class Parser:
 
     @store_derivation
     def control_flow_stmt(self) -> ast_.ASTNode:
-        match self.advance().type_:
+        match self.peek().type_:
             case TokenType.RETURN:
+                self.advance()
                 # This may try to eat up the next line? might need a statement separator...
                 if self.peek().type_ not in self.get_first_set("expr"):
                     return ast_.Return(ast_.None_())
                 return ast_.Return(self.expr())
             case TokenType.BREAK:
+                self.advance()
                 return ast_.Break()
             case TokenType.CONTINUE:
+                self.advance()
                 return ast_.Continue()
             case TokenType.SKIP:
+                self.advance()
                 return ast_.Skip()
             case _:
                 self.error("Invalid start to control flow statement")

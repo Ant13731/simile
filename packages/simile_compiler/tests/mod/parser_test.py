@@ -837,14 +837,14 @@ QUANTIFICATION_AND_TYPING_CASES = [
 PARSER_ERROR_CASES_ASSIGNMENT_AND_TYPING = [
     (
         "a: int v",
-        "parsing assignment or expression (and before possible traits)",
+        "Expected end of simple statements continuation",
     ),
     (
         normalize_source("""
             a: int := v
                 a > 0
             """),
-        "Each refinement line in an assignment block must start with 'trait'",
+        "Each line in a trait block must start with 'trait'",
     ),
 ]
 
