@@ -66,11 +66,11 @@ BASIC_EXPRESSION_CASES = [
     ("x |-> y", Maplet(Identifier("x"), Identifier("y"))),
     ("{}", SetEnumeration([])),
     ("[]", SequenceEnumeration([])),
-    ("[[]]", BagEnumeration([])),
+    ("[||]", BagEnumeration([])),
     ("{1, 2}", SetEnumeration([Int("1"), Int("2")])),
     ("{1 |-> 2}", RelationEnumeration([Maplet(Int("1"), Int("2"))])),
     ("[1, 2]", SequenceEnumeration([Int("1"), Int("2")])),
-    ("[[1, 2]]", BagEnumeration([Int("1"), Int("2")])),
+    ("[|1, 2|]", BagEnumeration([Int("1"), Int("2")])),
 ]
 
 TYPE_EXPRESSION_CASES = [
@@ -178,8 +178,19 @@ COMPOUND_STATEMENT_CASES = [
 						print(i)
 					"""),
         For(
-            TupleIdentifier((Identifier("i"),)),
+            Identifier("i"),
             SequenceEnumeration([Int("1"), Int("2"), Int("3")]),
+            Statements([Call(Identifier("print"), [Identifier("i")])]),
+        ),
+    ),
+    (
+        normalize_source("""
+                        for (i,j) in {(1, 2)}:
+                            print(i)
+                        """),
+        For(
+            TupleIdentifier((Identifier("i"), Identifier("j"))),
+            SetEnumeration([TupleLiteral([Int("1"), Int("2")])]),
             Statements([Call(Identifier("print"), [Identifier("i")])]),
         ),
     ),
@@ -293,8 +304,8 @@ COMPREHENSION_CASES = [
         Quantifier3(
             QuantifierBody(
                 [
-                    Generator(TupleIdentifier((Identifier("x"),)), Identifier("X"), True_()),
-                    Generator(TupleIdentifier((Identifier("y"),)), Identifier("Y"), True_()),
+                    Generator(Identifier("x"), Identifier("X"), True_()),
+                    Generator(Identifier("y"), Identifier("Y"), True_()),
                 ],
                 Maplet(Identifier("x"), Identifier("y")),
             ),
@@ -306,7 +317,7 @@ COMPREHENSION_CASES = [
         Quantifier3(
             QuantifierBody(
                 [
-                    Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                    Generator(Identifier("x"), Identifier("S"), True_()),
                 ],
                 Identifier("x"),
             ),
@@ -314,11 +325,11 @@ COMPREHENSION_CASES = [
         ),
     ),
     (
-        "[[x in S | x]]",
+        "[|x in S | x|]",
         Quantifier3(
             QuantifierBody(
                 [
-                    Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                    Generator(Identifier("x"), Identifier("S"), True_()),
                 ],
                 Identifier("x"),
             ),
@@ -330,7 +341,7 @@ COMPREHENSION_CASES = [
         Quantifier3(
             QuantifierBody(
                 [
-                    Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                    Generator(Identifier("x"), Identifier("S"), True_()),
                 ],
                 Call(Identifier("F"), [Identifier("x")]),
             ),
@@ -342,7 +353,7 @@ COMPREHENSION_CASES = [
         Quantifier3(
             QuantifierBody(
                 [
-                    Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                    Generator(Identifier("x"), Identifier("S"), True_()),
                 ],
                 Call(Identifier("F"), [Identifier("x")]),
             ),
@@ -350,7 +361,7 @@ COMPREHENSION_CASES = [
         ),
     ),
     (
-        "lambda x . x in S | x",
+        "lambda x .: x in S | x",
         LambdaDef(
             TupleIdentifier((Identifier("x"),)),
             In(Identifier("x"), Identifier("S")),
@@ -362,7 +373,7 @@ COMPREHENSION_CASES = [
         Fold(
             Assignment(Identifier("i"), Int("0"), False),
             QuantifierBody(
-                [Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_())],
+                [Generator(Identifier("x"), Identifier("S"), True_())],
                 Add(Identifier("i"), Identifier("x")),
             ),
         ),
@@ -373,8 +384,8 @@ COMPREHENSION_CASES = [
             QuantifierBody(
                 [],
                 [
-                    QuantifierBody([Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_())], Identifier("x")),
-                    QuantifierBody([Generator(TupleIdentifier((Identifier("y"),)), Identifier("S"), True_())], Identifier("y")),
+                    QuantifierBody([Generator(Identifier("x"), Identifier("S"), True_())], Identifier("x")),
+                    QuantifierBody([Generator(Identifier("y"), Identifier("S"), True_())], Identifier("y")),
                 ],
             ),
             QuantifierOperator.SUM,
@@ -386,7 +397,7 @@ COMPREHENSION_CASES = [
             IterBody(
                 [
                     IterGenerator(
-                        Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                        Generator(Identifier("x"), Identifier("S"), True_()),
                         [
                             Assignment(Identifier("i"), Int("0"), False),
                             Assignment(Identifier("j"), Int("1"), False),
@@ -414,13 +425,13 @@ COMPREHENSION_CASES = [
             IterBody(
                 [
                     IterGenerator(
-                        Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                        Generator(Identifier("x"), Identifier("S"), True_()),
                         [
                             Assignment(Identifier("i"), Int("0"), False),
                         ],
                     ),
                     IterGenerator(
-                        Generator(TupleIdentifier((Identifier("y"),)), Identifier("T"), True_()),
+                        Generator(Identifier("y"), Identifier("T"), True_()),
                         [
                             Assignment(Identifier("j"), Int("1"), False),
                         ],
@@ -436,7 +447,7 @@ COMPREHENSION_CASES = [
                             )
                         ]
                     ),
-                    TupleIdentifier((Identifier("i"),)),
+                    Identifier("i"),
                 ),
             )
         ),
@@ -450,7 +461,7 @@ COMPREHENSION_CASES = [
                     IterBody(
                         [
                             IterGenerator(
-                                Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                                Generator(Identifier("x"), Identifier("S"), True_()),
                                 [
                                     Assignment(Identifier("i"), Int("0"), False),
                                 ],
@@ -466,7 +477,7 @@ COMPREHENSION_CASES = [
                                     )
                                 ]
                             ),
-                            TupleIdentifier((Identifier("i"),)),
+                            Identifier("i"),
                         ),
                     ),
                 ],
@@ -518,7 +529,7 @@ COMPREHENSION_CASES = [
             IterBody(
                 [
                     IterGenerator(
-                        Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                        Generator(Identifier("x"), Identifier("S"), True_()),
                         [
                             Assignment(Identifier("i"), Int("0"), False),
                         ],
@@ -534,7 +545,7 @@ COMPREHENSION_CASES = [
                             )
                         ]
                     ),
-                    TupleIdentifier((Identifier("i"),)),
+                    Identifier("i"),
                 ),
             )
         ),
@@ -585,8 +596,8 @@ COLLECTION_NEWLINE_CASES = [
     ),
     (
         """
-        [[
-        ]]
+        [|
+        |]
         """,
         BagEnumeration([]),
     ),
@@ -610,10 +621,10 @@ COLLECTION_NEWLINE_CASES = [
     ),
     (
         """
-        [[
+        [|
             1,
             2
-        ]]
+        |]
         """,
         BagEnumeration([Int("1"), Int("2")]),
     ),
@@ -646,17 +657,17 @@ ADVANCED_EXPRESSION_CASES = [
         "obj.field.subfield",
         RecordAccess(RecordAccess(Identifier("obj"), Identifier("field")), Identifier("subfield")),
     ),
-    ("R[x]", Image(Identifier("R"), Identifier("x"))),
+    ("R[x]", Image(Identifier("R"), [Identifier("x")])),
     (
         "R[x].field",
-        RecordAccess(Image(Identifier("R"), Identifier("x")), Identifier("field")),
+        RecordAccess(Image(Identifier("R"), [Identifier("x")]), Identifier("field")),
     ),
     (
         "{x in S | x + 1}",
         Quantifier3(
             QuantifierBody(
                 [
-                    Generator(TupleIdentifier((Identifier("x"),)), Identifier("S"), True_()),
+                    Generator(Identifier("x"), Identifier("S"), True_()),
                 ],
                 Add(Identifier("x"), Int("1")),
             ),
@@ -752,7 +763,7 @@ QUANTIFICATION_AND_TYPING_CASES = [
             QuantifierBody(
                 [
                     Generator(
-                        TupleIdentifier((Identifier("x"),)),
+                        Identifier("x"),
                         Identifier("S"),
                         True_(),
                     ),
@@ -763,12 +774,12 @@ QUANTIFICATION_AND_TYPING_CASES = [
         ),
     ),
     (
-        "exists x in S | x > 0",
+        "exists (x,y) in S | x > 0",
         Quantifier3(
             QuantifierBody(
                 [
                     Generator(
-                        TupleIdentifier((Identifier("x"),)),
+                        TupleIdentifier((Identifier("x"), Identifier("y"))),
                         Identifier("S"),
                         True_(),
                     ),
@@ -867,7 +878,7 @@ PARSER_ERROR_CASES_IMPORTS = [
 
 PARSER_ERROR_CASES_QUANTIFICATION_AND_GROUPING = [
     (
-        "forall . x in S",
+        "forall .: x in S",
         "No identifier or sub-pattern found",
     ),
     (
@@ -934,14 +945,14 @@ class TestParserHappyPath:
         SIMPLE_STATEMENT_CASES,
     )
     def test_parse_simple_statements(self, source: str, expected_body: ASTNode):
-        assert parse(source) == start_with_body(source, expected_body)
+        assert parse(source, Path("test_source_file_path")) == start_with_body(source, expected_body)
 
     @pytest.mark.parametrize(
         "source, expected_body",
         MULTI_SIMPLE_STATEMENT_CASES,
     )
     def test_parse_multiple_simple_statements(self, source: str, expected_body: list[ASTNode]):
-        assert parse(source) == start_with_statements(source, expected_body)
+        assert parse(source, Path("test_source_file_path")) == start_with_statements(source, expected_body)
 
     @pytest.mark.parametrize(
         "source, expected_body",
@@ -1016,5 +1027,5 @@ class TestParserErrorCases:
     )
     def test_parse_error_cases(self, source: str, expected_error_msg: str):
         with pytest.raises(ParseError) as exc_info:
-            parse(source)
+            parse(source, Path("test_source_file_path"))
         assert expected_error_msg in str(exc_info.value)

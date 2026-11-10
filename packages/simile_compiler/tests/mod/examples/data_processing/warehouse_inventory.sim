@@ -8,7 +8,7 @@ material_catalogue: relation[PartID, FriendlyName] := {}
 material_price_catalogue: relation[PartID, Price] := {}
     trait many_to_one
 
-inventory: bag[PartID] := <[]>
+inventory: bag[PartID] := [| |]
 recipes: relation[ProductID, bag[PartID]]
     trait many_to_one
 

@@ -298,6 +298,18 @@ class Parser:
         self.ignore_whitespace_ = set_to
         return set_value_back_to
 
+    def prep_backtrack(self) -> tuple[int, int]:
+        return self.current_index, len(self.derivation)
+
+    def backtrack_from_error(self, starting_index: int, starting_derivation: int, error_count: int = 1) -> list[ParseErr]:
+        self.current_index = starting_index
+        self.derivation = self.derivation[:starting_derivation]
+        parse_errs = []
+        for _ in range(error_count):
+            if self.errors:
+                parse_errs.append(self.errors.pop())
+        return parse_errs
+
     # Parsing based (loosely) on the grammar in the specification
     @store_derivation
     def start(self) -> ast_.Start:
@@ -381,19 +393,18 @@ class Parser:
         # Since trait statements can start with a newline and assignments can end with a newline,
         # we need backtracking to determine the correct parsing route. Since traits are more restrictive
         # parse those first
-        starting_index = self.current_index
+        backtrack_ctx = self.prep_backtrack()
         try:
             attempted_traits_parse = self.trait_stmt()
             return ast_.TraitApplication(assignment, attempted_traits_parse)
         except ParseException:
             logger.debug(f"Failed to parse trait statement. Backtracking out of assignment. Parse error was: {self.errors[-1]}")
-            self.errors.pop()
-        self.current_index = starting_index
+            self.backtrack_from_error(*backtrack_ctx)
         return assignment
 
     @store_derivation
     def trait_stmt(self) -> list[ast_.ASTNode]:
-        match self.advance().type_:
+        match (t := self.advance()).type_:
             case TokenType.TRAIT:
                 traits = [self.expr()]
                 while self.match(TokenType.TRAIT):
@@ -405,7 +416,11 @@ class Parser:
                 while not self.match(TokenType.DEDENT):
                     self.consume(TokenType.TRAIT, "Each refinement line in an assignment block must start with 'trait'")
                     traits.append(self.expr())
+                    t = self.peek()
                     self.consume(TokenType.NEWLINE, "Expected newline after with clause expression")
+                # FIXME: hack to get traits working with SimpleStatements (which expects a newline at the end,
+                # not our consumed dedent)
+                self.tokens.insert(self.current_index, t)
                 return traits
             case _:
                 self.error("Trait statement must start with 'trait' or a newline after an assignment or expression")
@@ -509,7 +524,6 @@ class Parser:
                 item: ast_.IdentifierListTypes = ast_.Identifier(t.value)
             case TokenType.L_PAREN:
                 set_whitespace_back_to = self.ignore_whitespace(True)
-                self.advance()
                 item = self.ident_list()
                 self.consume(TokenType.R_PAREN, "Expected end to identifier item sub-list")
                 self.ignore_whitespace(set_whitespace_back_to)
@@ -633,16 +647,17 @@ class Parser:
         # Attempt to parse as a func call first. If we see "|" or the expr parse fails,
         # we know this is a quantification, so backtrack and try again
         quantification_token_as_identifier = ast_.Identifier(t.value)
-        starting_index = self.current_index
+        backtrack_ctx = self.prep_backtrack()
         try:
             # Small hack, but allows us to use both `forall (x,y) in S | x` and `forall(S)`
-            attempted_expr_parse = self.atom_follow(quantification_token_as_identifier)
-            if self.peek().type_ != TokenType.VBAR:
-                return attempted_expr_parse
+            if self.peek().type_ == TokenType.L_PAREN:
+                attempted_expr_parse = self.atom_follow(quantification_token_as_identifier)
+                if self.peek().type_ != TokenType.IN:
+                    return attempted_expr_parse
+                self.backtrack_from_error(*backtrack_ctx, error_count=0)
         except ParseException:
             logger.debug(f"Failed to parse quantification IDENTIFIER as an atom (func call), attempting to parse as a quantification. Parse error was: {self.errors[-1]}")
-            self.errors.pop()
-        self.current_index = starting_index
+            self.backtrack_from_error(*backtrack_ctx)
 
         # Then attempt to parse as a quantification
         try:
@@ -676,23 +691,46 @@ class Parser:
 
             body = self.quantification_body()
             return ast_.Quantifier3(body, op_type)
-        except ParseException:
+        except ParseException as e:
             logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier. Parse error was: {self.errors[-1]}")
-            self.errors.pop()
-        self.current_index = starting_index
+            # TEMP: testing parsing without considering identifiers
+            # self.backtrack_from_error(*backtrack_ctx)
+            raise e
 
         # If all else fails, treat as an identifier
-        return quantification_token_as_identifier
+        # TEMP: disabled to test parsing quant without considering identifiers
+        # return quantification_token_as_identifier
 
     @store_derivation
     def quantification_body(self) -> ast_.QuantifierBody:
-        if self.peek().type_ in self.get_first_set("branch_quantification_body"):
-            return ast_.QuantifierBody([], self.branch_quantification_body())
-        generators = [self.generator()]
-        while self.match(TokenType.COMMA):
+        backtrack_ctx = self.prep_backtrack()
+        try:
+            generators = [self.generator()]
+        except ParseException as e:
+            logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body. Parse error was: {self.errors[-1]}")
+            # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
+            # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
+            parse_errs = self.backtrack_from_error(*backtrack_ctx)
             if self.peek().type_ in self.get_first_set("branch_quantification_body"):
-                return ast_.QuantifierBody(generators, self.branch_quantification_body())
-            generators.append(self.generator())
+                return ast_.QuantifierBody([], self.branch_quantification_body())
+            # Add back in the original generator errors if the quantification body also failed
+            self.errors.extend(parse_errs)
+            raise e
+
+        while self.match(TokenType.COMMA):
+            try:
+                generators.append(self.generator())
+            except ParseException as e:
+                logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body. Parse error was: {self.errors[-1]}")
+                # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
+                # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
+                parse_errs = self.backtrack_from_error(*backtrack_ctx)
+                if self.peek().type_ in self.get_first_set("branch_quantification_body"):
+                    return ast_.QuantifierBody(generators, self.branch_quantification_body())
+                # Add back in the original generator errors if the quantification body also failed
+                self.errors.extend(parse_errs)
+                raise e
+
         self.consume(TokenType.VBAR, "Expected pipe symbol after generators in quantification body")
         expr = self.expr()
         return ast_.QuantifierBody(generators, expr)
@@ -1009,13 +1047,13 @@ class Parser:
         if self.match(TokenType.NEWLINE):
             self.match(TokenType.INDENT)
 
-        # Since sets may start with an ident_list even if they are just set enumeration,
-        # we need to use similar hacks to quantification body
-        starting_index = self.current_index
-
         # Handle empty set
         if self.match(closing_symbol):
             return ast_.Enumeration([], collection_operator)
+
+        # Since sets may start with an ident_list even if they are just set enumeration,
+        # we need to use similar hacks to quantification body
+        backtrack_ctx = self.prep_backtrack()
 
         # Then try set enumeration with one elem
         # FIXME This comma trick wont work because actual generators can use commas now
@@ -1031,14 +1069,13 @@ class Parser:
 
             if self.match(closing_symbol):
                 return ast_.Enumeration(enumeration, collection_operator)
+            self.backtrack_from_error(*backtrack_ctx, error_count=0)
         except ParseException:
             logger.debug(f"Failed to parse as enumeration, trying as quantification. Parse error was: {self.errors[-1]}")
-            self.errors.pop()  # remove the parseException cause by attempting to match on expr directly
+            # backtrack - this is not an enumeration, rather a quantification
+            self.backtrack_from_error(*backtrack_ctx)
 
-        # backtrack - this is not an enumeration, rather a quantification
-        self.current_index = starting_index
         body = self.quantification_body()
-
         quantification_operator = ast_.QuantifierOperator.from_collection_operator(collection_operator)
         if quantification_operator is None:
             self.error(f"Failed to convert collection operator {collection_operator} to quantification operator")

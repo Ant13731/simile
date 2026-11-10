@@ -36,9 +36,13 @@ def _(ast: ast_.MapletIdentifier, indent: int) -> str:
 
 @_ast_to_source.register(ast_.Int)
 @_ast_to_source.register(ast_.Float)
-@_ast_to_source.register(ast_.String)
-def _(ast: ast_.Int | ast_.Float | ast_.String, indent: int) -> str:
+def _(ast: ast_.Int | ast_.Float, indent: int) -> str:
     return ast.value
+
+
+@_ast_to_source.register(ast_.String)
+def _(ast: ast_.String, indent: int) -> str:
+    return f'"{ast.value}"'
 
 
 @_ast_to_source.register(ast_.True_)

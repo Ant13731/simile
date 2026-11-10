@@ -1365,10 +1365,10 @@ class ReplaceAndSimplifyCollection(RewriteCollection):
 
 
 REWRITE_COLLECTION: list[type[RewriteCollection]] = [
-    SyntacticSugarForBags,
-    SyntacticSugarForSequences,
+    # SyntacticSugarForBags,
+    # SyntacticSugarForSequences,
     ComprehensionConstructionCollection,
-    BuiltinFunctions,
+    # BuiltinFunctions,
     ComprehensionConstructionCollection,
     DisjunctiveNormalFormCollection,
     OrWrappingCollection,

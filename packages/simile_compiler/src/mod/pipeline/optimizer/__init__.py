@@ -6,8 +6,8 @@ from src.mod.pipeline.optimizer.rewrite_collection import (
 )
 from src.mod.pipeline.optimizer.rewrite_collections import (
     REWRITE_COLLECTION,
-    SyntacticSugarForBags,
-    BuiltinFunctions,
+    # SyntacticSugarForBags,
+    # BuiltinFunctions,
     ComprehensionConstructionCollection,
     DisjunctiveNormalFormCollection,
     OrWrappingCollection,

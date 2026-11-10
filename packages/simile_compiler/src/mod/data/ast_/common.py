@@ -582,7 +582,7 @@ class Import(ASTNode):
 @dataclass
 class Start(ASTNode):
     body: Statements | None_
-    original_text: str
+    original_text: str = field(compare=False)
 
 
 Primitive = Int | Float | String | True_ | False_ | None_

@@ -250,16 +250,25 @@ class Printer:
         return "float"
 
     @lower_type.register
-    def _(self, typ: types.SetType | types.RelationType) -> str:
-        return "set"
+    def _(self, typ: types.SetType) -> str:
+        return f"set[{self.lower_type(typ.element_type)}]"
+
+    @lower_type.register
+    def _(self, typ: types.RelationType) -> str:
+        return f"{SIMILE_LIBRARY_NAME}.Relation[{self.lower_type(typ.left)}, {self.lower_type(typ.right)}]"
 
     @lower_type.register
     def _(self, typ: types.BagType) -> str:
-        return "Counter"
+        return f"Counter[{self.lower_type(typ.element_type)}]"
 
     @lower_type.register
-    def _(self, typ: types.SequenceType | types.TupleType) -> str:
-        return "tuple"
+    def _(self, typ: types.SequenceType) -> str:
+        return f"tuple[{self.lower_type(typ.element_type)}, ...]"
+
+    @lower_type.register
+    def _(self, typ: types.TupleType) -> str:
+        tuple_types = [self.lower_type(t) for t in typ.items]
+        return f"tuple[{', '.join(tuple_types)}]"
 
     @lower_type.register
     def _(self, typ: types.GenericType) -> str:
@@ -267,7 +276,7 @@ class Printer:
 
     @lower_type.register
     def _(self, typ: types.TypeOfType) -> str:
-        return "type"
+        return f"type[{self.lower_type(typ.type_of)}]"
 
     #### PRINTING ####
     def i(self, indent: int) -> str:
@@ -361,7 +370,7 @@ class Printer:
 
     def collection_brackets(self, op_type: ast_.CollectionOperator) -> tuple[str, str]:
         match op_type:
-            case ast_.CollectionOperator.SET | ast_.CollectionOperator.RELATION:
+            case ast_.CollectionOperator.SET:
                 return "{", "}"
             case ast_.CollectionOperator.SEQUENCE:
                 return "[", "]"
@@ -369,6 +378,8 @@ class Printer:
                 return "(", ")"
             case ast_.CollectionOperator.BAG:
                 return "Counter([", "])"
+            case ast_.CollectionOperator.RELATION:
+                return f"{SIMILE_LIBRARY_NAME}.Relation.from_set_tuple({{", "})"
 
     @_print.register
     def _(self, ast: ast_.Quantifier3, i: int) -> str:
