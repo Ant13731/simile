@@ -30,7 +30,7 @@ from tests.mod.parser_test import (
 
 def round_trip_parse(source: str) -> ASTNode:
     """Parse the source code, convert the AST back to source code, and parse it again."""
-    ast = parse(source)
+    ast = parse(source, Path("test_source_file_path"))
     source_from_ast = ast_to_source(ast)
     return parse(source_from_ast, Path("test_source_file_path"))
 

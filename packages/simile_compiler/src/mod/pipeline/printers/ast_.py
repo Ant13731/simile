@@ -105,8 +105,7 @@ def _(ast: ast_.Generator, indent: int) -> str:
 
 
 @_ast_to_source.register(ast_.QuantifierBody)
-@_ast_to_source.register(ast_.IterBody)
-def _(ast: ast_.QuantifierBody | ast_.IterBody, indent: int) -> str:
+def _(ast: ast_.QuantifierBody, indent: int) -> str:
     generators = ", ".join(_ast_to_source(gen, indent) for gen in ast.generators)
     if isinstance(ast.end_or_branch, list):
         # To account for no initial generators, we conditionally add a comma between generators and branches
@@ -115,6 +114,19 @@ def _(ast: ast_.QuantifierBody | ast_.IterBody, indent: int) -> str:
         branches = ") ` (".join(_ast_to_source(branch, indent) for branch in ast.end_or_branch)
         return f"{generators}({branches})"
     return f"{generators} | {_ast_to_source(ast.end_or_branch, indent)}"
+
+
+@_ast_to_source.register(ast_.IterBody)
+def _(ast: ast_.IterBody, indent: int) -> str:
+    generators = ", ".join(_ast_to_source(gen, indent) for gen in ast.generators)
+    if isinstance(ast.end_or_branch, list):
+        # To account for no initial generators, we conditionally add a comma between generators and branches
+        if generators:
+            generators += ", "
+        branches = ") ` (".join(_ast_to_source(branch, indent) for branch in ast.end_or_branch)
+        return f"{generators}({branches})"
+    # Iter end branch supplies its own VBAR
+    return f"{generators} {_ast_to_source(ast.end_or_branch, indent)}"
 
 
 @_ast_to_source.register(ast_.Fold)
@@ -139,7 +151,7 @@ def _(ast: ast_.IterBodyEnd, indent: int) -> str:
 
 @_ast_to_source.register(ast_.Iter)
 def _(ast: ast_.Iter, indent: int) -> str:
-    return f"iter {ast.body}"
+    return f"iter {_ast_to_source(ast.body, indent)}"
 
 
 @_ast_to_source.register(ast_.Enumeration)
@@ -198,8 +210,8 @@ def _(ast: ast_.TraitApplication, indent: int) -> str:
     target = _ast_to_source(ast.target, indent)
     if ast.traits:
         indentation = "\t" * (indent + 1)
-        with_clause_str = f"\n{indentation}with" + f"\n{indentation}with".join(_ast_to_source(clause, indent + 1) for clause in ast.traits)
-        return f"{target}{with_clause_str}"
+        trait_clause_str = f"\n{indentation}trait" + f"\n{indentation}trait".join(_ast_to_source(clause, indent + 1) for clause in ast.traits)
+        return f"{target}{trait_clause_str}"
     return target
 
 
@@ -239,7 +251,7 @@ def _(ast: ast_.If, indent: int) -> str:
     ret += "\n"
     if isinstance(ast.else_body, ast_.None_):
         return ret
-    ret += _ast_to_source(ast.else_body, indent)
+    ret += "\t" * indent + _ast_to_source(ast.else_body, indent)
     return ret
 
 
@@ -272,26 +284,30 @@ def _(ast: ast_.While, indent: int) -> str:
 @_ast_to_source.register(ast_.RecordDefIdentifier)
 def _(ast: ast_.RecordDefIdentifier, indent: int) -> str:
     items_str = f"\n{'\t'*(indent + 1)}".join(_ast_to_source(item, indent + 1) for item in ast.items)
-    return f"struct {_ast_to_source(ast.name, indent)}({items_str})"
+    if not items_str:
+        items_str = "skip"
+    return f"record {_ast_to_source(ast.name, indent)}:\n{'\t'*(indent + 1)}{items_str}"
 
 
 @_ast_to_source.register(ast_.ProcedureDefIdentifier)
 def _(ast: ast_.ProcedureDefIdentifier, indent: int) -> str:
-    args_str = f",\n{'\t'*(indent + 1)}".join(_ast_to_source(arg, indent + 1) for arg in ast.args)
+    # TODO: add back in when whitespace becomes available (and only do it when the other string variation would exceed 120 chars)
+    # args_str = "\n" + f",\n{'\t'*(indent + 1)}".join(_ast_to_source(arg, indent + 1) for arg in ast.args) + "\n"
+    args_str = f", ".join(_ast_to_source(arg, indent + 1) for arg in ast.args)
     body_str = _ast_to_source(ast.body, indent + 1)
     return_type_str = _ast_to_source(ast.return_type, indent)
-    return f"def {_ast_to_source(ast.name, indent)}(\n{args_str}\n) -> {return_type_str}:\n{'\t' * (indent + 1)}{body_str}\n"
+    return f"procedure {_ast_to_source(ast.name, indent)}({args_str}) -> {return_type_str}:\n{'\t' * (indent + 1)}{body_str}\n"
 
 
 @_ast_to_source.register(ast_.Import)
 def _(ast: ast_.Import, indent: int) -> str:
     match ast.operator:
         case ast_.ImportOperator.ALL_NAMES:
-            return f"from {ast.module_file_path} import *"
+            return f'from "{ast.module_file_path}" import *'
         case ast_.ImportOperator.MODULE_NAME:
-            return f"import {ast.module_file_path}"
+            return f'import "{ast.module_file_path}"'
         case ast_.ImportOperator.SPECIFIC_NAMES:
-            return f"from {ast.module_file_path} import {', '.join(ast.import_objects)}"
+            return f'from "{ast.module_file_path}" import {", ".join(ast.import_objects)}'
 
 
 @_ast_to_source.register(ast_.Start)

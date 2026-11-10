@@ -263,7 +263,8 @@ OPERATOR_TOKEN_TABLE = {
     "": TokenType.TOTAL_SURJECTIVE_RELATION,
     "⇸": TokenType.PARTIAL_FUNCTION,
     "+->": TokenType.PARTIAL_FUNCTION,
-    "→": TokenType.TOTAL_FUNCTION,
+    # needed to choose this unicode differently to not clash with RIGHTARROW
+    "⇾": TokenType.TOTAL_FUNCTION,
     "-->": TokenType.TOTAL_FUNCTION,
     "⤔": TokenType.PARTIAL_INJECTION,
     ">+>": TokenType.PARTIAL_INJECTION,

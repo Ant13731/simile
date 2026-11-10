@@ -62,9 +62,10 @@ class ParseError(Exception):
         for err in parser.errors:
             err_str += f"{err}\n"
 
-        err_str += "\nAlternate error paths:\n"
-        for err in parser.errors_from_alternate_paths:
-            err_str += f"{err}\n"
+        if parser.errors_from_alternate_paths:
+            err_str += "\nAlternate error paths:\n"
+            for err in parser.errors_from_alternate_paths:
+                err_str += f"{err}\n"
 
         err_str += "\nParser info:\n"
         err_str += f"Tokens: {len(parser.tokens)}\n"
