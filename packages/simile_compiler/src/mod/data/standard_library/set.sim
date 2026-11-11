@@ -5,10 +5,10 @@ T1: type := generic
 T2: type := generic
 T: type := generic
 
-procedure min_(S: set[N]) -> N:
+procedure min(S: set[N]) -> N:
     return min x in S | x
 
-procedure max_(S: set[N]) -> N:
+procedure max(S: set[N]) -> N:
     return max x in S | x
 
 procedure map_min(f: procedure[(T1,), N], S: set[T1]) -> T1:
@@ -28,20 +28,20 @@ procedure map_max(f: procedure[(T1,), N], S: set[T1]) -> T1:
 procedure map(f: procedure[(T1,), T2], S: set[T1]) -> set[T2]:
     return {x in S | f(x)}
 
-procedure fold_(identity_of_f: T1, f: procedure[(T1, T1), T2], S: set[T1]) -> T2:
+procedure fold(identity_of_f: T1, f: procedure[(T1, T1), T2], S: set[T1]) -> T2:
     return fold acc: T1 := identity_of_f : x in S | f(acc, x)
 
 # TODO fix generics to allow for this to be defined once
-procedure sum_(S: set[int]) -> int:
+procedure sum(S: set[int]) -> int:
     return sum x in S | x
 
-procedure product_(S: set[int]) -> int:
+procedure product(S: set[int]) -> int:
     return product x in S | x
 
-procedure f_sum_(S: set[float]) -> float:
+procedure sum_f(S: set[float]) -> float:
     return sum x in S | x
 
-procedure f_product_(S: set[float]) -> float:
+procedure product_f(S: set[float]) -> float:
     return product x in S | x
 
 procedure card(S: set[T]) -> int:

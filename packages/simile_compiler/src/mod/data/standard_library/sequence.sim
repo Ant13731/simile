@@ -1,4 +1,4 @@
-from "relation" import *
+from "relation" import dom
 
 T: type := generic
 

@@ -112,7 +112,7 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
 
     ast_vars: dict[str, ast_.ASTNode] = {}
     ast_var_traits: dict[str, traits.Traits | None] = {}
-    trait_only_base_symbol_table = make_symbol_table(ast_.Statements([]))
+    trait_only_base_symbol_table = make_symbol_table(ast_.Statements([]), False)
     for var_ast in var_asts:
         trait_collection = None
         if isinstance(var_ast, ast_.TraitApplication):
@@ -140,7 +140,7 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
         generic_type_assignments.extend(list(map(_name_to_generic_type_assignment, implicitly_defined_generic_type_names)))
 
     # Add required generic types to the symbol table (all other types are expected to be builtins)
-    generic_symbol_table = make_symbol_table(ast_.Statements(generic_type_assignments))
+    generic_symbol_table = make_symbol_table(ast_.Statements(generic_type_assignments), False)
     # Synthesize types for each var identifier (remember to handle traits)
     typed_vars: dict[str, types.BaseType] = {}
     for var_name, typed_name_ast in ast_vars.items():

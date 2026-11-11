@@ -11,9 +11,10 @@ from src.mod.data.standard_library import STANDARD_LIBRARY_FILES
 from src.mod.pipeline.printers import ast_to_source
 
 from tests.mod.ast_to_source_test import round_trip_parse
+from tests.mod.examples import EXAMPLES_FILES
 
 
-class TestAnalysisHappyPath:
+class TestStandardLibraryHappyPath:
     @pytest.mark.parametrize("standard_library_path", STANDARD_LIBRARY_FILES)
     def test_standard_library_parses(self, standard_library_path: pathlib.Path):
         with open(standard_library_path, "r", encoding="utf-8") as f:
@@ -27,10 +28,6 @@ class TestAnalysisHappyPath:
         ast = parse(source, standard_library_path)
         source_from_ast = ast_to_source(ast)
         round_trip_ast = parse(source_from_ast, standard_library_path)
-        print("Source:")
-        print(source)
-        print("Source from AST:")
-        print(source_from_ast)
         assert ast == round_trip_ast
 
     @pytest.mark.parametrize("standard_library_path", STANDARD_LIBRARY_FILES)
@@ -38,5 +35,30 @@ class TestAnalysisHappyPath:
         with open(standard_library_path, "r", encoding="utf-8") as f:
             source = f.read()
         ast = parse(source, standard_library_path)
+        analysis = semantic_analysis(ast, True)
+        assert analysis is not None
+
+
+class TestExamplesHappyPath:
+    @pytest.mark.parametrize("example_path", EXAMPLES_FILES)
+    def test_example_parses(self, example_path: pathlib.Path):
+        with open(example_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        parse(source, example_path)
+
+    @pytest.mark.parametrize("example_path", EXAMPLES_FILES)
+    def test_example_parses_to_source(self, example_path: pathlib.Path):
+        with open(example_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        ast = parse(source, example_path)
+        source_from_ast = ast_to_source(ast)
+        round_trip_ast = parse(source_from_ast, example_path)
+        assert ast == round_trip_ast
+
+    @pytest.mark.parametrize("example_path", EXAMPLES_FILES)
+    def test_example_passes_semantic_analysis(self, example_path: pathlib.Path):
+        with open(example_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        ast = parse(source, example_path)
         analysis = semantic_analysis(ast)
         assert analysis is not None

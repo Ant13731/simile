@@ -1328,7 +1328,20 @@ class Parser:
         self.consume(TokenType.PROCEDURE, "Expected PROCEDURE keyword in procedure definition (possibly after traits)")
 
         t = self.advance()
-        if t.type_ != TokenType.IDENTIFIER:
+        definable_tokens = [
+            TokenType.IDENTIFIER,
+            TokenType.FORALL,
+            TokenType.EXISTS,
+            TokenType.SUM,
+            TokenType.PRODUCT,
+            TokenType.GENERAL_UNION,
+            TokenType.GENERAL_INTERSECTION,
+            TokenType.FOLD,
+            TokenType.ITER,
+            TokenType.MAX,
+            TokenType.MIN,
+        ]
+        if t.type_ not in definable_tokens:
             self.error("Expected identifier after DEF keyword")
         name = ast_.Identifier(t.value)
 

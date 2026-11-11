@@ -9,12 +9,12 @@ from src.mod.pipeline.analysis.reserved_keywords import reserved_keywords_check
 from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
 
 
-def semantic_analysis(ast: ast_.ASTNode) -> SemanticAnalysis:
+def semantic_analysis(ast: ast_.ASTNode, no_standard_library: bool = False) -> SemanticAnalysis:
     """Combines all semantic analysis passes into one function"""
 
     reserved_keywords_check(ast)
     ast = normalize_ast(ast)
-    symbol_table = make_symbol_table(ast)
+    symbol_table = make_symbol_table(ast, no_standard_library)
     assert_no_parser_only_nodes(ast)
     type_synthesizer = TypeSynthesizer(symbol_table)
     type_synthesizer.type_check(ast)

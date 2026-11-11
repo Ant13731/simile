@@ -24,8 +24,9 @@ class SymbolTable:
     def add_symbol(self, name: str, context: IdentifierContext, declared_type: BaseType) -> SymbolTableIdentifierEntry:
         """Returns the new symbol table entry."""
         current_scope = self.current_scope()
-        if self.symbol_exists_in_current_scope(name):
-            raise SymbolTableError(f"Cannot add new symbol with name {name} because a symbol with that name already exists in the current scope with id {current_scope.id_}")
+        maybe_existing_symbol = self.get_symbol_by_name_in_current_scope(name)
+        if maybe_existing_symbol is not None:
+            raise SymbolTableError(f"Cannot add new symbol with name {name} because a symbol with that name already exists in the current scope: {maybe_existing_symbol}")
 
         self._symbol_id_counter += 1
         new_symbol = SymbolTableIdentifierEntry(

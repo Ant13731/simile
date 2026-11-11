@@ -49,7 +49,7 @@ from src.mod.pipeline.analysis.type_annotation_resolver import TypeAnnotationRes
 from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
 
 
-def make_symbol_table(ast: ast_.ASTNode) -> SymbolTable:
+def make_symbol_table(ast: ast_.ASTNode, no_standard_library: bool) -> SymbolTable:
     """Populates the symbol table with all identifiers in the AST.
     SIDE EFFECT: Transforms Identifiers within the ast into symbol-table assigned Symbols
     """
@@ -58,7 +58,7 @@ def make_symbol_table(ast: ast_.ASTNode) -> SymbolTable:
         raise SymbolTableError("Cannot populate symbol table because AST is not a Start node")
 
     # Add in the standard library
-    if isinstance(ast.body, ast_.Statements):
+    if isinstance(ast.body, ast_.Statements) and not no_standard_library:
         file_path = (STANDARD_LIBRARY_FOLDER / "standard_library.sim").resolve()
         standard_library_import = ast_.Import(file_path, [], ast_.ImportOperator.ALL_NAMES)
         ast.body.items.insert(0, standard_library_import)

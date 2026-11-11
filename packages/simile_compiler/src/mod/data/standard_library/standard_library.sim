@@ -1,5 +1,5 @@
-from "bag" import *
-from "relation" import *
-from "sequence" import *
-from "set" import *
-from "type" import *
+from "bag" import map, bag_size, fold
+from "relation" import dom, ran
+from "sequence" import concat, flatten, first, length, tail, append, prepend, tails, heads, segments
+from "set" import min, max, map_min, map_max, map, fold, sum, product, sum_f, product_f, card, choice, choice_with_default
+from "type" import cast
