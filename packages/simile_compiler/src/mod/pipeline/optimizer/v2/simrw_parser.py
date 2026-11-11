@@ -66,7 +66,7 @@ def _strip_expected_prefix_whitespace(s_any: Any) -> str:
     return s
 
 
-def parse_simrw_file(file_path: str | pathlib.Path) -> list[SimrwAST]:
+def parse_simrw(source: str) -> list[SimrwAST]:
     parser = Lark.open(
         "simrw.lark",
         rel_to=__file__,
@@ -74,7 +74,11 @@ def parse_simrw_file(file_path: str | pathlib.Path) -> list[SimrwAST]:
         transformer=RewriteTransformer(),
         postlex=PythonIndenter(),
     )
+    simrw_rewrite_rules: list[SimrwAST] = parser.parse(source)  # type: ignore
+    return simrw_rewrite_rules
+
+
+def parse_simrw_file(file_path: str | pathlib.Path) -> list[SimrwAST]:
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
-    simrw_rewrite_rules: list[SimrwAST] = parser.parse(content)  # type: ignore
-    return simrw_rewrite_rules
+        return parse_simrw(content)

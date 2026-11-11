@@ -1,6 +1,7 @@
 from src.mod.pipeline.optimizer.v2.simrw_parser import (
     SimrwAST,
     parse_simrw_file,
+    parse_simrw,
 )
 from src.mod.pipeline.optimizer.v2.simrw import (
     RewriteRule,

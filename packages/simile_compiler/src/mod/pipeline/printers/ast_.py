@@ -71,7 +71,7 @@ def _(ast: ast_.BinaryOp | ast_.RelationOp, indent: int) -> str:
 @_ast_to_source.register(ast_.UnaryOp)
 def _(ast: ast_.UnaryOp, indent: int) -> str:
     if ast.op_type == ast_.UnaryOperator.INVERSE:
-        return f"{_ast_to_source(ast.value, indent)}{ast.op_type.to_source()}"
+        return f"({_ast_to_source(ast.value, indent)}{ast.op_type.to_source()})"
     return f"{ast.op_type.to_source()}{_ast_to_source(ast.value, indent)}"
 
 
@@ -92,7 +92,7 @@ def _(ast: ast_.Quantifier3, indent: int) -> str:
         l_wrapper, r_wrapper = tuple(ast.op_type.to_source())
         quantifier = f"{l_wrapper}{quantifier}{r_wrapper}"
     else:
-        quantifier = f"{ast.op_type.to_source()} {quantifier}"
+        quantifier = f"({ast.op_type.to_source()} {quantifier})"
     return quantifier
 
 
@@ -210,7 +210,7 @@ def _(ast: ast_.TraitApplication, indent: int) -> str:
     target = _ast_to_source(ast.target, indent)
     if ast.traits:
         indentation = "\t" * (indent + 1)
-        trait_clause_str = f"\n{indentation}trait" + f"\n{indentation}trait".join(_ast_to_source(clause, indent + 1) for clause in ast.traits)
+        trait_clause_str = f"\n{indentation}trait " + f"\n{indentation}trait ".join(_ast_to_source(clause, indent + 1) for clause in ast.traits)
         return f"{target}{trait_clause_str}"
     return target
 

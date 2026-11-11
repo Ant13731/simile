@@ -3,7 +3,7 @@ T2: type := generic
 T: type := generic
 
 procedure map(f: procedure[(T1,), T2], B: bag[T1]) -> bag[T2]:
-    return [[x |-> n in B | f(x) |-> n]]
+    return [|x |-> n in B | f(x) |-> n|]
 
 procedure bag_size(B: bag[T]) -> int:
     return sum x |-> n in B | n

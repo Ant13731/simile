@@ -550,6 +550,32 @@ COMPREHENSION_CASES = [
             )
         ),
     ),
+    (
+        "{(max x in dom(S) | x) |-> y}",
+        RelationEnumeration(
+            [
+                Maplet(
+                    Quantifier3(
+                        QuantifierBody(
+                            [
+                                Generator(
+                                    Identifier("x"),
+                                    Call(
+                                        Identifier("dom"),
+                                        [Identifier("S")],
+                                    ),
+                                    True_(),
+                                ),
+                            ],
+                            Identifier("x"),
+                        ),
+                        QuantifierOperator.MAX,
+                    ),
+                    Identifier("y"),
+                )
+            ]
+        ),
+    ),
 ]
 
 RELATION_SUBTYPE_CASES = [
