@@ -3,6 +3,8 @@ from functools import singledispatch
 
 from src.mod.data import ast_
 
+T = "    "
+
 
 def ast_to_source(ast: ast_.ASTNode) -> str:
     """Convert an AST node back to its source code representation."""
@@ -209,7 +211,7 @@ def _(ast: ast_.TypedName, indent: int) -> str:
 def _(ast: ast_.TraitApplication, indent: int) -> str:
     target = _ast_to_source(ast.target, indent)
     if ast.traits:
-        indentation = "\t" * (indent + 1)
+        indentation = T * (indent + 1)
         trait_clause_str = f"\n{indentation}trait " + f"\n{indentation}trait ".join(_ast_to_source(clause, indent + 1) for clause in ast.traits)
         return f"{target}{trait_clause_str}"
     return target
@@ -236,29 +238,29 @@ def _(ast: ast_.ControlFlowStmt, indent: int) -> str:
 
 @_ast_to_source.register(ast_.Statements)
 def _(ast: ast_.Statements, indent: int) -> str:
-    return f"\n{'\t'*indent}".join(_ast_to_source(item, indent) for item in ast.items)
+    return f"\n{T*indent}".join(_ast_to_source(item, indent) for item in ast.items)
 
 
 @_ast_to_source.register(ast_.Else)
 def _(ast: ast_.Else, indent: int) -> str:
-    return f"else:\n\t{'\t'*indent}{_ast_to_source(ast.body, indent+1)}\n"
+    return f"else:\n{T*(indent+1)}{_ast_to_source(ast.body, indent+1)}\n"
 
 
 @_ast_to_source.register(ast_.If)
 def _(ast: ast_.If, indent: int) -> str:
     ret = f"if {_ast_to_source(ast.condition, indent)}:\n"
-    ret += f"{'\t' * (indent + 1)}{_ast_to_source(ast.body, indent + 1)}"
+    ret += f"{T * (indent + 1)}{_ast_to_source(ast.body, indent + 1)}"
     ret += "\n"
     if isinstance(ast.else_body, ast_.None_):
         return ret
-    ret += "\t" * indent + _ast_to_source(ast.else_body, indent)
+    ret += T * indent + _ast_to_source(ast.else_body, indent)
     return ret
 
 
 @_ast_to_source.register(ast_.ElseIf)
 def _(ast: ast_.ElseIf, indent: int) -> str:
     ret = f"else if {_ast_to_source(ast.condition, indent)}:\n"
-    ret += f"{'\t' * (indent + 1)}{_ast_to_source(ast.body, indent + 1)}"
+    ret += f"{T * (indent + 1)}{_ast_to_source(ast.body, indent + 1)}"
     ret += "\n"
     if isinstance(ast.else_body, ast_.None_):
         return ret
@@ -271,32 +273,32 @@ def _(ast: ast_.For, indent: int) -> str:
     iterable_str = _ast_to_source(ast.iterable, indent)
     names_str = _ast_to_source(ast.iterable_names, indent)
     body_str = _ast_to_source(ast.body, indent + 1)
-    return f"for {names_str} in {iterable_str}:\n{'\t' * (indent + 1)}{body_str}\n"
+    return f"for {names_str} in {iterable_str}:\n{T * (indent + 1)}{body_str}\n"
 
 
 @_ast_to_source.register(ast_.While)
 def _(ast: ast_.While, indent: int) -> str:
     condition_str = _ast_to_source(ast.condition, indent)
     body_str = _ast_to_source(ast.body, indent + 1)
-    return f"while {condition_str}:\n{'\t' * (indent + 1)}{body_str}\n"
+    return f"while {condition_str}:\n{T * (indent + 1)}{body_str}\n"
 
 
 @_ast_to_source.register(ast_.RecordDefIdentifier)
 def _(ast: ast_.RecordDefIdentifier, indent: int) -> str:
-    items_str = f"\n{'\t'*(indent + 1)}".join(_ast_to_source(item, indent + 1) for item in ast.items)
+    items_str = f"\n{T*(indent + 1)}".join(_ast_to_source(item, indent + 1) for item in ast.items)
     if not items_str:
         items_str = "skip"
-    return f"record {_ast_to_source(ast.name, indent)}:\n{'\t'*(indent + 1)}{items_str}"
+    return f"record {_ast_to_source(ast.name, indent)}:\n{T*(indent + 1)}{items_str}"
 
 
 @_ast_to_source.register(ast_.ProcedureDefIdentifier)
 def _(ast: ast_.ProcedureDefIdentifier, indent: int) -> str:
     # TODO: add back in when whitespace becomes available (and only do it when the other string variation would exceed 120 chars)
-    # args_str = "\n" + f",\n{'\t'*(indent + 1)}".join(_ast_to_source(arg, indent + 1) for arg in ast.args) + "\n"
+    # args_str = "\n" + f",\n{T*(indent + 1)}".join(_ast_to_source(arg, indent + 1) for arg in ast.args) + "\n"
     args_str = f", ".join(_ast_to_source(arg, indent + 1) for arg in ast.args)
     body_str = _ast_to_source(ast.body, indent + 1)
     return_type_str = _ast_to_source(ast.return_type, indent)
-    return f"procedure {_ast_to_source(ast.name, indent)}({args_str}) -> {return_type_str}:\n{'\t' * (indent + 1)}{body_str}\n"
+    return f"procedure {_ast_to_source(ast.name, indent)}({args_str}) -> {return_type_str}:\n{T * (indent + 1)}{body_str}\n"
 
 
 @_ast_to_source.register(ast_.Import)
@@ -326,7 +328,7 @@ def _(ast: ast_.GeneratorSelection | ast_.CombinedGeneratorSelection | ast_.Sing
 def _(ast: ast_.Loop, indent: int) -> str:
     predicate = _ast_to_source(ast.predicate, indent)
     body = _ast_to_source(ast.body, indent + 1)
-    return f"loop {predicate}:\n{'\t' * (indent + 1)}{body}\n"
+    return f"loop {predicate}:\n{T * (indent + 1)}{body}\n"
 
 
 def ast_to_debug_string(
