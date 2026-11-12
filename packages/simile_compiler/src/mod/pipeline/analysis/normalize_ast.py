@@ -1,5 +1,9 @@
+from loguru import logger
+
 from src.mod.data import ast_
 from src.mod.data.types.error import SimileTypeError
+
+from src.mod.pipeline.scanner import OPERATOR_TOKEN_TABLE, KEYWORD_TABLE
 
 
 def normalize_ast(node: ast_.ASTNode) -> ast_.ASTNode:
@@ -43,6 +47,8 @@ def ast_promoter(node: ast_.ASTNode) -> ast_.ASTNode | None:
         return _promote_enumeration(node)
     if isinstance(node, ast_.Assignment):
         return _promote_type_assignment(node)
+    if isinstance(node, ast_.Identifier):
+        return _promote_identifier(node)
     return None
 
 
@@ -71,9 +77,9 @@ def _convert_type_assignment_value_to_type_expr(value: ast_.ASTNode) -> ast_.Typ
         case ast_.Identifier(_):
             return ast_.Type_(value, [])
         case ast_.Image(target, indices):
-            # TODO need to also convert index/params into Type_s??
+            # TODO need to also convert index/params into Types??
+            logger.warning("This should not be reached?")
             return ast_.Type_(target, indices)
-
         case _:
             raise SimileTypeError(f"Invalid type assignment value: {value}", value)
 
@@ -276,4 +282,14 @@ def _promote_enumeration(node: ast_.Enumeration) -> ast_.ASTNode:
             return ast_.BagEnumeration(node.items)
         case _:
             raise ValueError(f"Match statement does not cover all cases for AST normalization (missed {node.op_type})")
+    return node
+
+
+UNICODE_TOKEN_TO_KEYWORD = {a: c for a, b in OPERATOR_TOKEN_TABLE.items() for c, b_ in KEYWORD_TABLE.items() if b == b_}
+
+
+def _promote_identifier(node: ast_.Identifier) -> ast_.ASTNode:
+    if node.name in UNICODE_TOKEN_TO_KEYWORD:
+        keyword = UNICODE_TOKEN_TO_KEYWORD[node.name]
+        return ast_.Identifier(keyword)
     return node

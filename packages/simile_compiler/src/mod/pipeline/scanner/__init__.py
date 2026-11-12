@@ -3,6 +3,7 @@ from src.mod.pipeline.scanner.tokens import (
     OPERATOR_TOKEN_TABLE,
     KEYWORD_TABLE,
     TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS,
+    TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS,
 )
 from src.mod.pipeline.scanner.scanner import (
     scan,

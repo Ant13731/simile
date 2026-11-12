@@ -6,12 +6,22 @@ from loguru import logger
 
 from src.mod.data import ast_
 from src.mod.pipeline.parser import parse
-from src.mod.pipeline.analysis import SemanticAnalysis, semantic_analysis
+from src.mod.pipeline.analysis import SemanticAnalysis, semantic_analysis, make_symbol_table
 from src.mod.data.standard_library import STANDARD_LIBRARY_FILES
 from src.mod.pipeline.printers import ast_to_source
 
 from tests.mod.ast_to_source_test import round_trip_parse
 from tests.mod.examples import EXAMPLES_FILES
+
+
+class TestBase:
+    def test_empty_symbol_table(self):
+        make_symbol_table(ast_.Start(ast_.Statements([]), ""), True)
+        assert True
+
+    def test_empty_symbol_table_with_standard_library(self):
+        make_symbol_table(ast_.Start(ast_.Statements([]), ""), False)
+        assert True
 
 
 class TestStandardLibraryHappyPath:

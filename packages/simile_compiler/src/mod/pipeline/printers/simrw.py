@@ -42,5 +42,5 @@ def simrw_to_source(rewrite_rule: RewriteRule) -> str:
 
 
 def guard_condition_to_source(guard_condition: GuardCondition) -> str:
-    raise NotImplementedError  # TODO need to implement visitor pattern over all variable types of guards...
+    raise NotImplementedError("Guard condition to source code converter not implemented")  # TODO need to implement visitor pattern over all variable types of guards...
     return f"{guard_condition.name}()"

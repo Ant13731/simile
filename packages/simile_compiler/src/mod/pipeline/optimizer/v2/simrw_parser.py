@@ -46,13 +46,13 @@ class RewriteTransformer(Transformer):
         return items[0]
 
     def vars(self, items) -> str:
-        return "\n".join([_strip_expected_prefix_whitespace(i) for i in items])
+        return "\n".join([_strip_expected_prefix_whitespace(i) for i in items]).strip()
 
     def rewrite_left(self, items) -> str:
-        return "\n".join([_strip_expected_prefix_whitespace(i) for i in items])
+        return "\n".join([_strip_expected_prefix_whitespace(i) for i in items]).strip()
 
     def rewrite_right(self, items: list[Token]) -> str:
-        return "\n".join([_strip_expected_prefix_whitespace(i) for i in items])
+        return "\n".join([_strip_expected_prefix_whitespace(i) for i in items]).strip()
 
     def when(self, items: list[Token]) -> list[str]:
         return [_strip_expected_prefix_whitespace(i) for i in items]
@@ -74,8 +74,8 @@ def parse_simrw(source: str) -> list[SimrwAST]:
         transformer=RewriteTransformer(),
         postlex=PythonIndenter(),
     )
-    simrw_rewrite_rules: list[SimrwAST] = parser.parse(source)  # type: ignore
-    return simrw_rewrite_rules
+    simrw_asts: list[SimrwAST] = parser.parse(source)  # type: ignore
+    return simrw_asts
 
 
 def parse_simrw_file(file_path: str | pathlib.Path) -> list[SimrwAST]:

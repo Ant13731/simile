@@ -7,7 +7,7 @@ from loguru import logger
 
 from src.mod.data import ast_, traits, types
 from src.mod.data.helpers.dataclass import dataclass_traverse
-from src.mod.pipeline.analysis import TypeAnnotationResolver, make_symbol_table
+from src.mod.pipeline.analysis import TypeAnnotationResolver, make_symbol_table, normalize_ast
 from src.mod.pipeline.analysis.trait_resolver import TraitResolver
 from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
 from src.mod.pipeline.parser import parse
@@ -106,13 +106,19 @@ def collect_guard_condition(when_condition_str: str) -> GuardCondition:
 
 def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
     var_ast_combined = parse(rewrite_rule_var_str)
-    if isinstance(var_ast_combined.body, ast_.None_):
+    normalized_var_ast_combined = normalize_ast(var_ast_combined)
+    if not isinstance(normalized_var_ast_combined, ast_.Start):
+        raise ValueError(f"AST Normalization removed ast_.Start - this should never happen. Before: {var_ast_combined}. After: {normalized_var_ast_combined}")
+    if isinstance(normalized_var_ast_combined.body, ast_.None_):
         return {}
-    var_asts = var_ast_combined.body.items
+    var_asts = normalized_var_ast_combined.body.items
 
-    ast_vars: dict[str, ast_.ASTNode] = {}
+    ast_vars: dict[str, ast_.Type_] = {}
     ast_var_traits: dict[str, traits.Traits | None] = {}
-    trait_only_base_symbol_table = make_symbol_table(ast_.Statements([]), False)
+    trait_only_base_symbol_table = make_symbol_table(
+        ast_.Start(ast_.Statements([]), ""),
+        False,
+    )
     for var_ast in var_asts:
         trait_collection = None
         if isinstance(var_ast, ast_.TraitApplication):
@@ -124,8 +130,10 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
             raise ValueError(f"Expected a TypedName AST node, got {type(var_ast)}")
         if not isinstance(var_ast.name, ast_.Identifier):
             raise ValueError(f"Expected a Identifier AST node on the left side of TypedName, got {type(var_ast)}")
+        if not isinstance(var_ast.type_, ast_.Type_):
+            raise ValueError(f"Simrw vars must have a corresponding type of the form `x: type` (got: {var_ast})")
         # Unwrap and collect LH variable identifiers
-        ast_vars[var_ast.name.name] = var_ast
+        ast_vars[var_ast.name.name] = var_ast.type_
         ast_var_traits[var_ast.name.name] = trait_collection
 
     # Search types for identifiers of the form T[0-9]*. These identifiers are reserved for generic types
@@ -134,18 +142,22 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
         if var_name.startswith("T") and var_name[1:].isdigit():
             raise ValueError(f"Variable names matching T[0-9]* (like '{var_name}') are reserved for (implicit) generic types. Please use a different name (e.g., T_...).")
 
-    generic_type_assignments: list[ast_.ASTNode] = []
-    for typed_name_ast in ast_vars.values():
-        implicitly_defined_generic_type_names = list(filter(None, dataclass_traverse(typed_name_ast, _is_implicitly_defined_generic_type)))
-        generic_type_assignments.extend(list(map(_name_to_generic_type_assignment, implicitly_defined_generic_type_names)))
+    # Need to keep these loops separate bc we want to dedupe generic type defs
+    generic_type_vars: set[str] = set()
+    for type_ast in ast_vars.values():
+        generic_type_vars |= set(filter(None, dataclass_traverse(type_ast, _is_implicitly_defined_generic_type)))
+    generic_type_assignments: list[ast_.ASTNode] = list(map(_name_to_generic_type_assignment, generic_type_vars))
 
     # Add required generic types to the symbol table (all other types are expected to be builtins)
-    generic_symbol_table = make_symbol_table(ast_.Statements(generic_type_assignments), False)
+    generic_symbol_table = make_symbol_table(
+        ast_.Start(ast_.Statements(generic_type_assignments), rewrite_rule_var_str),
+        False,
+    )
     # Synthesize types for each var identifier (remember to handle traits)
     typed_vars: dict[str, types.BaseType] = {}
-    for var_name, typed_name_ast in ast_vars.items():
+    for var_name, type_ast in ast_vars.items():
         trait_collection = ast_var_traits.get(var_name)
-        var_type = TypeAnnotationResolver.resolve_type_annotation(typed_name_ast, generic_symbol_table)
+        var_type = TypeAnnotationResolver.resolve_type_annotation(type_ast, generic_symbol_table)
         if trait_collection:
             var_type.traits = var_type.traits.merge_copy(trait_collection)
         typed_vars[var_name] = var_type
@@ -160,13 +172,15 @@ def _is_implicitly_defined_generic_type(ast: Any) -> str | None:
 
 
 def _name_to_generic_type_assignment(name: str) -> ast_.ASTNode:
-    return ast_.Assignment(
-        ast_.TypedName(
-            ast_.Identifier(name),
-            ast_.Type_(ast_.Identifier("type"), []),
-        ),
-        ast_.Identifier("generic"),
-        False,
+    return normalize_ast(
+        ast_.Assignment(
+            ast_.TypedName(
+                ast_.Identifier(name),
+                ast_.Type_(ast_.Identifier("type"), []),
+            ),
+            ast_.Identifier("generic"),
+            False,
+        )
     )
 
 

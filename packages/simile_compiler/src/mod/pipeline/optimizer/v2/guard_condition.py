@@ -14,7 +14,7 @@ class GuardCondition:
     # Subclasses should add information (as passed through caller notation in the when clause of simrw)
 
     def guard(self, ast: ast_.ASTNode, typed_vars: PatternMatchVars) -> bool:
-        raise NotImplementedError
+        raise NotImplementedError("This must be subclassed with a defined guard condition")
 
 
 # Maps function names in if-statements to guard functions that can block a rewrite rule from being applied

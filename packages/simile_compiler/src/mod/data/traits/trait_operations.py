@@ -2,6 +2,7 @@ from enum import Enum, auto
 from dataclasses import dataclass, field
 from typing import TypeVar, get_args
 from copy import copy
+from loguru import logger
 
 
 from src.mod.data.traits.base import (
@@ -208,11 +209,13 @@ class Traits:
                     self.add(MaxTrait(value=literal_trait.value))  # type: ignore
 
         # TODO write down trait-trait dependencies
-        raise NotImplementedError
+        # FIXME implement trait-trait dependencies
+        logger.error("Missing trait-trait dependencies implementation")
+        # raise NotImplementedError("Missing trait-trait dependencies")
 
     def check_compatible(self) -> None:
         # Check if specific traits are incompatible with one another (ex. max below min)
-        raise NotImplementedError
+        raise NotImplementedError("trait-trait compatibility checks not implemented")
 
     def merge_copy(self, other: Traits, behaviour: MergeTraitBehaviour = MergeTraitBehaviour.PREFER_LEFT) -> Traits:
         # Merging traits generally takes the widest possible value (union of the underlying sets)

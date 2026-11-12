@@ -75,7 +75,7 @@ class TupleType(BaseType):
         empty_traits = self.traits.find(EmptyTrait)
         if empty_traits is not None:
             return True
-        raise NotImplementedError
+        raise NotImplementedError("Sub traits not implemented for tuple type")
 
     def base_traits(self) -> set[BaseTrait]:
         return {IterableTrait()}

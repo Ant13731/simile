@@ -361,3 +361,19 @@ TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS = [
     TokenType.TRAIT,
     TokenType.RECORD,
 ]
+
+# Done for two reasons:
+# 1. Simpler parsing of quantifiers
+# 2. These have special unicode symbols
+TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS = [
+    TokenType.FOLD,
+    TokenType.ITER,
+    TokenType.FORALL,
+    TokenType.EXISTS,
+    TokenType.SUM,
+    TokenType.PRODUCT,
+    TokenType.GENERAL_UNION,
+    TokenType.GENERAL_INTERSECTION,
+    TokenType.MAX,
+    TokenType.MIN,
+]

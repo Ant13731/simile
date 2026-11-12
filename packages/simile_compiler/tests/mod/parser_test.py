@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
+from loguru import logger
 
 import pytest
 
@@ -1053,5 +1054,5 @@ class TestParserErrorCases:
     )
     def test_parse_error_cases(self, source: str, expected_error_msg: str):
         with pytest.raises(ParseError) as exc_info:
-            parse(source, Path("test_source_file_path"))
+            p = parse(source, Path("test_source_file_path"))
         assert expected_error_msg in str(exc_info.value)

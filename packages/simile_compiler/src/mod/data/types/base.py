@@ -29,7 +29,7 @@ class _TraitMixin:
     compatible_traits: ClassVar[set[type[BaseTrait]]] = {ImmutableTrait}
 
     def base_traits(self) -> set[BaseTrait]:
-        raise NotImplementedError
+        raise NotImplementedError("Base class does not define base traits")
 
     def check_incompatible_traits(self) -> NoReturn | None:
         for trait in self.traits.items.values():
@@ -44,7 +44,7 @@ class _TraitMixin:
     @typing_rule("Type Refinement")
     def _is_sub_traits(self, other: _TraitMixin) -> bool:
         """Check whether the type is a sub-type when considering traits."""
-        raise NotImplementedError
+        raise NotImplementedError("Base class does not define sub traits")
 
 
 @dataclass(kw_only=True)
@@ -78,7 +78,7 @@ class BaseType(_TraitMixin):
         return self._is_eq_type(other)
 
     def _is_eq_type(self, other: BaseType) -> bool:
-        raise NotImplementedError
+        raise NotImplementedError("Base class does not define equality check for types")
 
     @typing_rule("Reflexive Subtype", "Transitive Subtype", "Sub Top Type")
     def is_subtype(self, other: BaseType, check_traits: bool = False) -> bool:
@@ -111,7 +111,7 @@ class BaseType(_TraitMixin):
         return is_sub_trait and self._is_subtype(other)
 
     def _is_subtype(self, other: BaseType) -> bool:
-        raise NotImplementedError
+        raise NotImplementedError("Base class does not define sub-type check for types")
 
     @classmethod
     def max_type(cls, types: list[BaseType]) -> BaseType:

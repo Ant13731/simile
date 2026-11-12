@@ -1,2 +1,2 @@
 procedure max_tail_sum(xs: sequence[int]) -> int:
-    return max_(map(sum_, tails(xs)))
+    return max(map(sum_, tails(xs)))

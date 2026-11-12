@@ -703,8 +703,9 @@ def _read_from_path_and_parse(module_file_path: Path) -> tuple[str, ast_.ASTNode
     try:
         module_ast: ast_.Start = parse(module_content, full_module_path)
     except ParseError as e:
+        logger.debug(e)
         raise SymbolTableError(
-            f"Failed to parse module for symbol table importing: module {module_file_path} does not contain a valid Simile module. Expected a single Start node at the top level."
+            f"Failed to parse module for symbol table importing: module {module_file_path} does not contain a valid Simile module. Failed to parse the module content."
         ) from e
 
     # And normalize ast to prep for the symb table
@@ -712,7 +713,7 @@ def _read_from_path_and_parse(module_file_path: Path) -> tuple[str, ast_.ASTNode
         normalized_module_ast = normalize_ast(module_ast)
     except Exception as e:
         raise SymbolTableError(
-            f"Failed to normalize module for symbol table importing: module {module_file_path} does not contain a valid Simile module. Expected a single Start node at the top level."
+            f"Failed to normalize module for symbol table importing: module {module_file_path} does not contain a valid Simile module. Failed to normalize the imported AST."
         ) from e
 
     return full_module_path.stem, normalized_module_ast

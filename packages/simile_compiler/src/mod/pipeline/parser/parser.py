@@ -10,7 +10,7 @@ from termcolor import colored
 from loguru import logger
 
 
-from src.mod.pipeline.scanner import Token, TokenType, scan, TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS
+from src.mod.pipeline.scanner import Token, TokenType, scan, TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS, TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS
 from src.mod.data import ast_
 
 T = TypeVar("T")
@@ -704,12 +704,12 @@ class Parser:
         except ParseException as e:
             logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier. Parse error was: {self.errors[-1]}")
             # TEMP: testing parsing without considering identifiers
-            # self.backtrack_from_error(*backtrack_ctx)
-            raise e
+            self.backtrack_from_error(*backtrack_ctx)
+            # raise e
 
         # If all else fails, treat as an identifier
         # TEMP: disabled to test parsing quant without considering identifiers
-        # return quantification_token_as_identifier
+        return quantification_token_as_identifier
 
     @store_derivation
     def quantification_body(self) -> ast_.QuantifierBody:
@@ -1208,13 +1208,16 @@ class Parser:
             set_whitespace_back_to = self.ignore_whitespace(True)
 
         t = self.peek()
-        self.consume(TokenType.IDENTIFIER, "Expected identifier tuple identifier")
+        if t.type_ not in {TokenType.IDENTIFIER, *TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS}:
+            self.error(f"Expected identifier in tuple identifier")
+        self.advance()
         items = [ast_.Identifier(t.value)]
 
         while self.match(TokenType.COMMA):
-            t = self.advance()
-            if t.type_ != TokenType.IDENTIFIER:
+            t = self.peek()
+            if t.type_ not in {TokenType.IDENTIFIER, *TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS}:
                 self.error(f"Expected identifier in tuple identifier (parsed up to {items})")
+            self.advance()
             items.append(ast_.Identifier(t.value))
 
         if matched_paren:

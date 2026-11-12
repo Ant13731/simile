@@ -2,26 +2,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TypeVar
 
-from src.mod.pipeline.scanner import KEYWORD_TABLE, TokenType, OPERATOR_TOKEN_TABLE
+from src.mod.pipeline.scanner import KEYWORD_TABLE, TokenType, OPERATOR_TOKEN_TABLE, TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS
 from src.mod.data import ast_
 from src.mod.pipeline.analysis.type_annotation_resolver import TypeAnnotationResolver
 
 T = TypeVar("T", bound=ast_.ASTNode)
 RESERVED_KEYWORDS = list(KEYWORD_TABLE.keys())
-DEFINABLE_KEYWORDS_AS_TOKENS = [
-    TokenType.FOLD,
-    TokenType.ITER,
-    TokenType.FORALL,
-    TokenType.EXISTS,
-    TokenType.SUM,
-    TokenType.PRODUCT,
-    TokenType.GENERAL_UNION,
-    TokenType.GENERAL_INTERSECTION,
-    TokenType.MAX,
-    TokenType.MIN,
-]
-
-DEFINABLE_KEYWORDS = [k for k, v in list(KEYWORD_TABLE.items()) + list(OPERATOR_TOKEN_TABLE.items()) if v in DEFINABLE_KEYWORDS_AS_TOKENS]
+DEFINABLE_KEYWORDS = [k for k, v in list(KEYWORD_TABLE.items()) + list(OPERATOR_TOKEN_TABLE.items()) if v in TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS]
 
 
 @dataclass

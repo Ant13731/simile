@@ -10,25 +10,25 @@ rule union:
         S: bag[T1]
         T: bag[T1]
     rewrite:
-        S \/ T ~> [[x in dom(S) \/ dom(T) .: n = max(S[x] \/ T[x]) | x |-> n]]
+        S \/ T ~> [|x in dom(S) \/ dom(T) .: n = max(S[x] \/ T[x]) | x |-> n|]
 
 rule intersection:
     vars:
         S: bag[T1]
         T: bag[T1]
     rewrite:
-        S /\ T ~> [[x in dom(S) .: x in dom(T) and n = min(S[x] \/ T[x]) and n > 0 | x |-> n]]
+        S /\ T ~> [|x in dom(S) .: x in dom(T) and n = min(S[x] \/ T[x]) and n > 0 | x |-> n|]
 
 rule sum:
     vars:
         S: bag[T1]
         T: bag[T1]
     rewrite:
-        S + T ~> [[x in dom(S) \/ dom(T) .: n = sum(S[x] \/ T[x]) | x |-> n]]
+        S + T ~> [|x in dom(S) \/ dom(T) .: n = sum(S[x] \/ T[x]) | x |-> n|]
 
 rule difference:
     vars:
         S: bag[T1]
         T: bag[T1]
     rewrite:
-        S - T ~> [[x in dom(S) .: n = S(x) - (T \/ [[x |-> 0]])(x) and n > 0 | x |-> n]]
+        S - T ~> [|x in dom(S) .: n = S(x) - (T \/ [|x |-> 0|])(x) and n > 0 | x |-> n|]
