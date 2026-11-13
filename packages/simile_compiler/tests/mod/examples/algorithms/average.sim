@@ -1,2 +1,2 @@
-procedure average(xs: set[int]) -> int:
+procedure average(S: set[int]) -> int:
     return sum(S) / card(S)

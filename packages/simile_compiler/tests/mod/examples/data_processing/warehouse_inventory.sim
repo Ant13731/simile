@@ -9,7 +9,7 @@ material_price_catalogue: relation[PartID, Price] := {}
     trait many_to_one
 
 inventory: bag[PartID] := [| |]
-recipes: relation[ProductID, bag[PartID]]
+recipes: relation[ProductID, bag[PartID]] := {}
     trait many_to_one
 
 procedure purchase_item(product_id: ProductID) -> bag[PartID]:
@@ -19,7 +19,7 @@ procedure purchase_item(product_id: ProductID) -> bag[PartID]:
 
 # How much will a restock cost?
 procedure restock(expected_inventory: bag[PartID]) -> Price:
-    inventory_to_buy: bag[PartID] = expected_inventory - inventory # bag minus
+    inventory_to_buy: bag[PartID] := expected_inventory - inventory # bag minus
     cost := sum(material_price_catalogue[inventory_to_buy]) # every entry in inventory_to_buy is mapped to a price, the cost is then summed
     return cost
 
@@ -29,6 +29,10 @@ procedure weekly_profit(sold_items: bag[ProductID]) -> Price:
     profit := sum(material_price_catalogue[sold_inventory]) # all materials are converted into prices
     return profit
 
+# TODO make this a lambda
+procedure count(item: (ProductID, int)) -> int:
+    return item(1)
+
 procedure most_sold_material(sold_items: bag[ProductID]) -> PartID:
     sold_materials: bag[PartID] := recipes[sold_items]
-    return max(organizeby=count, sold_materials) # if this was represented as a double hash table, we would just reverse lookup by the max number of occurrences in the bag.
+    return max(count, sold_materials) # if this was represented as a double hash table, we would just reverse lookup by the max number of occurrences in the bag.

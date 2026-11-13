@@ -1,2 +1,2 @@
 procedure max_subseq_product(xs: sequence[int]) -> int:
-    return max(map(product_, tails(xs)))
+    return max(map(product, tails(xs)))

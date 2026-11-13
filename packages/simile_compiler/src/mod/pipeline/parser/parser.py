@@ -176,6 +176,7 @@ class Parser:
             "bag",
             "tuple",
             TokenType.L_PAREN,
+            *TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS,
         },
         "set": {TokenType.L_BRACE},
         "bag": {TokenType.L_DOUBLE_BRACKET},
@@ -649,55 +650,66 @@ class Parser:
         self.consume(TokenType.VBAR, "Expected LAMBDA quantification predicate separator")
         return ast_.LambdaDef(params, predicate, self.expr())
 
-    @store_derivation
-    def quantification(self) -> ast_.ASTNode:
-        op_type: ast_.QuantifierOperator | None = None
-        t = self.advance()
-
-        # Attempt to parse as a func call first. If we see "|" or the expr parse fails,
-        # we know this is a quantification, so backtrack and try again
-        quantification_token_as_identifier = ast_.Identifier(t.value)
+    def try_parse_function_call(self, expected_num_call_args: int) -> ast_.ASTNode | None:
         backtrack_ctx = self.prep_backtrack()
+        quantification_token_as_identifier = ast_.Identifier(self.advance().value)
         try:
             # Small hack, but allows us to use both `forall (x,y) in S | x` and `forall(S)`
             if self.peek().type_ == TokenType.L_PAREN:
                 attempted_expr_parse = self.atom_follow(quantification_token_as_identifier)
-                if self.peek().type_ != TokenType.IN:
-                    return attempted_expr_parse
+                # Reparse as a predicate to allow it to work with other expressions
                 self.backtrack_from_error(*backtrack_ctx, error_count=0)
+                if isinstance(attempted_expr_parse, ast_.Call) and len(attempted_expr_parse.args) == expected_num_call_args:
+                    return self.predicate()
+            self.backtrack_from_error(*backtrack_ctx, error_count=0)
         except ParseException:
             logger.debug(f"Failed to parse quantification IDENTIFIER as an atom (func call), attempting to parse as a quantification. Parse error was: {self.errors[-1]}")
             self.backtrack_from_error(*backtrack_ctx)
+        return None
+
+    TOKEN_TO_QUANTIFIER_OPERATOR: ClassVar[dict[TokenType, ast_.QuantifierOperator]] = {
+        TokenType.GENERAL_UNION: ast_.QuantifierOperator.UNION_ALL,
+        TokenType.GENERAL_INTERSECTION: ast_.QuantifierOperator.INTERSECTION_ALL,
+        TokenType.FORALL: ast_.QuantifierOperator.FORALL,
+        TokenType.EXISTS: ast_.QuantifierOperator.EXISTS,
+        TokenType.SUM: ast_.QuantifierOperator.SUM,
+        TokenType.PRODUCT: ast_.QuantifierOperator.PRODUCT,
+        TokenType.MAX: ast_.QuantifierOperator.MAX,
+        TokenType.MIN: ast_.QuantifierOperator.MIN,
+    }
+
+    @store_derivation
+    def quantification(self) -> ast_.ASTNode:
+        if self.match(TokenType.ITER):
+            return ast_.Iter(self.iter_quantification_body())
+
+        backtrack_ctx = self.prep_backtrack()
+        if self.peek().type_ == TokenType.FOLD:
+            if (ret := self.try_parse_function_call(2)) is not None:
+                if self.peek().type_ not in {TokenType.COLON, TokenType.ASSIGN}:
+                    return ret
+                self.backtrack_from_error(*backtrack_ctx, error_count=0)
+            self.consume(TokenType.FOLD, "Expected FOLD quantification operator")
+
+            initializing_assignment = self.assignment()
+            self.consume(TokenType.COLON, "Expected FOLD quantification separator `:' between generator and initializing assignment")
+            body = self.quantification_body()
+            return ast_.Fold(initializing_assignment, body)
+
+        # The rest of these quantifications follow the same pattern: either call as a function with one arg, as a quantifier, or as a plain identifier
+        # Attempt to parse as a func call first. If the expr parse fails or the call doesnt have exactly 1 arg,
+        # we know this is a quantification or identifier, so backtrack and try again
+        if (ret := self.try_parse_function_call(1)) is not None:
+            return ret
 
         # Then attempt to parse as a quantification
+        op_type: ast_.QuantifierOperator | None = None
         try:
-            match t.type_:
-                case TokenType.FOLD:
-                    initializing_assignment = self.assignment()
-                    self.consume(TokenType.COLON, "Expected FOLD quantification separator `:' between generator and initializing assignment")
-                    body = self.quantification_body()
-                    return ast_.Fold(initializing_assignment, body)
-                case TokenType.ITER:
-                    return ast_.Iter(self.iter_quantification_body())
-                case TokenType.GENERAL_UNION:
-                    op_type = ast_.QuantifierOperator.UNION_ALL
-                case TokenType.GENERAL_INTERSECTION:
-                    op_type = ast_.QuantifierOperator.INTERSECTION_ALL
-                case TokenType.FORALL:
-                    op_type = ast_.QuantifierOperator.FORALL
-                case TokenType.EXISTS:
-                    op_type = ast_.QuantifierOperator.EXISTS
-                case TokenType.SUM:
-                    op_type = ast_.QuantifierOperator.SUM
-                case TokenType.PRODUCT:
-                    op_type = ast_.QuantifierOperator.PRODUCT
-                case TokenType.MAX:
-                    op_type = ast_.QuantifierOperator.MAX
-                case TokenType.MIN:
-                    op_type = ast_.QuantifierOperator.MIN
-                case _:
-                    self.error("Invalid start to quantification")
-            assert op_type is not None, "op_type should have been defined in above mapping"
+            t = self.peek()
+            op_type = self.TOKEN_TO_QUANTIFIER_OPERATOR.get(t.type_)
+            if op_type is None:
+                self.error("Invalid start to quantification")
+            self.advance()
 
             body = self.quantification_body()
             return ast_.Quantifier3(body, op_type)
@@ -705,11 +717,14 @@ class Parser:
             logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier. Parse error was: {self.errors[-1]}")
             # TEMP: testing parsing without considering identifiers
             self.backtrack_from_error(*backtrack_ctx)
-            # raise e
+            if self.peek(1).type_ == TokenType.L_PAREN:
+                self.error(f"Failed to parse quantification as a call and comprehension. Parse error was: {self.errors[-1]}")
+            if self.peek(1).type_ == TokenType.IDENTIFIER:
+                self.error(f"Failed to parse quantification as a comprehension. Parse error was: {self.errors[-1]}")
 
-        # If all else fails, treat as an identifier
+        # If all else fails, treat as an identifier (given that we dont have a followup parenthesis or identifier)
         # TEMP: disabled to test parsing quant without considering identifiers
-        return quantification_token_as_identifier
+        return self.predicate()
 
     @store_derivation
     def quantification_body(self) -> ast_.QuantifierBody:
@@ -1056,7 +1071,7 @@ class Parser:
                 self.ignore_whitespace(set_whitespace_back_to)
                 return ast_.TupleLiteral(exprs)
 
-            case TokenType.IDENTIFIER:
+            case _ if t.type_ in {TokenType.IDENTIFIER, *TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS}:
                 self.advance()
                 return ast_.Identifier(t.value)
             case _:

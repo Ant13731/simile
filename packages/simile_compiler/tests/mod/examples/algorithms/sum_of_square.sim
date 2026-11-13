@@ -1,5 +1,5 @@
 procedure square(n: int) -> int:
-    return n ** 2
+    return n ^ 2
 
 procedure sum_of_square(n: int) -> int:
-    return sum_(map(square, 1..n))
+    return sum(map(square, 1..n))
