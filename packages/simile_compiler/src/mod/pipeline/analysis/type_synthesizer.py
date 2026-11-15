@@ -22,14 +22,18 @@ class TypeSynthesizer:
                 self.type_check(node)
                 self.synthesize_type(node)
 
-    @singledispatchmethod
+    @types.SimileTypeError.wrap_type_check_error_with_ast
     def synthesize_type(self, ast: ast_.ASTNode) -> types.BaseType:
+        return self._synthesize_type(ast)
+
+    @singledispatchmethod
+    def _synthesize_type(self, ast: ast_.ASTNode) -> types.BaseType:
         if not isinstance(ast, ast_.ASTNode):
             raise TypeError(f"Expected ASTNode for type synthesis, got {type(ast)}")
         raise NotImplementedError(f"Type checking not implemented for AST node of type {type(ast)} at location {ast.get_location()}")
 
     @typing_rule("Fetch Identifier")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Symbol) -> types.BaseType:
         symbol_info = self.symbol_table.lookup_symbol(ast.symbol_table_entry.id_, ast.symbol_table_entry.scope)
         if symbol_info.declared_type is None:
@@ -44,20 +48,20 @@ class TypeSynthesizer:
         return symbol_info.declared_type
 
     @typing_rule("Tuple Enumeration")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TupleSymbol) -> types.BaseType:
         ast_types = [self.synthesize_type(item) for item in ast.items]
         return types.TupleType(ast_types)
 
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Type_) -> types.BaseType:
         return TypeAnnotationResolver.resolve_type_annotation(ast, self.symbol_table)
 
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TypedName) -> types.BaseType:
         return self.synthesize_type(ast.type_)
 
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TraitApplication) -> types.BaseType:
         base_type = self.synthesize_type(ast.target)
         newly_applied_traits = TraitResolver.resolve_traits(ast.traits, self.symbol_table)
@@ -65,42 +69,42 @@ class TypeSynthesizer:
         return base_type
 
     @typing_rule("")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Int) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
         return types.IntType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Float) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
         return types.FloatType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.String) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
         return types.StringType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.True_) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
         return types.BoolType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.False_) -> types.BaseType:
         literal_value = TraitResolver.literal_ast_to_python(ast)
         return types.BoolType(traits=traits.Traits({traits.LiteralTrait(literal_value)}))
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.None_) -> types.BaseType:
         return types.NoneType_(traits=traits.Traits({traits.LiteralTrait(None)}))
 
     @typing_rule("Lambda Expression")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.LambdaDef) -> types.BaseType:
         param_types = []
         for arg in ast.params.items:
@@ -113,7 +117,7 @@ class TypeSynthesizer:
         return types.ProcedureType(types.TupleType(list(param_types)), return_type=return_type)
 
     @typing_rule("Records - Access")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RecordAccess) -> types.BaseType:
         ast_type = self.synthesize_type(ast.record)
         if isinstance(ast_type, types.RecordType):
@@ -121,7 +125,7 @@ class TypeSynthesizer:
         raise types.SimileTypeError(f"Cannot access field of non-record type {ast_type} in record access", ast)
 
     @typing_rule("Command - Procedure Call", "Relation Operations - Function Call")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Call) -> types.BaseType:
         ast_type = self.synthesize_type(ast.target)
         if isinstance(ast_type, types.ProcedureType):
@@ -131,7 +135,7 @@ class TypeSynthesizer:
         raise types.SimileTypeError(f"Cannot call type {ast_type} (expected procedure or relation)", ast)
 
     @typing_rule("Bag Operations - Image", "Relation Operations - Image")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Image) -> types.BaseType:
         if len(ast.indices) != 1:
             raise types.SimileTypeError(f"Image operation expects exactly one index, got {len(ast.indices)}", ast)
@@ -151,52 +155,52 @@ class TypeSynthesizer:
     # def _(self, ast: ast_.TypedName) -> types.BaseType: ...
 
     @typing_rule("Command - return")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Return) -> types.BaseType:
         return self.synthesize_type(ast.value)
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Assignment) -> types.BaseType:
         return types.NoneType_()
 
     @typing_rule("Command - break", "Command - continue", "Command - skip")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.ControlFlowStmt) -> types.BaseType:
         return types.NoneType_()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.If | ast_.ElseIf | ast_.Else | ast_.For | ast_.While) -> types.BaseType:
         return types.NoneType_()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Import | ast_.Start | ast_.Statements) -> types.BaseType:
         return types.NoneType_()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RecordDefSymbol | ast_.ProcedureDefSymbol) -> types.BaseType:
         return types.NoneType_()
 
     @typing_rule("Binary Boolean Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Implies) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.BoolType, types.BoolType.implies)
 
     @typing_rule("Binary Boolean Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Equivalent) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.BoolType, types.BoolType.equivalent)
 
     @typing_rule("Binary Boolean Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotEquivalent) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.BoolType, types.BoolType.not_equivalent)
 
     @typing_rule("Bag Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Add) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -207,7 +211,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Bag Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Subtract) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -218,7 +222,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Multiply) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -228,7 +232,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Divide) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -238,17 +242,17 @@ class TypeSynthesizer:
         )
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.IntDivide) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.IntType, types.IntType.int_divide)
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Modulo) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.IntType, types.IntType.modulo)
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Exponent) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -258,7 +262,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Ordering Operators")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.LessThan) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -268,7 +272,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Ordering Operators")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.LessThanOrEqual) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -278,7 +282,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Ordering Operators")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.GreaterThan) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -288,7 +292,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Ordering Operators")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.GreaterThanOrEqual) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -298,12 +302,12 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Equals")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Equal) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.BaseType, types.BaseType.equals)
 
     @typing_rule("Equals")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotEqual) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.BaseType, types.BaseType.not_equals)
 
@@ -313,17 +317,17 @@ class TypeSynthesizer:
     # def _(self, ast: ast_.IsNot) -> types.BaseType:
 
     @typing_rule("Set Membership")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.In) -> types.BaseType:
         return self._synthesize_type_binary_right_as_base(ast, types.SetType, types.SetType.in_)
 
     @typing_rule("Set Membership")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotIn) -> types.BaseType:
         return self._synthesize_type_binary_right_as_base(ast, types.SetType, types.SetType.not_in)
 
     @typing_rule("Set Operations", "Bag Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Union) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -333,7 +337,7 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Set Operations", "Bag Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Intersection) -> types.BaseType:
         return self._synthesize_type_multiple_binary_paths(
             [
@@ -343,97 +347,97 @@ class TypeSynthesizer:
         )
 
     @typing_rule("Set Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Difference) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.difference)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Subset) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.is_subset)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SubsetEq) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.is_subset_equals)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Superset) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.is_superset)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SupersetEq) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.is_superset_equals)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotSubset) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.not_is_subset)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotSubsetEq) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.not_is_subset_equals)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotSuperset) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.not_is_superset)
 
     @typing_rule("Set Ordering Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.NotSupersetEq) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.not_is_superset_equals)
 
     @typing_rule("Maplet")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Maplet) -> types.BaseType:
         return types.PairType.maplet(self.synthesize_type(ast.left), self.synthesize_type(ast.right))
 
     @typing_rule("Relation Operations - Overriding")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RelationOverriding) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.RelationType, types.RelationType.overriding)
 
     @typing_rule("Relation Operations - Composition")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Composition) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.RelationType, types.RelationType.composition)
 
     @typing_rule("Cartesian Product")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.CartesianProduct) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SetType, types.SetType.cartesian_product)
 
     @typing_rule("Numerical Range")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Upto) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.IntType, types.IntType.upto)
 
     @typing_rule("Sequence Operations - Concatenation")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Concat) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.SequenceType, types.SequenceType.concat)
 
     @typing_rule("Relation Operations - Domain Subtraction")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.DomainSubtraction) -> types.BaseType:
         return self._synthesize_type_binary_right_as_base(ast, types.RelationType, types.RelationType.domain_subtraction)
 
     @typing_rule("Relation Operations - Domain Restriction")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.DomainRestriction) -> types.BaseType:
         return self._synthesize_type_binary_right_as_base(ast, types.RelationType, types.RelationType.domain_restriction)
 
     @typing_rule("Relation Operations - Range Subtraction")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RangeSubtraction) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.RelationType, types.RelationType.range_subtraction)
 
     @typing_rule("Relation Operations - Range Restriction")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RangeRestriction) -> types.BaseType:
         return self._synthesize_type_binary(ast, types.RelationType, types.RelationType.range_restriction)
 
@@ -445,62 +449,62 @@ class TypeSynthesizer:
         return relation_type
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Relation) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.RELATION)
 
     @typing_rule("Relation Subtype - Total Relation")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TotalRelation) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.TOTAL_RELATION)
 
     @typing_rule("Relation Subtype - Surjective Relation")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SurjectiveRelation) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.SURJECTIVE_RELATION)
 
     @typing_rule("Relation Subtype - Total Surjective Relation")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TotalSurjectiveRelation) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.TOTAL_SURJECTIVE_RELATION)
 
     @typing_rule("Relation Subtype - Partial Function")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.PartialFunction) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.PARTIAL_FUNCTION)
 
     @typing_rule("Relation Subtype - Total Function")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TotalFunction) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.TOTAL_FUNCTION)
 
     @typing_rule("Relation Subtype - Partial Injection")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.PartialInjection) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.PARTIAL_INJECTION)
 
     @typing_rule("Relation Subtype - Total Injection")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TotalInjection) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.TOTAL_INJECTION)
 
     @typing_rule("Relation Subtype - Partial Surjection")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.PartialSurjection) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.PARTIAL_SURJECTION)
 
     @typing_rule("Relation Subtype - Total Surjection")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.TotalSurjection) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.TOTAL_SURJECTION)
 
     @typing_rule("Relation Subtype - Bijection")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Bijection) -> types.BaseType:
         return self.create_relation_type(ast, ast_.RelationOperator.BIJECTION)
 
     @typing_rule("Boolean Operations - Negation")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Not) -> types.BaseType:
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.BoolType):
@@ -508,7 +512,7 @@ class TypeSynthesizer:
         return val_type.not_()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Negative) -> types.BaseType:
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.IntType | types.FloatType):
@@ -516,16 +520,16 @@ class TypeSynthesizer:
         return val_type.negate()
 
     # @typing_rule("Set Operations - Powerset")
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.Powerset) -> types.BaseType:
     #     val_type = self.synthesize_type(ast.value)
     #     return types.SetType.powerset(val_type)
 
     # @typing_rule()
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.NonemptyPowerset) -> types.BaseType: ...
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Inverse) -> types.BaseType:
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.RelationType):
@@ -533,7 +537,7 @@ class TypeSynthesizer:
         return val_type.inverse()
 
     @typing_rule("Binary Boolean Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.And) -> types.BaseType:
         item_types = []
         for item in ast.items:
@@ -544,7 +548,7 @@ class TypeSynthesizer:
         return reduce(types.BoolType.and_, item_types)
 
     @typing_rule("Binary Boolean Operations")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Or) -> types.BaseType:
         item_types = []
         for item in ast.items:
@@ -555,15 +559,15 @@ class TypeSynthesizer:
         return reduce(types.BoolType.or_, item_types)
 
     # @typing_rule("Forall")
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.Forall) -> types.BaseType: ...
     # @typing_rule("Exists")
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.Exists) -> types.BaseType: ...
     # @typing_rule("Binds (with generator)", "Binds with OR", "Binds with AND")
 
     @typing_rule("Quantifier", "Branching Quantifier")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.QuantifierBody) -> types.BaseType:
         self._synthesize_type_generator_nest(ast.generators)
 
@@ -593,7 +597,7 @@ class TypeSynthesizer:
         return types.GeneratorIntermediary(types.TupleType(generator_types))
 
     @typing_rule("Generator")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Generator) -> types.BaseType:
         set_type = self.synthesize_type(ast.set_)
         if not isinstance(set_type, types.SetType):
@@ -633,7 +637,7 @@ class TypeSynthesizer:
                 raise types.SimileTypeError("Unreachable state", identifiers)
 
     @typing_rule("Iter Generator")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.IterGenerator) -> types.BaseType:
         generator_type = self.synthesize_type(ast.generator)
         if not isinstance(generator_type, types.GeneratorIntermediary):
@@ -643,13 +647,13 @@ class TypeSynthesizer:
         return generator_type
 
     @typing_rule("Iter (body)")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.IterBodyEnd) -> types.BaseType:  # typecheck body, then return return_value's type
         self.synthesize_type(ast.body)
         return self.synthesize_type(ast.return_value)
 
     @typing_rule("Iter")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.IterBody) -> types.BaseType:
         self._synthesize_type_generator_nest(ast.generators)
 
@@ -665,7 +669,7 @@ class TypeSynthesizer:
         return return_type
 
     @typing_rule("Fold")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Fold) -> types.BaseType:
         self.synthesize_type(ast.accumulator_init)
         accumulator_init_var_type = self.synthesize_type(ast.accumulator_init.target)
@@ -677,7 +681,7 @@ class TypeSynthesizer:
         return types.QuantificationBodyIntermediary(fold_return_type).fold()
 
     @typing_rule("Forall")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Forall) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -685,7 +689,7 @@ class TypeSynthesizer:
         return quantification_body.forall()
 
     @typing_rule("Exists")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Exists) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -693,7 +697,7 @@ class TypeSynthesizer:
         return quantification_body.exists()
 
     @typing_rule("General Union")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.UnionAll) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -701,7 +705,7 @@ class TypeSynthesizer:
         return quantification_body.union_all()
 
     @typing_rule("General Intersection")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.IntersectionAll) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -709,7 +713,7 @@ class TypeSynthesizer:
         return quantification_body.intersection_all()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Sum) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -717,7 +721,7 @@ class TypeSynthesizer:
         return quantification_body.sum()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Product) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -725,7 +729,7 @@ class TypeSynthesizer:
         return quantification_body.product()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Min) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -733,7 +737,7 @@ class TypeSynthesizer:
         return quantification_body.min()
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.Max) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -741,43 +745,43 @@ class TypeSynthesizer:
         return quantification_body.max()
 
     @typing_rule("Set Enumeration")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SequenceEnumeration) -> types.BaseType:
         item_types = list(map(self.synthesize_type, ast.items))
         return types.SequenceType.enumeration(item_types)
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SetEnumeration) -> types.BaseType:
         item_types = list(map(self.synthesize_type, ast.items))
         return types.SetType.enumeration(item_types)
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RelationEnumeration) -> types.BaseType:
         item_types = list(map(self.synthesize_type, ast.items))
         return types.RelationType.enumeration(item_types)
 
     @typing_rule()
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.BagEnumeration) -> types.BaseType:
         item_types = list(map(self.synthesize_type, ast.items))
         return types.BagType.enumeration(item_types)
 
     # @typing_rule()
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.SequenceComprehension) -> types.BaseType: ...
     # @typing_rule()
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.SetComprehension) -> types.BaseType: ...
     # @typing_rule()
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.RelationComprehension) -> types.BaseType: ...
     # @typing_rule()
-    # @synthesize_type.register
+    # @_synthesize_type.register
     # def _(self, ast: ast_.BagComprehension) -> types.BaseType: ...
     @typing_rule("Sequence Comprehension")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SequenceComprehension) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -785,7 +789,7 @@ class TypeSynthesizer:
         return quantification_body.sequence_comprehension()
 
     @typing_rule("Set Comprehension")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.SetComprehension) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -793,7 +797,7 @@ class TypeSynthesizer:
         return quantification_body.set_comprehension()
 
     @typing_rule("Relation Comprehension")  # TODO FIXME?
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.RelationComprehension) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
@@ -801,12 +805,17 @@ class TypeSynthesizer:
         return quantification_body.relation_comprehension()
 
     @typing_rule("Bag Comprehension")
-    @synthesize_type.register
+    @_synthesize_type.register
     def _(self, ast: ast_.BagComprehension) -> types.BaseType:
         quantification_body = self.synthesize_type(ast.body)
         if not isinstance(quantification_body, types.QuantificationBodyIntermediary):
             raise types.SimileTypeError(f"Body of exists must be a quantification body. Got {quantification_body}", ast.body)
         return quantification_body.bag_comprehension()
+
+    @_synthesize_type.register
+    def _(self, ast: ast_.TupleLiteral) -> types.BaseType:
+        item_types = list(map(self.synthesize_type, ast.items))
+        return types.TupleType(item_types)
 
     def _synthesize_type_binary[T](
         self,

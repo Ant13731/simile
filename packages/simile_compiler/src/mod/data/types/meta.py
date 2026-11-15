@@ -40,6 +40,24 @@ class AnyType_(BaseType):
 
 
 @dataclass
+class EmptyCollectionType(BaseType):
+    def _is_eq_type(self, other: BaseType) -> bool:
+        return isinstance(other, EmptyCollectionType)
+
+    def _is_subtype(self, other: BaseType) -> bool:
+        # Assuming that this type is only called within the context of an empty collection
+        # it can become any possible type
+        # TODO add the formalization rules for this into the spec
+        return True
+
+    def base_traits(self) -> set[BaseTrait]:
+        return set()
+
+    def check_incompatible_traits(self) -> None:
+        return None
+
+
+@dataclass
 class GenericType(BaseType):
     """Generic types are used primarily for resolving generic procedures/functions into a specific type based on context.
 

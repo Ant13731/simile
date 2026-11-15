@@ -644,9 +644,10 @@ class Parser:
         if self.peek().type_ not in (TokenType.DOT, TokenType.CDOT):
             params = self.flat_tuple_identifier()
 
-        if not self.match(TokenType.DOT):
-            self.consume(TokenType.CDOT, "Expected LAMBDA quantification separator")
-        predicate = self.predicate()
+        predicate: ast_.ASTNode = ast_.True_()
+        if self.match(TokenType.CDOT):
+            predicate = self.predicate()
+
         self.consume(TokenType.VBAR, "Expected LAMBDA quantification predicate separator")
         return ast_.LambdaDef(params, predicate, self.expr())
 

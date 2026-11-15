@@ -1,5 +1,5 @@
 from "bag" import map_b, bag_size, fold_b
-from "relation" import dom, ran
-from "sequence" import concat, flatten, first, length, tail, append, prepend, tails, heads, segments
+from "relation" import dom, ran, relation_generator, total_relation_generator, surjective_relation_generator, total_surjective_relation_generator, partial_function_generator, total_function_generator, partial_injection_generator, total_injection_generator, partial_surjection_generator, total_surjection_generator, bijection_generator
+from "sequence" import concat, flatten, first, len, tail, append, prepend, tails, heads, segments
 from "set" import min, max, map_min, map_max, map, fold, sum, product, sum_f, product_f, card, choice, choice_with_default
 from "type" import cast

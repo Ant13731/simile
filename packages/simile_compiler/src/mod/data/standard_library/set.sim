@@ -55,3 +55,13 @@ procedure choice_with_default(S: set[T], default: T) -> T:
     if card(S) = 0:
         return default
     return choice(S)
+
+procedure powerset_aux(S: set[T], current_powerset: set[set[T]]) -> set[set[T]]:
+    if card(S) = 0:
+        return {current_powerset}
+    x: T :: S
+    next_powerset: set[set[T]] := current_powerset \/ {s in current_powerset | s \/ {x}}
+    return powerset_aux(S \ {x}, next_powerset)
+
+procedure powerset(S: set[T]) -> set[set[T]]:
+    return powerset_aux(S, {})

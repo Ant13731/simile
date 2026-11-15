@@ -34,7 +34,7 @@ from src.mod.data.traits import (
 from src.mod.data.types.base import BaseType, BoolType, _TraitMixin
 from src.mod.data.types.primitive import FloatType, NoneType_, IntType, StringType
 from src.mod.data.types.tuple_ import PairType
-from src.mod.data.types.meta import AnyType_
+from src.mod.data.types.meta import AnyType_, EmptyCollectionType
 from src.mod.data.types.typing_rule_decorator import typing_rule
 
 if TYPE_CHECKING:
@@ -140,7 +140,7 @@ class SetType(BaseType):
         """Create a set from an enumeration of elements of a specific type."""
         traits: set[BaseTrait] = {SizeTrait(size=len(element_types))}
         if element_types == []:
-            return cls.set_constructor(element_type=AnyType_(), traits=traits)
+            return cls.set_constructor(element_type=EmptyCollectionType(), traits=traits)
 
         return cls.set_constructor(element_type=BaseType.max_type(element_types), traits=traits)
 

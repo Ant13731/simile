@@ -1,2 +1,2 @@
 procedure count_pos_before_fst_neg(xs: sequence[int]) -> int:
-    return sum i in 0 .. len(xs) · (forall x in xs[:i] | x > 0) | 1
+    return sum i in 0 .. len(xs) · (forall x in xs[0..i] | x > 0) | 1

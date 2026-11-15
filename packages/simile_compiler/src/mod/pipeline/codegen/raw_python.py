@@ -16,18 +16,6 @@ class CodegenError(Exception):
 
 class BuiltinOperations:
     lib_lookup: ClassVar[dict] = {
-        ast_.RelationOperator.RELATION: "relation_generator",
-        ast_.RelationOperator.TOTAL_RELATION: "relation_generator",
-        ast_.RelationOperator.SURJECTIVE_RELATION: "relation_generator",
-        ast_.RelationOperator.TOTAL_SURJECTIVE_RELATION: "relation_generator",
-        ast_.RelationOperator.PARTIAL_FUNCTION: "relation_generator",
-        ast_.RelationOperator.TOTAL_FUNCTION: "relation_generator",
-        ast_.RelationOperator.PARTIAL_INJECTION: "relation_generator",
-        ast_.RelationOperator.TOTAL_INJECTION: "relation_generator",
-        ast_.RelationOperator.PARTIAL_SURJECTION: "relation_generator",
-        ast_.RelationOperator.TOTAL_SURJECTION: "relation_generator",
-        ast_.RelationOperator.BIJECTION: "relation_generator",
-        #
         ast_.ListOperator.AND: "and_",
         ast_.ListOperator.OR: "or_",
         #
@@ -216,6 +204,65 @@ class ASTLowering:
             )
         return ast
 
+    @lower_ast.register
+    def _(self, ast: ast_.RelationOp) -> ast_.ASTNode:
+        match ast.op_type:
+            case ast_.RelationOperator.RELATION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("relation_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.TOTAL_RELATION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("total_relation_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.SURJECTIVE_RELATION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("surjective_relation_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.TOTAL_SURJECTIVE_RELATION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("total_surjective_relation_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.PARTIAL_FUNCTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("partial_function_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.TOTAL_FUNCTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("total_function_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.PARTIAL_INJECTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("partial_injection_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.TOTAL_INJECTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("total_injection_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.PARTIAL_SURJECTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("partial_surjection_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.TOTAL_SURJECTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("total_surjection_generator")),
+                    [ast.left, ast.right],
+                )
+            case ast_.RelationOperator.BIJECTION:
+                return ast_.Call(
+                    ast_.Symbol(self.symbol_table.lookup_identifier("bijection_generator")),
+                    [ast.left, ast.right],
+                )
+
 
 @dataclass
 class Printer:
@@ -339,7 +386,7 @@ class Printer:
         return "None"
 
     @_print.register
-    def _(self, ast: ast_.BinaryOp | ast_.RelationOp, i: int) -> str:
+    def _(self, ast: ast_.BinaryOp, i: int) -> str:
         left = self._print(ast.left, i)
         right = self._print(ast.right, i)
         return f"{BuiltinOperations.lookup(ast.op_type)}({left}, {right})"

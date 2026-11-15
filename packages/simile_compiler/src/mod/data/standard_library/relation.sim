@@ -1,3 +1,5 @@
+from "set" import card, powerset
+
 T1: type := generic
 T2: type := generic
 
@@ -6,3 +8,64 @@ procedure dom(R: relation[T1, T2]) -> set[T1]:
 
 procedure ran(R: relation[T1, T2]) -> set[T2]:
     return {x |-> y in R | y}
+
+procedure relation_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return powerset(s1 >< s2)
+
+# TODO: Figure out a constructive way to generate these (as we have done for bijections)
+# rather than cutting down from the relation generator
+procedure _is_total(r: relation[T1, T2], expected_domain: set[T1]) -> bool:
+    return dom(r) = expected_domain
+
+procedure _is_surjective(r: relation[T1, T2], expected_range: set[T1]) -> bool:
+    return ran(r) = expected_range
+
+procedure _is_many_to_one(r: relation[T1, T2]) -> bool:
+    return forall x in dom(r) | card(r[x]) <= 1
+
+procedure _is_one_to_many(r: relation[T1, T2]) -> bool:
+    return forall y in ran(r) | card((r~)[y]) <= 1
+
+procedure total_relation_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_total(r, s1) | r}
+
+procedure surjective_relation_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_surjective(r, s2) | r}
+
+procedure total_surjective_relation_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_total(r, s1) and _is_surjective(r, s2) | r}
+
+procedure partial_function_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_many_to_one(r) | r}
+
+procedure total_function_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_total(r, s1) and _is_many_to_one(r) | r}
+
+procedure partial_injection_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_many_to_one(r) and _is_one_to_many(r) | r}
+
+procedure total_injection_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_total(r, s1) and _is_many_to_one(r) and _is_one_to_many(r) | r}
+
+procedure partial_surjection_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_surjective(r, s2) and _is_many_to_one(r) | r}
+
+procedure total_surjection_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return {r in relation_generator(s1, s2) .: _is_total(r, s1) and _is_surjective(r, s2)  and _is_many_to_one(r) | r}
+
+# procedure bijection_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+#    return {r in relation_generator(s1, s2) .: _is_total(r, s1) and _is_surjective(r, s2) and _is_many_to_one(r) and and _is_one_to_many(r) | r}
+
+
+
+# Constructive version of bijection generator
+# TODO make this tail recursive
+procedure _bijection_generator_aux(s1: set[T1], s2: set[T2], current_bijection: relation[T1, T2]) -> set[relation[T1, T2]]:
+    if card(s1) = 0:
+        return {current_bijection}
+    x: T1 :: s1
+    return union y in s2 | _bijection_generator_aux(s1 \ {x}, s2 \ {y}, current_bijection \/ {(x,y)})
+
+procedure bijection_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
+    return _bijection_generator_aux(s1, s2, {})
+

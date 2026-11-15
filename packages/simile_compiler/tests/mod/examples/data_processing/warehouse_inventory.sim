@@ -35,4 +35,4 @@ procedure count(item: (ProductID, int)) -> int:
 
 procedure most_sold_material(sold_items: bag[ProductID]) -> PartID:
     sold_materials: bag[PartID] := recipes[sold_items]
-    return max(count, sold_materials) # if this was represented as a double hash table, we would just reverse lookup by the max number of occurrences in the bag.
+    return max({count, sold_materials}) # if this was represented as a double hash table, we would just reverse lookup by the max number of occurrences in the bag.

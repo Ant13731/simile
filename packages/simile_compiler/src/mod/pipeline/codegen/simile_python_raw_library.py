@@ -1,5 +1,6 @@
-from typing import Iterable
+from typing import Iterator, Iterable
 from copy import copy
+from itertools import chain, combinations
 
 
 class SimileRuntimeException(Exception):
@@ -12,7 +13,7 @@ class Relation[K, V]:
         self._fwd: dict[K, list[V]] = {}
         self._bwd: dict[V, list[K]] = {}
 
-    def __iter__(self) -> Iterable[tuple[K, V]]:
+    def __iter__(self) -> Iterator[tuple[K, V]]:
         for key, values in self._fwd.items():
             for value in values:
                 yield (key, value)
@@ -126,13 +127,16 @@ class Relation[K, V]:
                 result.delete_value(v)
         return result
 
+    def __str__(self) -> str:
+        return "{" + ", ".join(f"{k}↦ {v}" for k, v in self) + "}"
+
     # TODO union, intersection, set difference
 
 
-def relation_generator[T1, T2](r1: Iterable[T1], r2: Iterable[T2]) -> Iterable[tuple[T1, T2]]:
-    for item1 in r1:
-        for item2 in r2:
-            yield (item1, item2)
+def powerset[T](vs: Iterable[T]) -> set[tuple[T, ...]]:
+    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3) (1,2,3)"
+    s = list(vs)
+    return set(chain.from_iterable(combinations(s, r) for r in range(len(s) + 1)))
 
 
 def and_(vs: Iterable[bool]) -> bool:
@@ -331,6 +335,14 @@ def range_subtraction(v1: Relation, v2):
 
 def range_restriction(v1: Relation, v2):
     return v1.range_restriction(v2)
+
+
+def dom(r: Relation):
+    return set(r._fwd.keys())
+
+
+def ran(r: Relation):
+    return set(r._bwd.keys())
 
 
 def concat(v1, v2):

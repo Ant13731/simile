@@ -2,4 +2,4 @@ _0_or_1: type := int
     trait domain = {0,1}
 
 procedure _0_after_1(xs: sequence[_0_or_1]) -> bool:
-    return exists i in 0 .. len(xs) | xs[i] = 0 and 1 in xs[:i]
+    return exists i in 0 .. len(xs) | xs[i] = 0 and 1 in xs[0..i]
