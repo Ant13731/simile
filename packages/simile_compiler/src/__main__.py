@@ -1,4 +1,5 @@
 import argparse
+from loguru import logger
 
 from src.mod import scan, parse
 
@@ -23,23 +24,23 @@ def main() -> None:
 
     simile_input = None
     if args.cli:
-        print("Parsing input from command line:", args.cli)
+        logger.info("Parsing input from command line:", args.cli)
         simile_input = args.cli
     elif args.input:
-        print("Parsing input from file:", args.input)
+        logger.info("Parsing input from file:", args.input)
         with open(args.input, "r", encoding="utf-8") as file:
             simile_input = file.read()
     else:
-        print("No input provided. Please specify an input file or a command line string.")
+        logger.info("No input provided. Please specify an input file or a command line string.")
         return
 
     if args.tokenize:
-        print("Tokenizing input:", simile_input)
-        print("Output:")
-        print(scan(simile_input))
+        logger.info("Tokenizing input:", simile_input)
+        logger.info("Output:")
+        logger.info(scan(simile_input))
 
     if args.pretty_print_parse:
-        print("Parsing input and pretty printing parse tree:", simile_input)
+        logger.info("Parsing input and pretty printing parse tree:", simile_input)
 
 
 if __name__ == "__main__":

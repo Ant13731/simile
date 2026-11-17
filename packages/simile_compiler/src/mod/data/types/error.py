@@ -21,7 +21,7 @@ class SimileTypeError(Exception):
         from src.mod.pipeline.printers.ast_ import ast_to_source
 
         self.node = node
-        self.add_note(f"Error at node {node.get_location()}: {ast_to_source(node)}")
+        self.add_note(f"Error at node {node.get_location()}: {ast_to_source(node)}, {node}")
 
     @classmethod
     def wrap_type_check_error_with_ast[T](cls, func: Callable[[T, ASTNode], BaseType]) -> Callable[[T, ASTNode], BaseType]:

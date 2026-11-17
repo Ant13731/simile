@@ -231,6 +231,7 @@ class PopulateSymbolTable:
                     assert isinstance(field_type, BaseType)
                     fields[item.name.name] = field_type
 
+                # This effectively disallows recursive structures to be defined...
                 self.symbol_table.add_symbol(
                     name,
                     IdentifierContext.RECORD,

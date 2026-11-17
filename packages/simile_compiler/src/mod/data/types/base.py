@@ -78,7 +78,7 @@ class BaseType(_TraitMixin):
         return self._is_eq_type(other)
 
     def _is_eq_type(self, other: BaseType) -> bool:
-        raise NotImplementedError("Base class does not define equality check for types")
+        raise NotImplementedError(f"Base class does not define equality check for types - missing from {self}")
 
     @typing_rule("Reflexive Subtype", "Transitive Subtype", "Sub Top Type")
     def is_subtype(self, other: BaseType, check_traits: bool = False) -> bool:

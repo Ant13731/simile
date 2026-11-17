@@ -430,10 +430,10 @@ class RelationType(SetType):
         return new_type
 
     def function_call(self, argument: BaseType) -> BaseType:
-        return self.image(argument).choice()
+        return self.image(SetType(element_type=argument)).choice()
 
     def image(self, argument: BaseType) -> SetType:
-        self._is_subtype_or_error(argument, (self.left,))
+        self._is_subtype_or_error(argument, SetType(element_type=self.left))
         # TODO transfer empty trait
         return SetType(element_type=self.right)
 

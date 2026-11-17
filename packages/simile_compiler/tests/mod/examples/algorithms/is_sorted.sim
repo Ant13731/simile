@@ -1,2 +1,2 @@
 procedure is_sorted(xs: sequence[int]) -> bool:
-    return forall i in 1 .. len(xs) | xs[i-1] < xs[i]
+    return forall i in 1 .. len(xs) | xs(i-1) < xs(i)

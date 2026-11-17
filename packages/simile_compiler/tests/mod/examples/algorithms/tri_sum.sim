@@ -1,2 +1,2 @@
 procedure tri_sum(xs: sequence[int]) -> int:
-    return sum i in 0 .. len(xs), d in 0..i | xs[i]*d
+    return sum i in 0 .. len(xs), d in 0..i | xs(i) * d

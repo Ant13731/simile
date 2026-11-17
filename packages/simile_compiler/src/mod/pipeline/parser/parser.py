@@ -407,7 +407,7 @@ class Parser:
             attempted_traits_parse = self.trait_stmt()
             return ast_.TraitApplication(assignment, attempted_traits_parse)
         except ParseException:
-            logger.debug(f"Failed to parse trait statement. Backtracking out of assignment. Parse error was: {self.errors[-1]}")
+            logger.debug(f"Failed to parse trait statement. Backtracking out of assignment")
             self.backtrack_from_error(*backtrack_ctx)
         return assignment
 
@@ -664,7 +664,7 @@ class Parser:
                     return self.predicate()
             self.backtrack_from_error(*backtrack_ctx, error_count=0)
         except ParseException:
-            logger.debug(f"Failed to parse quantification IDENTIFIER as an atom (func call), attempting to parse as a quantification. Parse error was: {self.errors[-1]}")
+            logger.debug(f"Failed to parse quantification IDENTIFIER as an atom (func call), attempting to parse as a quantification")
             self.backtrack_from_error(*backtrack_ctx)
         return None
 
@@ -715,7 +715,7 @@ class Parser:
             body = self.quantification_body()
             return ast_.Quantifier3(body, op_type)
         except ParseException as e:
-            logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier. Parse error was: {self.errors[-1]}")
+            logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier")
             # TEMP: testing parsing without considering identifiers
             self.backtrack_from_error(*backtrack_ctx)
             if self.peek(1).type_ == TokenType.L_PAREN:
@@ -733,7 +733,7 @@ class Parser:
         try:
             generators = [self.generator()]
         except ParseException as e:
-            logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body. Parse error was: {self.errors[-1]}")
+            logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body")
             # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
             # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
             parse_errs = self.backtrack_from_error(*backtrack_ctx, add_errs_to_alt=False)
@@ -747,7 +747,7 @@ class Parser:
             try:
                 generators.append(self.generator())
             except ParseException as e:
-                logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body. Parse error was: {self.errors[-1]}")
+                logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body")
                 # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
                 # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
                 parse_errs = self.backtrack_from_error(*backtrack_ctx, add_errs_to_alt=False)
@@ -1107,7 +1107,7 @@ class Parser:
                 return ast_.Enumeration(enumeration, collection_operator)
             self.backtrack_from_error(*backtrack_ctx, error_count=0)
         except ParseException:
-            logger.debug(f"Failed to parse as enumeration, trying as quantification. Parse error was: {self.errors[-1]}")
+            logger.debug(f"Failed to parse as enumeration, trying as quantification")
             # backtrack - this is not an enumeration, rather a quantification
             self.backtrack_from_error(*backtrack_ctx)
 

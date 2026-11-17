@@ -70,5 +70,6 @@ class TestExamplesHappyPath:
         with open(example_path, "r", encoding="utf-8") as f:
             source = f.read()
         ast = parse(source, example_path)
+        logger.debug(f"Analyzing file {example_path}")
         analysis = semantic_analysis(ast)
         assert analysis is not None

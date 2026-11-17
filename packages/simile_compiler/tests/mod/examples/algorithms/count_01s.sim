@@ -2,4 +2,4 @@ _0_or_1: type := int
     trait domain = {0,1}
 
 procedure count_01s(xs: sequence[_0_or_1]) -> int:
-    return sum i in 1 .. len(xs) · xs[i-1] = 0 and xs[i] = 1 | 1
+    return sum i in 1 .. len(xs) · xs(i-1) = 0 and xs(i) = 1 | 1

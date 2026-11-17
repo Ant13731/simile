@@ -31,7 +31,7 @@ def _(type_: types.AnyType_) -> str:
 @type_to_source.register
 def _(type_: types.GenericType) -> str:
     # TODO store the friendly name back in GenericType
-    return f"T_scope{type_.scope_id}_symbol{type_.symbol_id}"
+    return f"T_{type_.scope_id}_{type_.symbol_id}"
 
 
 @type_to_source.register
@@ -97,4 +97,6 @@ def _(type_: types.EnumType) -> str:
 @type_to_source.register
 def _(type_: types.TupleType) -> str:
     parameterized_types = ", ".join(type_to_source(item) for item in type_.items)
-    return f"tuple[{parameterized_types}]"
+    if len(type_.items) == 1:
+        parameterized_types += ","
+    return f"({parameterized_types})"

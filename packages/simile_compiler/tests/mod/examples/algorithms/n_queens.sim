@@ -1,5 +1,5 @@
 procedure safe(placement: relation[int, int]) -> bool:
-    return forall p1 |-> p2 in placement >< placement | p1 != p2 ==> abs(p1[0] - p2[0]) != abs(p1[1] - p2[1])
+    return forall p1 |-> p2 in placement >< placement | p1 != p2 ==> abs(p1(0) - p2(0)) != abs(p1(1) - p2(1))
 
 procedure n_queens(n: int) -> set[relation[int, int]]:
     return {placement in 0..n >->> 0..n · safe(placement) | placement}

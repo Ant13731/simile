@@ -43,9 +43,11 @@ class TypeSynthesizer:
         # but we want the type to actually come through in the synthesizer
         # (so we can actually type check against other types)
         # The real fix would be to not need to wrap imported symbols in a new type... but we will see for now
-        if isinstance(symbol_info.declared_type, types.ImportedSymbol):
-            return symbol_info.declared_type.imported_symbol_entry.declared_type
-        return symbol_info.declared_type
+        ret_type = symbol_info.declared_type
+        # Multiple layers of imports means we need to handle multiple layers of type dereferencing
+        while isinstance(ret_type, types.ImportedSymbol):
+            ret_type = ret_type.imported_symbol_entry.declared_type
+        return ret_type
 
     @typing_rule("Tuple Enumeration")
     @_synthesize_type.register
@@ -119,24 +121,31 @@ class TypeSynthesizer:
     @typing_rule("Records - Access")
     @_synthesize_type.register
     def _(self, ast: ast_.RecordAccess) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         ast_type = self.synthesize_type(ast.record)
         if isinstance(ast_type, types.RecordType):
             return ast_type.access(ast.field_name.name)
-        raise types.SimileTypeError(f"Cannot access field of non-record type {ast_type} in record access", ast)
+        raise types.SimileTypeError(f"Cannot access field of non-record type {type_to_source(ast_type)} in record access", ast)
 
     @typing_rule("Command - Procedure Call", "Relation Operations - Function Call")
     @_synthesize_type.register
     def _(self, ast: ast_.Call) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         ast_type = self.synthesize_type(ast.target)
+        assert not isinstance(ast_type, types.ImportedSymbol), "Why is this an imported symbol?"
         if isinstance(ast_type, types.ProcedureType):
             return ast_type.call([self.synthesize_type(arg) for arg in ast.args])
         if isinstance(ast_type, types.RelationType) and len(ast.args) == 1:
             return ast_type.function_call(self.synthesize_type(ast.args[0]))
-        raise types.SimileTypeError(f"Cannot call type {ast_type} (expected procedure or relation)", ast)
+        raise types.SimileTypeError(f"Cannot call type {type_to_source(ast_type)} (expected procedure or relation)", ast)
 
     @typing_rule("Bag Operations - Image", "Relation Operations - Image")
     @_synthesize_type.register
     def _(self, ast: ast_.Image) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         if len(ast.indices) != 1:
             raise types.SimileTypeError(f"Image operation expects exactly one index, got {len(ast.indices)}", ast)
         ast_index = ast.indices[0]
@@ -146,7 +155,7 @@ class TypeSynthesizer:
             return target_type.image(index_type)
         if isinstance(target_type, types.RelationType):
             return target_type.image(index_type)
-        raise types.SimileTypeError(f"Cannot take image of non-relation type {target_type}", ast)
+        raise types.SimileTypeError(f"Cannot take image of non-relation type {type_to_source(target_type)}", ast)
 
     # There should be no types or typed names
     # @resolve_type.register
@@ -506,17 +515,21 @@ class TypeSynthesizer:
     @typing_rule("Boolean Operations - Negation")
     @_synthesize_type.register
     def _(self, ast: ast_.Not) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.BoolType):
-            raise types.SimileTypeError(f"Operand of negation must be of type BoolType. Got {val_type}", ast.value)
+            raise types.SimileTypeError(f"Operand of negation must be of type bool. Got {type_to_source(val_type)}", ast.value)
         return val_type.not_()
 
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.Negative) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.IntType | types.FloatType):
-            raise types.SimileTypeError(f"Operand of negative must be of type IntType or BoolType. Got {val_type}", ast.value)
+            raise types.SimileTypeError(f"Operand of negative must be of type int or bool. Got {type_to_source(val_type)}", ast.value)
         return val_type.negate()
 
     # @typing_rule("Set Operations - Powerset")
@@ -531,30 +544,36 @@ class TypeSynthesizer:
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.Inverse) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.RelationType):
-            raise types.SimileTypeError(f"Operand of inverse must be of type RelationType. Got {val_type}", ast.value)
+            raise types.SimileTypeError(f"Operand of inverse must be of type RelationType. Got {type_to_source(val_type)}", ast.value)
         return val_type.inverse()
 
     @typing_rule("Binary Boolean Operations")
     @_synthesize_type.register
     def _(self, ast: ast_.And) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         item_types = []
         for item in ast.items:
             item_type = self.synthesize_type(item)
             if not isinstance(item_type, types.BoolType):
-                raise types.SimileTypeError(f"Operand of and_ must be of type BoolType. Got {item_type}", item)
+                raise types.SimileTypeError(f"Operand of and_ must be of type BoolType. Got {type_to_source(item_type)}", item)
             item_types.append(item_type)
         return reduce(types.BoolType.and_, item_types)
 
     @typing_rule("Binary Boolean Operations")
     @_synthesize_type.register
     def _(self, ast: ast_.Or) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         item_types = []
         for item in ast.items:
             item_type = self.synthesize_type(item)
             if not isinstance(item_type, types.BoolType):
-                raise types.SimileTypeError(f"Operand of or_ must be of type BoolType. Got {item_type}", item)
+                raise types.SimileTypeError(f"Operand of or_ must be of type BoolType. Got {type_to_source(item_type)}", item)
             item_types.append(item_type)
         return reduce(types.BoolType.or_, item_types)
 
@@ -569,6 +588,8 @@ class TypeSynthesizer:
     @typing_rule("Quantifier", "Branching Quantifier")
     @_synthesize_type.register
     def _(self, ast: ast_.QuantifierBody) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         self._synthesize_type_generator_nest(ast.generators)
 
         if isinstance(ast.end_or_branch, ast_.ASTNode):
@@ -579,7 +600,7 @@ class TypeSynthesizer:
         for branch in ast.end_or_branch:
             branch_type = self.synthesize_type(branch)
             if not isinstance(branch_type, types.QuantificationBodyIntermediary):
-                raise types.SimileTypeError(f"Branch of quantifier must be of type QuantificationBodyIntermediary. Got {branch_type}", branch)
+                raise types.SimileTypeError(f"Branch of quantifier must be of type QuantificationBodyIntermediary. Got {type_to_source(branch_type)}", branch)
             branch_types.append(branch_type.return_type)
 
         return_type = types.BaseType.max_type(branch_types)
@@ -599,31 +620,35 @@ class TypeSynthesizer:
     @typing_rule("Generator")
     @_synthesize_type.register
     def _(self, ast: ast_.Generator) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         set_type = self.synthesize_type(ast.set_)
         if not isinstance(set_type, types.SetType):
-            raise types.SimileTypeError(f"Generator set must be of type SetType. Got {set_type}", ast.set_)
+            raise types.SimileTypeError(f"Generator set must be of type SetType. Got {type_to_source(set_type)}", ast.set_)
 
         assert isinstance(ast.identifiers, ast_.SymbolListTypes), "No identifiers allowed at this stage"
         self._structural_match(ast.identifiers, set_type.element_type)
 
         predicate_type = self.synthesize_type(ast.predicate)
         if not isinstance(predicate_type, types.BoolType):
-            raise types.SimileTypeError(f"Predicate of quantifier must be of type BoolType. Got {predicate_type}", ast.predicate)
+            raise types.SimileTypeError(f"Predicate of quantifier must be of type BoolType. Got {type_to_source(predicate_type)}", ast.predicate)
 
         return types.GeneratorIntermediary(set_type.element_type)
 
     @typing_rule("Structural Match", "Structural Match with Tuple")
     def _structural_match(self, identifiers: ast_.SymbolListTypes, element_type: types.BaseType) -> None:
+        from src.mod.pipeline.printers import type_to_source
+
         match identifiers:
             case ast_.TupleSymbol(symbols):
                 if not isinstance(element_type, types.TupleType):
                     # FIXME Hack because the parser wraps single identifiers in a tupleIdentifier during the ident_list call
                     if len(symbols) == 1:
                         return self._structural_match(symbols[0], element_type)
-                    raise types.SimileTypeError(f"Expected element type to be TupleType for structural match with tuple. Got {element_type}", identifiers)
+                    raise types.SimileTypeError(f"Expected element type to be TupleType for structural match with tuple. Got {type_to_source(element_type)}", identifiers)
                 if len(symbols) != len(element_type.items):
                     raise types.SimileTypeError(
-                        f"Expected number of symbols in tuple to match number of elements in tuple type. Got {len(symbols)}, {symbols} symbols and {len(element_type.items)}, {element_type.items} elements",
+                        f"Expected number of symbols in tuple to match number of elements in tuple type. Got {len(symbols)}, {symbols} symbols and {len(element_type.items)}, {list(map(type_to_source, element_type.items))} type elements",
                         identifiers,
                     )
                 for symbol, elem_type in zip(symbols, element_type.items):
@@ -823,10 +848,14 @@ class TypeSynthesizer:
         expected_left_type: type[T],
         operation_as_type_func: Callable[[T, types.BaseType], types.BaseType],
     ) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         left_type = self.synthesize_type(ast.left)
         right_type = self.synthesize_type(ast.right)
         if not isinstance(left_type, expected_left_type):
-            raise types.SimileTypeError(f"Left operand of {operation_as_type_func.__name__} must be of type {expected_left_type}, got {left_type}", ast.left)
+            raise types.SimileTypeError(
+                f"Left operand of {operation_as_type_func.__name__} must be an instance of type {expected_left_type}, got {type_to_source(left_type)}", ast.left
+            )
         return operation_as_type_func(left_type, right_type)
 
     def _synthesize_type_binary_right_as_base[T](
@@ -835,10 +864,14 @@ class TypeSynthesizer:
         expected_right_type: type[T],
         operation_as_type_func: Callable[[T, types.BaseType], types.BaseType],
     ) -> types.BaseType:
+        from src.mod.pipeline.printers import type_to_source
+
         left_type = self.synthesize_type(ast.left)
         right_type = self.synthesize_type(ast.right)
         if not isinstance(right_type, expected_right_type):
-            raise types.SimileTypeError(f"Right operand of {operation_as_type_func.__name__} must be of type {expected_right_type}, got {right_type}", ast.right)
+            raise types.SimileTypeError(
+                f"Right operand of {operation_as_type_func.__name__} must be an instance of type {expected_right_type}, got {type_to_source(right_type)}", ast.right
+            )
         return operation_as_type_func(right_type, left_type)
 
     def _synthesize_type_multiple_binary_paths[T](

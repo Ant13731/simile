@@ -167,6 +167,11 @@ class ModuleImports(BaseType):
 class TypeOfType(BaseType):
     type_of: BaseType
 
+    def _is_eq_type(self, other: BaseType) -> bool:
+        if not isinstance(other, TypeOfType):
+            return False
+        return self.type_of == other.type_of
+
     def base_traits(self) -> set[BaseTrait]:
         return set()
 

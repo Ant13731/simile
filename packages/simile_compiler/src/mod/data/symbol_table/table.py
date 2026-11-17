@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum, auto
+from tabulate import tabulate
 
 from src.mod.data.types.base import BaseType
 from src.mod.data.types.meta import ModuleImports, ImportedSymbol
@@ -107,17 +108,68 @@ class SymbolTable:
         return [self.symbols[symbol_id] for symbol_id in top_level_scope.declared_symbols]
 
     def debug(self) -> str:
+        from src.mod.pipeline.printers import type_to_source
+
+        scope_table_headers = ["Scope", "Parent", "Context", "Declared Symbols"]
+        symbol_table_headers = ["Symb", "Scp", "TypedName", "Context"]
+
+        current_scope_table = []
+        for scope_entry in self._current_scope_list:
+            current_scope_table.append([scope_entry.id_, scope_entry.parent, scope_entry.context.name, ranges_to_str(group_consecutive_ranges(scope_entry.declared_symbols))])
+
+        all_scope_table = []
+        for scope_id, scope_entry in self.scopes.items():
+            all_scope_table.append([scope_id, scope_entry.parent, scope_entry.context.name, ranges_to_str(group_consecutive_ranges(scope_entry.declared_symbols))])
+
+        symbol_entry_table = []
+        for symbol_id, symbol_entry in self.symbols.items():
+            symbol_entry_table.append([symbol_id, symbol_entry.scope, symbol_entry.context.name, f"{symbol_entry.name}: {type_to_source(symbol_entry.declared_type)}"])
+
         ret = "Symbol Table:\n"
         ret += f"  Symbol counter: {self._symbol_id_counter}\n"
         ret += f"  Scope counter: {self._scope_id_counter}\n"
         ret += "  Current Scope List:\n"
-        for scope_entry in self._current_scope_list:
-            ret += f"    ScopeID: {scope_entry.id_} | Parent: {scope_entry.parent} | Context: {scope_entry.context} | Symbols: {scope_entry.declared_symbols}\n"
-        ret += "  All Scopes:\n"
-        for scope_id, scope_entry in self.scopes.items():
-            ret += f"    ScopeID: {scope_id} | Parent: {scope_entry.parent} | Context: {scope_entry.context} | Symbols: {scope_entry.declared_symbols}\n"
-        ret += "  Symbols:\n"
-        for symbol_id, symbol_entry in self.symbols.items():
-            ret += f"    SymbID: {symbol_id} | ScopeID: {symbol_entry.scope} | Name: {symbol_entry.name} | Context: {symbol_entry.context} | Type: {symbol_entry.declared_type}\n"
-
+        ret += tabulate(current_scope_table, headers=scope_table_headers)
+        ret += "\n  All Scopes:\n"
+        ret += tabulate(all_scope_table, headers=scope_table_headers)
+        ret += "\n  Symbols:\n"
+        ret += tabulate(symbol_entry_table, headers=symbol_table_headers)
         return ret
+
+    def __repr__(self) -> str:
+        return self.debug()
+
+
+def group_consecutive_ranges(numbers: set[int]) -> list[tuple[int, int]]:
+    if not numbers:
+        return []
+    if len(numbers) == 1:
+        return [(next(iter(numbers)), next(iter(numbers)))]  # Return a single range for the single number
+
+    # Sort unique numbers
+    sorted_nums = sorted(set(numbers))
+    ranges = []
+    start = prev = sorted_nums[0]
+
+    for num in sorted_nums[1:]:
+        if num == prev + 1:
+            # Extend the current range
+            prev = num
+        else:
+            # Close the current range and start a new one
+            ranges.append((start, prev))
+            start = prev = num
+
+    # Append the final range
+    ranges.append((start, prev))
+    return ranges
+
+
+def ranges_to_str(ranges: list[tuple[int, int]]) -> str:
+    range_strs = []
+    for start, end in ranges:
+        if start == end:
+            range_strs.append(f"{start}")
+        else:
+            range_strs.append(f"{start}-{end}")
+    return "{" + ", ".join(range_strs) + "}"

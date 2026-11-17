@@ -52,7 +52,7 @@ class StructureMatcher:
     def _(self, against: list, ast: ast_.ASTFieldChildren) -> bool:
         if not isinstance(ast, list):
             return False
-        logger.debug(f"Matching against list: {against} with AST: {ast}")
+        logger.debug(f"Matching against list: {against} with AST: {list(map(ast_to_source, ast))}")
         if len(against) != len(ast):
             return False
         for against_item, ast_item in zip(against, ast):
@@ -62,5 +62,6 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: ast_.Operators, ast: ast_.ASTFieldChildren) -> bool:
-        logger.debug(f"Matching against operator: {against} with AST: {ast}")
+        if isinstance(ast, ast_.Operators):
+            logger.debug(f"Matching against operator: {against} with AST: {ast}")
         return against == ast

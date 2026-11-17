@@ -1,10 +1,12 @@
 record Package:
-    id: str
+    id: int
     version: int
-    dependencies: set[Package]
+
+dependencies: relation[Package, Package] := {}
+    trait one_to_many
 
 procedure dependencies_conflict(pkg1: Package, pkg2: Package) -> bool:
     if pkg1.id = pkg2.id:
         return pkg1.version = pkg2.version
 
-    return forall dep1 |-> dep2 in pkg1.dependencies >< pkg2.dependencies | dependencies_conflict(dep1, dep2)
+    return forall dep1 |-> dep2 in dependencies[{dep1}] >< dependencies[{dep2}] | dependencies_conflict(dep1, dep2)

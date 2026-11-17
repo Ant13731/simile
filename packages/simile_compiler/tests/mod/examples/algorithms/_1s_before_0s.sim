@@ -2,4 +2,4 @@ _0_or_1: type := int
     trait domain = {0,1}
 
 procedure _1s_before_0s(xs: sequence[_0_or_1]) -> bool:
-    return forall i in 0 .. len(xs) | (xs[i] = 0) ==> 1 not in xs[i..len(xs)]
+    return forall i in 0 .. len(xs) | (xs(i) = 0) ==> 1 not in xs[i..len(xs)]
