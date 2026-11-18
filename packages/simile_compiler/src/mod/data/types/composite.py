@@ -1,7 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from collections import OrderedDict
-from typing import ClassVar, TYPE_CHECKING
+from typing import ClassVar, TYPE_CHECKING, Self
+from loguru import logger
 
 from src.mod.data.types.error import SimileTypeError
 from src.mod.data.traits import (
@@ -18,18 +19,21 @@ from src.mod.data.traits import (
 
 from src.mod.data.types.set_ import SetType
 from src.mod.data.types.base import BaseType
-from src.mod.data.types.primitive import StringType
+from src.mod.data.types.primitive import NoneType_, StringType
 from src.mod.data.types.tuple_ import TupleType
+from src.mod.data.types.meta import GenericType
 from src.mod.data.types.typing_rule_decorator import typing_rule
 
 if TYPE_CHECKING:
-    from src.mod.data.symbol_table.entry import SymbolTableIdentifierEntry
+    from src.mod.data.symbol_table.entry import SymbolTableIdentifierEntry, ScopeTableEntry
 
 
 @dataclass
 class RecordType(BaseType):
     # Internally a (many-to-one) (total on defined fields) function
+    name: str
     fields: dict[str, BaseType]
+    lookup_scope_entry: ScopeTableEntry | None = None  # Where the record was defined, used to look up the fields in the symbol table
     compatible_traits: ClassVar[set[type[BaseTrait]]] = {
         *BaseType.compatible_traits,
         LiteralTrait,
@@ -41,6 +45,18 @@ class RecordType(BaseType):
         TotalOnDomainTrait,
         RelationalDomainTrait,
     }
+
+    def __post_init__(self):
+        for field, typ in self.fields.items():
+            if isinstance(typ, GenericType):
+                raise SimileTypeError(
+                    f"Generics not currently supported for record types. Please define a concrete type for all fields in the record. Field {field} has type {typ}"
+                )
+
+    def add_scope_entry(self, scope_entry: ScopeTableEntry) -> None:
+        if self.lookup_scope_entry is not None:
+            raise SimileTypeError(f"RecordType {self.name} already has a lookup scope entry: {self.lookup_scope_entry}")
+        self.lookup_scope_entry = scope_entry
 
     def _is_eq_type(self, other: BaseType) -> bool:
         if not isinstance(other, RecordType):
@@ -79,6 +95,8 @@ class RecordType(BaseType):
         }
 
     def access(self, field_name: str) -> BaseType:
+        # TODO how to handle generics? For now dont allow in record types
+        # FIXME see above comments and __post_init__ on generics
         if field_name not in self.fields:
             raise KeyError(f"RecordType has no field named '{field_name}'")
         return self.fields[field_name]
@@ -125,11 +143,38 @@ class ProcedureType(BaseType):
         for i, (provided_type, expected_type) in enumerate(zip(arg_types, self.arg_types.items)):
             if not provided_type.is_subtype(expected_type):
                 raise SimileTypeError(f"Procedure argument {i} expected type {expected_type}, got {provided_type}")
-        # TODO check for generics here - ex, if return type is generic, look for the actual type in one of its arguments
-        # generic ids should match
-        # TODO also need to account for the return type matching the type of the returned value
 
-        return self.return_type
+        generic_to_concrete_types = self.match_generic_types(ProcedureType(TupleType(arg_types), NoneType_()))
+        concrete_procedure_type = self.replace_generic_types(generic_to_concrete_types)
+        return concrete_procedure_type.return_type
 
     def base_traits(self) -> set[BaseTrait]:
         return set()
+
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        if not isinstance(concrete_type, ProcedureType):
+            raise SimileTypeError(f"Cannot match generic types for ProcedureType with non-ProcedureType {concrete_type}")
+
+        try:
+            return self.arg_types.match_generic_types(concrete_type.arg_types)
+        except SimileTypeError as e:
+            raise SimileTypeError(f"Cannot match generic types for ProcedureType args: {e}") from e
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
+        new_arg_types = self.arg_types.replace_generic_types(generic_to_concrete_type_map)
+        assert isinstance(new_arg_types, TupleType), f"Expected new_arg_types to be a TupleType, got {new_arg_types}"
+        new_return_type = self.return_type.replace_generic_types(generic_to_concrete_type_map)
+        if leftover_generics := new_return_type.extract_generic_types():
+            for leftover_generic in leftover_generics:
+                if leftover_generic.id_() not in generic_to_concrete_type_map:
+                    # TODO this doesnt work with bag.sim/map_b
+                    logger.warning(
+                        f"Generic return type {self.return_type} does not have a matching argument type to determine its concrete return type. Leftover generic {leftover_generic} after matching against {generic_to_concrete_type_map}"
+                    )
+                    # raise SimileTypeError(
+                    #     f"Generic return type {self.return_type} does not have a matching argument type to determine its concrete return type. Leftover generic {leftover_generic} after matching against {generic_to_concrete_type_map}"
+                    # )
+        return type(self)(new_arg_types, new_return_type)
+
+    def extract_generic_types(self) -> list[GenericType]:
+        return self.arg_types.extract_generic_types() + self.return_type.extract_generic_types()

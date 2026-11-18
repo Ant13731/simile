@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field, fields, asdict
 from copy import deepcopy
-from typing import Callable, ClassVar, NoReturn, Type, TypeVar
+from typing import Callable, ClassVar, NoReturn, Type, TypeVar, Self, TYPE_CHECKING
 import inspect
 from loguru import logger
 
@@ -18,6 +18,9 @@ from src.mod.data.traits import (
     MergeTraitBehaviour,
     Traits,
 )
+
+if TYPE_CHECKING:
+    from src.mod.data.types.meta import GenericType
 
 T = TypeVar("T", bound="BaseType")
 
@@ -164,6 +167,18 @@ class BaseType(_TraitMixin):
                 return
 
         raise SimileTypeError(f"Cannot perform operation {class_name}.{method_name} with incompatible type: {other} (expected a (sub)type of one of {is_subtype_of})")
+
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        logger.debug(f"Generic type match not implemented for {self.__class__} - returning empty")
+        return {}
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
+        logger.debug(f"Generic type replacement not implemented for {self.__class__} - returning self")
+        return self
+
+    def extract_generic_types(self) -> list[GenericType]:
+        logger.debug(f"Generic type extraction not implemented for {self.__class__} - returning empty")
+        return []
 
 
 @dataclass

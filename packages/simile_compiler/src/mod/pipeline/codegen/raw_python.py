@@ -454,7 +454,7 @@ class Printer:
     # def _(self, ast: ast_.LambdaDef, i: int) -> str: ...
     @_print.register
     def _(self, ast: ast_.RecordAccess, i: int) -> str:
-        return f"{self._print(ast.record, i)}.{ast.field_name}"
+        return f"{self._print(ast.record, i)}.{self._print(ast.field_name, i)}"
 
     @_print.register
     def _(self, ast: ast_.Call, i: int) -> str:

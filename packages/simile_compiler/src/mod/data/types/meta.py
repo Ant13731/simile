@@ -116,6 +116,25 @@ class GenericType(BaseType):
         self.symbol_id = symbol.id_
         self.scope_id = symbol.scope
 
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        # TODO Generic bound trait checks here - if bound traits exist, concrete type must be one of those bound traits, else err
+        return {self.id_(): concrete_type}
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+        if self.symbol_id is None or self.scope_id is None:
+            raise SimileTypeError(f"Generic type {self} does not have a symbol ID/scope ID. Cannot replace with concrete type.")
+
+        key = (self.symbol_id, self.scope_id)
+        return generic_to_concrete_type_map.get(key, self)
+
+    def extract_generic_types(self) -> list[GenericType]:
+        return [self]
+
+    def id_(self) -> tuple[int, int]:
+        if self.symbol_id is None or self.scope_id is None:
+            raise SimileTypeError(f"Generic type {self} does not have a symbol ID/scope ID.")
+        return self.symbol_id, self.scope_id
+
 
 @dataclass
 @deprecated("Do we actually need this type?")
@@ -148,6 +167,29 @@ class ImportedSymbol(BaseType):
     def base_traits(self) -> set[BaseTrait]:
         return set()
 
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        if not isinstance(concrete_type, ImportedSymbol):
+            raise SimileTypeError(f"Cannot match generic types for ImportedSymbol with non-ImportedSymbol {concrete_type}")
+
+        return self.imported_symbol_entry.declared_type.match_generic_types(concrete_type.imported_symbol_entry.declared_type)
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+        new_declared_type = self.imported_symbol_entry.declared_type.replace_generic_types(generic_to_concrete_type_map)
+        if new_declared_type == self.imported_symbol_entry.declared_type:
+            return self
+        # TODO this is a bit of a hack, but we need to create a new symbol table entry with the new declared type
+        new_imported_symbol_entry = SymbolTableIdentifierEntry(
+            id_=self.imported_symbol_entry.id_,
+            scope=self.imported_symbol_entry.scope,
+            name=self.imported_symbol_entry.name,
+            context=self.imported_symbol_entry.context,
+            declared_type=new_declared_type,
+        )
+        return ImportedSymbol(new_imported_symbol_entry, self.source_file)
+
+    def extract_generic_types(self) -> list[GenericType]:
+        return self.imported_symbol_entry.declared_type.extract_generic_types()
+
 
 @dataclass
 class ModuleImports(BaseType):
@@ -174,6 +216,18 @@ class TypeOfType(BaseType):
 
     def base_traits(self) -> set[BaseTrait]:
         return set()
+
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        return self.type_of.match_generic_types(concrete_type)
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+        new_type_of = self.type_of.replace_generic_types(generic_to_concrete_type_map)
+        if new_type_of == self.type_of:
+            return self
+        return TypeOfType(new_type_of)
+
+    def extract_generic_types(self) -> list[GenericType]:
+        return self.type_of.extract_generic_types()
 
 
 @dataclass

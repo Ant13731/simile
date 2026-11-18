@@ -45,6 +45,7 @@ class TestStandardLibraryHappyPath:
         with open(standard_library_path, "r", encoding="utf-8") as f:
             source = f.read()
         ast = parse(source, standard_library_path)
+        logger.debug(f"Analyzing file {standard_library_path}")
         analysis = semantic_analysis(ast, True)
         assert analysis is not None
 

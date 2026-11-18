@@ -125,7 +125,8 @@ class TypeSynthesizer:
 
         ast_type = self.synthesize_type(ast.record)
         if isinstance(ast_type, types.RecordType):
-            return ast_type.access(ast.field_name.name)
+            assert not isinstance(ast.field_name, ast_.Identifier)
+            return ast_type.access(ast.field_name.symbol_table_entry.name)
         raise types.SimileTypeError(f"Cannot access field of non-record type {type_to_source(ast_type)} in record access", ast)
 
     @typing_rule("Command - Procedure Call", "Relation Operations - Function Call")
@@ -191,6 +192,26 @@ class TypeSynthesizer:
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.RecordDefSymbol | ast_.ProcedureDefSymbol) -> types.BaseType:
+        return types.NoneType_()
+
+    @typing_rule()
+    @_synthesize_type.register
+    def _(self, ast: ast_.ProcedureDefSymbol) -> types.BaseType:
+        procedure_type = ast.name.symbol_table_entry.declared_type
+        if not isinstance(procedure_type, types.ProcedureType):
+            raise types.SimileTypeError(f"ProcedureDefSymbol must have a declared type of ProcedureType, got {type(procedure_type)}", ast)
+
+        return_statements = ast.body.find_all_instances(ast_.Return)
+        if len(return_statements) == 0 and not isinstance(procedure_type.return_type, types.NoneType_):
+            raise types.SimileTypeError(f"ProcedureDefSymbol has no return statements, but declared return type is {procedure_type.return_type}", ast)
+
+        # TODO exhaustive leaving check, for now, if one path returns a value of the expected type, we are good
+        for return_statement in return_statements:
+            return_type = self.synthesize_type(return_statement)
+            if not return_type.is_subtype(procedure_type.return_type):
+                raise types.SimileTypeError(
+                    f"ProcedureDefSymbol has a return statement with type {return_type}, which is not a subtype of the declared return type {procedure_type.return_type}", ast
+                )
         return types.NoneType_()
 
     @typing_rule("Binary Boolean Operations")
@@ -626,14 +647,22 @@ class TypeSynthesizer:
         if not isinstance(set_type, types.SetType):
             raise types.SimileTypeError(f"Generator set must be of type SetType. Got {type_to_source(set_type)}", ast.set_)
 
+        element_type = set_type.element_type
+        # Deliberate choice: sequences and sets iterate over elements, relations and bags iterate over mapping pairs
+        # TODO update spec with this
+        # FIXME should we allow iteration over sequences without their indexes at all?
+        # Standard library iterates over tuples, but examples use straight iteration
+        if isinstance(set_type, types.SequenceType):
+            element_type = set_type.right
+
         assert isinstance(ast.identifiers, ast_.SymbolListTypes), "No identifiers allowed at this stage"
-        self._structural_match(ast.identifiers, set_type.element_type)
+        self._structural_match(ast.identifiers, element_type)
 
         predicate_type = self.synthesize_type(ast.predicate)
         if not isinstance(predicate_type, types.BoolType):
             raise types.SimileTypeError(f"Predicate of quantifier must be of type BoolType. Got {type_to_source(predicate_type)}", ast.predicate)
 
-        return types.GeneratorIntermediary(set_type.element_type)
+        return types.GeneratorIntermediary(element_type)
 
     @typing_rule("Structural Match", "Structural Match with Tuple")
     def _structural_match(self, identifiers: ast_.SymbolListTypes, element_type: types.BaseType) -> None:

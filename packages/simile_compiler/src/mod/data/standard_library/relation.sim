@@ -21,10 +21,10 @@ procedure _is_surjective(r: relation[T1, T2], expected_range: set[T1]) -> bool:
     return ran(r) = expected_range
 
 procedure _is_many_to_one(r: relation[T1, T2]) -> bool:
-    return forall x in dom(r) | card(r[x]) <= 1
+    return forall x in dom(r) | card(r[{x}]) <= 1
 
 procedure _is_one_to_many(r: relation[T1, T2]) -> bool:
-    return forall y in ran(r) | card((r~)[y]) <= 1
+    return forall y in ran(r) | card((r~)[{y}]) <= 1
 
 procedure total_relation_generator(s1: set[T1], s2: set[T2]) -> set[relation[T1, T2]]:
     return {r in relation_generator(s1, s2) .: _is_total(r, s1) | r}

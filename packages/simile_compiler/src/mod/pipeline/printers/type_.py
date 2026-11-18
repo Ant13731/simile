@@ -9,6 +9,11 @@ def type_to_source(type_: types.BaseType) -> str:
 
 @type_to_source.register
 def _(type_: types.RecordType) -> str:
+    return type_.name
+
+
+def record_type_to_source(type_: types.RecordType) -> str:
+    # When asking for a record's type, use the reference name (since records may/may not be defined recursively)
     parameterized_types = ", ".join(f"{field_name}: {type_to_source(field_type)}" for field_name, field_type in type_.fields.items())
     return f"record[{parameterized_types}]"
 

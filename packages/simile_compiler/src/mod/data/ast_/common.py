@@ -482,7 +482,7 @@ class LambdaDef(ASTNode):
 @dataclass
 class RecordAccess(ASTNode):
     record: ASTNode
-    field_name: Identifier
+    field_name: Identifier | Symbol
 
 
 @dataclass

@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from copy import deepcopy
-from typing import TYPE_CHECKING, Callable, TypeVar, ClassVar
+from typing import TYPE_CHECKING, Callable, TypeVar, ClassVar, Self
 
 from src.mod.data.ast_.operators import (
     CollectionOperator,
@@ -10,6 +10,7 @@ from src.mod.data.ast_.operators import (
     UnaryOperator,
 )
 from src.mod.data.types.error import SimileTypeError
+from src.mod.data.types.meta import GenericType
 from src.mod.data.traits import (
     BaseTrait,
     OrderableTrait,
@@ -145,7 +146,7 @@ class SetType(BaseType):
         return cls.set_constructor(element_type=BaseType.max_type(element_types), traits=traits)
 
     @classmethod
-    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> SetType:
+    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
         return cls(element_type=element_type, traits=Traits(traits))
 
     # Single operations
@@ -308,6 +309,20 @@ class SetType(BaseType):
     def not_is_superset_equals(self, other: BaseType) -> BoolType:
         return self.is_superset_equals(other).not_()
 
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        if not isinstance(concrete_type, SetType):
+            raise SimileTypeError(f"Cannot match generic types for SetType with non-SetType {concrete_type} (self is {self})")
+        if isinstance(concrete_type.element_type, EmptyCollectionType):
+            return {}
+        return self.element_type.match_generic_types(concrete_type.element_type)
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
+        new_element_type = self.element_type.replace_generic_types(generic_to_concrete_type_map)
+        return self.set_constructor(element_type=new_element_type, traits=set(self.traits.items.values()))
+
+    def extract_generic_types(self) -> list[GenericType]:
+        return self.element_type.extract_generic_types()
+
 
 @dataclass
 class RelationType(SetType):
@@ -389,11 +404,11 @@ class RelationType(SetType):
         )
 
     @classmethod
-    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> RelationType:
+    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
         """Cast a SetType to a RelationType, if possible."""
         if not isinstance(element_type, PairType):
             raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
-        return RelationType(left=element_type.left, right=element_type.right, traits=Traits(traits))
+        return cls(left=element_type.left, right=element_type.right, traits=Traits(traits))
 
     def inverse(self) -> RelationType:
         new_type = deepcopy(self)
@@ -526,7 +541,7 @@ class BagType(RelationType):
         return self.left
 
     @classmethod
-    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> BagType:
+    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
         return cls(element_type=element_type, traits=Traits(traits))
 
     def base_traits(self) -> set[BaseTrait]:
@@ -568,7 +583,7 @@ class SequenceType(RelationType):
         super().__init__(left=IntType(), right=element_type, traits=traits)
 
     @classmethod
-    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> SequenceType:
+    def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
         return cls(element_type=element_type, traits=Traits(traits))
 
     @property

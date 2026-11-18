@@ -4,6 +4,7 @@ from tabulate import tabulate
 
 from src.mod.data.types.base import BaseType
 from src.mod.data.types.meta import ModuleImports, ImportedSymbol
+from src.mod.data.types.composite import RecordType
 from src.mod.data.symbol_table.entry import (
     IdentifierContext,
     ScopeContext,
@@ -80,9 +81,12 @@ class SymbolTable:
             raise SymbolTableError("Cannot get current scope because no scope has been added to the symbol table yet (current_scope_list is empty)")
         return self._current_scope_list[-1]
 
-    def lookup_identifier(self, identifier: str) -> SymbolTableIdentifierEntry:
+    def lookup_identifier(self, identifier: str, include_scope: ScopeTableEntry | None = None) -> SymbolTableIdentifierEntry:
         """Looks up a symbol by its id and scope, returning the symbol table entry."""
-        for scope in reversed(self._current_scope_list):
+        scope_list = list(reversed(self._current_scope_list))
+        if include_scope is not None:
+            scope_list = [include_scope] + scope_list
+        for scope in scope_list:
             for symbol_id in scope.declared_symbols:
                 if self.symbols[symbol_id].name == identifier:
                     return self.symbols[symbol_id]
@@ -108,7 +112,7 @@ class SymbolTable:
         return [self.symbols[symbol_id] for symbol_id in top_level_scope.declared_symbols]
 
     def debug(self) -> str:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printers import type_to_source, record_type_to_source
 
         scope_table_headers = ["Scope", "Parent", "Context", "Declared Symbols"]
         symbol_table_headers = ["Symb", "Scp", "TypedName", "Context"]
@@ -123,6 +127,10 @@ class SymbolTable:
 
         symbol_entry_table = []
         for symbol_id, symbol_entry in self.symbols.items():
+            if symbol_entry.context == IdentifierContext.RECORD:
+                assert isinstance(symbol_entry.declared_type, RecordType)
+                symbol_entry_table.append([symbol_id, symbol_entry.scope, symbol_entry.context.name, f"{symbol_entry.name}: {record_type_to_source(symbol_entry.declared_type)}"])
+                continue
             symbol_entry_table.append([symbol_id, symbol_entry.scope, symbol_entry.context.name, f"{symbol_entry.name}: {type_to_source(symbol_entry.declared_type)}"])
 
         ret = "Symbol Table:\n"

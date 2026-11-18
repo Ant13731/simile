@@ -224,22 +224,30 @@ class PopulateSymbolTable:
                 return ast_.ProcedureDefSymbol(_name_symbol, _params_symbols, _body), False
             case ast_.RecordDefIdentifier(ast_.Identifier(name), items):
                 fields: dict[str, BaseType] = OrderedDict()
+                record_def_type = RecordType(name=name, fields=fields)
+                self.symbol_table.add_symbol(
+                    name,
+                    IdentifierContext.RECORD,
+                    record_def_type,
+                )
+                record_scope_table_entry = self.symbol_table.add_scope(ScopeContext.RECORD)
+                record_def_type.add_scope_entry(record_scope_table_entry)
+
                 for item in items:
                     if not isinstance(item.name, ast_.Identifier):
                         raise SimileTypeError(f"Invalid struct field name (must be an identifier): {item.name}", item)
                     field_type = TypeAnnotationResolver.resolve_type_annotation(item.type_, self.symbol_table)
                     assert isinstance(field_type, BaseType)
                     fields[item.name.name] = field_type
-
-                # This effectively disallows recursive structures to be defined...
-                self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.RECORD,
-                    RecordType(fields=fields),
-                )
+                    self.symbol_table.add_symbol(
+                        item.name.name,
+                        IdentifierContext.RECORD_FIELD,
+                        field_type,
+                    )
 
                 _symbol = self._convert_identifier_to_symbol(ast_.Identifier(name))
                 assert isinstance(_symbol, ast_.Symbol)
+                self.symbol_table.pop_scope_level()
                 return ast_.RecordDefSymbol(_symbol, fields), False
             case ast_.LambdaDef(params, predicate, expression):
                 assert isinstance(params, ast_.IdentifierListTypes)
@@ -508,6 +516,20 @@ class PopulateSymbolTable:
             # Replace them with symbol ids corresponding to the symbol table entry
             case ast_.Identifier(_) | ast_.MapletIdentifier(_) | ast_.TupleIdentifier(_):
                 return self._convert_identifier_to_symbol(ast), False
+            case ast_.RecordAccess(record, field):
+                if not isinstance(field, ast_.Identifier):
+                    return None, True
+                populated_record = self.populate(record)
+                temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
+                record_type = temporary_type_synthesizer.synthesize_type(populated_record)
+                if not isinstance(record_type, RecordType):
+                    return None, True
+                field_symbol_entry = self.symbol_table.lookup_identifier(
+                    field.name,
+                    include_scope=record_type.lookup_scope_entry,
+                )
+                return ast_.RecordAccess(populated_record, ast_.Symbol(field_symbol_entry)), False
+
         return None, True
 
     def _convert_identifier_to_symbol(self, ast: ast_.IdentifierListTypes) -> ast_.SymbolListTypes:

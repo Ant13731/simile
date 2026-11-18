@@ -4,6 +4,8 @@ from copy import deepcopy
 from typing import ClassVar, Type
 
 from src.mod.data.types.base import _TraitMixin, BaseType
+from src.mod.data.types.error import SimileTypeError
+from src.mod.data.types.meta import GenericType
 from src.mod.data.traits import (
     BaseTrait,
     OrderableTrait,
@@ -88,6 +90,36 @@ class TupleType(BaseType):
 
         return cls(items=element_types)
 
+    def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
+        if not isinstance(concrete_type, TupleType):
+            raise SimileTypeError(f"Cannot match generic types for TupleType with non-TupleType {concrete_type} (self is {self})")
+        if len(concrete_type.items) != len(self.items):
+            raise SimileTypeError(f"Generic type match for tuple called with incorrect number of elements. Expected {len(self.items)}, got {len(concrete_type.items)}")
+
+        generic_to_concrete_types: dict[tuple[int, int], BaseType] = {}
+        for concrete_arg_type, possible_generic_arg_type in zip(concrete_type.items, self.items):
+            generic_to_concrete_arg_types = possible_generic_arg_type.match_generic_types(concrete_arg_type)
+            for generic_id, concrete_arg_nested_type in generic_to_concrete_arg_types.items():
+                if generic_id in generic_to_concrete_types:
+                    previously_provided_type = generic_to_concrete_types[generic_id]
+                    max_provided_type = BaseType.max_type([concrete_arg_nested_type, previously_provided_type])
+                    generic_to_concrete_types[generic_id] = max_provided_type
+                    continue
+
+                generic_to_concrete_types[generic_id] = concrete_arg_nested_type
+
+        return generic_to_concrete_types
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+        new_items = [item.replace_generic_types(generic_to_concrete_type_map) for item in self.items]
+        return type(self)(items=new_items, traits=self.traits)
+
+    def extract_generic_types(self) -> list[GenericType]:
+        generic_types: list[GenericType] = []
+        for item in self.items:
+            generic_types.extend(item.extract_generic_types())
+        return generic_types
+
 
 @dataclass
 class PairType(TupleType):
@@ -113,3 +145,8 @@ class PairType(TupleType):
     def maplet(cls, key_type: BaseType, value_type: BaseType) -> PairType:
         """Create a PairType representing a maplet from key_type to value_type."""
         return cls(left=key_type, right=value_type)
+
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+        new_items = [item.replace_generic_types(generic_to_concrete_type_map) for item in self.items]
+        assert len(new_items) == 2
+        return type(self)(*new_items, traits=self.traits)

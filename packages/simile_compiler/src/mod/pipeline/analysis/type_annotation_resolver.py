@@ -35,6 +35,8 @@ class TypeAnnotationResolver:
         "float": FloatType(),
         "string": StringType(),
         "bool": BoolType(),
+        "none": NoneType_(),
+        "any": AnyType_(),
         # set
         "set": SetType(GenericType()),
         "sequence": SequenceType(GenericType()),
@@ -47,7 +49,7 @@ class TypeAnnotationResolver:
         # variable length types, dont populate anything since they can take multiple (unknown) arguments
         "tuple": TupleType([]),
         "procedure": ProcedureType(TupleType([]), GenericType()),
-        "record": RecordType({}),
+        "record": RecordType("record", {}),
         # type sugar
         "ℤ": SetType(IntType()),
         "ℕ": SetType(IntType(traits=Traits({MinTrait(0)}))),
