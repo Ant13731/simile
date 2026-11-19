@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from copy import deepcopy
-from typing import ClassVar, Type
+from typing import ClassVar, Type, Self
 
 from src.mod.data.types.base import _TraitMixin, BaseType
 from src.mod.data.types.error import SimileTypeError
@@ -110,7 +110,7 @@ class TupleType(BaseType):
 
         return generic_to_concrete_types
 
-    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
         new_items = [item.replace_generic_types(generic_to_concrete_type_map) for item in self.items]
         return type(self)(items=new_items, traits=self.traits)
 
@@ -146,7 +146,7 @@ class PairType(TupleType):
         """Create a PairType representing a maplet from key_type to value_type."""
         return cls(left=key_type, right=value_type)
 
-    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
         new_items = [item.replace_generic_types(generic_to_concrete_type_map) for item in self.items]
         assert len(new_items) == 2
         return type(self)(*new_items, traits=self.traits)

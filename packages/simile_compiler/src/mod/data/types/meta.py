@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Type, ClassVar
+from typing import TYPE_CHECKING, Type, ClassVar, Self
 from warnings import deprecated
 from pathlib import Path
 
@@ -120,7 +120,7 @@ class GenericType(BaseType):
         # TODO Generic bound trait checks here - if bound traits exist, concrete type must be one of those bound traits, else err
         return {self.id_(): concrete_type}
 
-    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:  # type: ignore
         if self.symbol_id is None or self.scope_id is None:
             raise SimileTypeError(f"Generic type {self} does not have a symbol ID/scope ID. Cannot replace with concrete type.")
 
@@ -173,7 +173,7 @@ class ImportedSymbol(BaseType):
 
         return self.imported_symbol_entry.declared_type.match_generic_types(concrete_type.imported_symbol_entry.declared_type)
 
-    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
         new_declared_type = self.imported_symbol_entry.declared_type.replace_generic_types(generic_to_concrete_type_map)
         if new_declared_type == self.imported_symbol_entry.declared_type:
             return self
@@ -185,7 +185,7 @@ class ImportedSymbol(BaseType):
             context=self.imported_symbol_entry.context,
             declared_type=new_declared_type,
         )
-        return ImportedSymbol(new_imported_symbol_entry, self.source_file)
+        return type(self)(new_imported_symbol_entry, self.source_file)
 
     def extract_generic_types(self) -> list[GenericType]:
         return self.imported_symbol_entry.declared_type.extract_generic_types()
@@ -220,11 +220,11 @@ class TypeOfType(BaseType):
     def match_generic_types(self, concrete_type: BaseType) -> dict[tuple[int, int], BaseType]:
         return self.type_of.match_generic_types(concrete_type)
 
-    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> BaseType:
+    def replace_generic_types(self, generic_to_concrete_type_map: dict[tuple[int, int], BaseType]) -> Self:
         new_type_of = self.type_of.replace_generic_types(generic_to_concrete_type_map)
         if new_type_of == self.type_of:
             return self
-        return TypeOfType(new_type_of)
+        return type(self)(new_type_of)
 
     def extract_generic_types(self) -> list[GenericType]:
         return self.type_of.extract_generic_types()

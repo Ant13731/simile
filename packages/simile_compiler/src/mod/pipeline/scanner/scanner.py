@@ -318,7 +318,7 @@ class Scanner:
                 self.advance()  # will match \"
                 value = self.text[self.current_index_lexeme_start + 1 : self.current_index - 1]
                 self.add_token(TokenType.STRING, value)
-            case _ if c.isdigit() or c == "." and (peek := self.peek()) is not None and peek.isdigit():
+            case _ if c.isdigit():  # or c == "." and (peek := self.peek()) is not None and peek.isdigit():
                 self.ignore_newline = False
                 while (peek := self.peek()) is not None and peek.isdigit():
                     self.advance()

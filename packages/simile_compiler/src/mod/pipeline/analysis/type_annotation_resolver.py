@@ -1,5 +1,6 @@
 from dataclasses import asdict
 from copy import deepcopy
+from loguru import logger
 
 from src.mod.data import ast_
 from src.mod.data.symbol_table import SymbolTable, SymbolTableIdentifierEntry
@@ -123,17 +124,30 @@ class TypeAnnotationResolver:
             if len(type_params) != 2:
                 raise SimileTypeError(f"Relation type annotation must have exactly 2 parameters, got {len(type_params)}: {type_params}")
             return RelationType(type_params[0], type_params[1])
+        if isinstance(base_type, EnumType):
+            if len(type_params) > 1:
+                raise SimileTypeError(f"Enum type annotation must have either 0 or 1 parameters, got {len(type_params)}: {type_params}")
+            if len(type_params) == 1:
+                return EnumType(type_params[0])
+            return EnumType()
         if isinstance(base_type, SetType):
             if len(type_params) != 1:
                 raise SimileTypeError(f"Set type annotation must have exactly 1 parameter, got {len(type_params)}: {type_params}")
             return SetType(type_params[0])
 
         if isinstance(base_type, TypeOfType):
-            if len(type_params) != 1:
-                # ignore for now
-                return base_type
-                # raise SimileTypeError(f"TypeOfType type annotation must have exactly 1 parameter, got {len(type_params)}: {type_params}")
-            return TypeOfType(type_params[0])
+            # When a typeOfType is used in a typing context, it resolves to the actual type instead of just being a typeOfType
+            # FIXME Skipping typeof generic types for now
+            # if type_params:
+            #     return cls._resolve_generic_type_params(base_type.type_of, type_params)
+            # FIXME we are just unwrapping this when we see it as a type instance, which is definitely a hack
+            # Only works to unwrap these types within a type annotation context, we dont unwrap them in normal expression contexts
+            return base_type.type_of
+            # if len(type_params) != 1:
+            #     # ignore for now
+            #     return base_type
+            #     # raise SimileTypeError(f"TypeOfType type annotation must have exactly 1 parameter, got {len(type_params)}: {type_params}")
+            # return TypeOfType(type_params[0])
         if isinstance(base_type, ProcedureType):
             if len(type_params) != 2:
                 raise SimileTypeError(
@@ -144,13 +158,6 @@ class TypeAnnotationResolver:
                     f"Procedure type annotation first parameter must be a tuple of argument types, got {type_params[0]}",
                 )
             return ProcedureType(type_params[0], type_params[1])
-
-        if isinstance(base_type, EnumType):
-            if len(type_params) > 1:
-                raise SimileTypeError(f"Generic type annotation must have either 0 or 1 parameters, got {len(type_params)}: {type_params}")
-            if len(type_params) == 1:
-                return EnumType(type_params[0])
-            return EnumType()
 
         # TODO record types with generics? disallow for now...
         # Types that expect no generic params

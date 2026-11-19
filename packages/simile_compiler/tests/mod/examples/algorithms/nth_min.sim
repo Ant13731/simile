@@ -1,4 +1,4 @@
 T: type := generic
-
+# TODO need to add sort implementation
 procedure nth_min(n: int, S: set[T]) -> T:
     return sort(S)[n]

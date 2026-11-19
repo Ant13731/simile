@@ -2,4 +2,4 @@ procedure square(n: int) -> int:
     return n ^ 2
 
 procedure sum_of_square(n: int) -> int:
-    return sum(map(square, 1..n))
+    return sum x in 1..n | square(x)

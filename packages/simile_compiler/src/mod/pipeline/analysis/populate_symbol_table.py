@@ -291,7 +291,7 @@ class PopulateSymbolTable:
                     self.symbol_table.add_symbol(
                         member,
                         IdentifierContext.ENUM_ITEM,
-                        EnumItemType(enum_type),
+                        EnumItemType(enum_type, name),
                     )
                 _value = self.populate(value)
                 return (
@@ -399,7 +399,7 @@ class PopulateSymbolTable:
                     self.symbol_table.add_symbol(
                         member,
                         IdentifierContext.ENUM_ITEM,
-                        EnumItemType(enum_type),
+                        EnumItemType(enum_type, name),
                     )
 
             case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("type"), [])), value, is_choice_assignment):

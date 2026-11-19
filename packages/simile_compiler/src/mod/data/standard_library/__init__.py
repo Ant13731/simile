@@ -4,6 +4,7 @@ STANDARD_LIBRARY_FOLDER = pathlib.Path(__file__).resolve().parent
 
 STANDARD_LIBRARY_FILE_NAMES = [
     "bag",
+    "math",
     "relation",
     "sequence",
     "set",

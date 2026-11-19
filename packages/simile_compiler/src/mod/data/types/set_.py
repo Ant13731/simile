@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from copy import deepcopy
 from typing import TYPE_CHECKING, Callable, TypeVar, ClassVar, Self
 
+from loguru import logger
+
 from src.mod.data.ast_.operators import (
     CollectionOperator,
     RelationOperator,
@@ -406,12 +408,14 @@ class RelationType(SetType):
     @classmethod
     def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
         """Cast a SetType to a RelationType, if possible."""
+        if isinstance(element_type, EmptyCollectionType):
+            return cls(left=EmptyCollectionType(), right=EmptyCollectionType(), traits=Traits(traits))
         if not isinstance(element_type, PairType):
             raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
         return cls(left=element_type.left, right=element_type.right, traits=Traits(traits))
 
     def inverse(self) -> RelationType:
-        new_type = deepcopy(self)
+        new_type = RelationType(self.right, self.left, traits=deepcopy(self.traits))
         relation_traits_tuple = self._relation_traits_to_tuple()
         new_relation_traits_tuple = (
             relation_traits_tuple[1],
@@ -542,7 +546,11 @@ class BagType(RelationType):
 
     @classmethod
     def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
-        return cls(element_type=element_type, traits=Traits(traits))
+        if isinstance(element_type, EmptyCollectionType):
+            return cls(element_type=EmptyCollectionType(), traits=Traits(traits))
+        if not isinstance(element_type, PairType):
+            raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
+        return cls(element_type=element_type.left, traits=Traits(traits))
 
     def base_traits(self) -> set[BaseTrait]:
         return {ManyToOneTrait()}
@@ -584,7 +592,11 @@ class SequenceType(RelationType):
 
     @classmethod
     def set_constructor(cls, element_type: BaseType, traits: set[BaseTrait]) -> Self:
-        return cls(element_type=element_type, traits=Traits(traits))
+        if isinstance(element_type, EmptyCollectionType):
+            return cls(element_type=EmptyCollectionType(), traits=Traits(traits))
+        if not isinstance(element_type, PairType):
+            raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
+        return cls(element_type=element_type.right, traits=Traits(traits))
 
     @property
     def element_type_(self) -> BaseType:
@@ -607,6 +619,20 @@ class EnumType(SetType):
     element_type: BaseType = field(default_factory=StringType)
     members: set[str] = field(default_factory=set)
 
+    def _is_eq_type(self, other: BaseType) -> bool:
+        if not isinstance(other, EnumType):
+            return False
+        return self.members == other.members
+
+    def _is_subtype(self, other: BaseType) -> bool:
+        return self.is_eq_type(other)
+
+    def _is_sub_traits(self, other: _TraitMixin) -> bool:
+        empty_traits = self.traits.find(EmptyTrait)
+        if empty_traits is not None:
+            return True
+        raise NotImplementedError("Sub traits not implemented for enum type")
+
     def base_traits(self) -> set[BaseTrait]:
         return {
             ImmutableTrait(),
@@ -618,6 +644,15 @@ class EnumType(SetType):
 @dataclass
 class EnumItemType(BaseType):
     enum_type: EnumType
+    enum_type_name: str
+
+    def _is_eq_type(self, other: BaseType) -> bool:
+        if not isinstance(other, EnumItemType):
+            return False
+        return self.enum_type.is_eq_type(other.enum_type)
+
+    def _is_subtype(self, other: BaseType) -> bool:
+        return self.is_eq_type(other)
 
 
 @dataclass

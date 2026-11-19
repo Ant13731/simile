@@ -1,7 +1,7 @@
 from "is_sorted" import is_sorted
 
 procedure all_positive(xs: sequence[int]) -> bool:
-    return forall x in xs | x >= 0
+    return forall _ |-> x in xs | x >= 0
 
 procedure largest_peak(xs: sequence[int]) -> int:
-    return max s in segments(xs) · is_sorted(s) and all_positive(s) | sum(s)
+    return max s in segments(xs) · is_sorted(s) and all_positive(s) | sum(ran(s))

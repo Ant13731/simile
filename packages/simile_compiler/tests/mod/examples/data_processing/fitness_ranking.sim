@@ -12,15 +12,15 @@ RankingEnum: enum := {time_spent, total_reps, total_weight, blended_effort, blen
 # Relationships
 members: relation[Person, Gym] := {} # person is a member of at most one gym
     trait many_to_one
-    trait partial
+    # trait partial
 trainers: relation[Person, Person] := {} # one trainer can be assigned to multiple people, but each person should only have one trainer
     trait many_to_one
 employees: relation[Person, Gym] := {} # person is an employee at a Gym
     trait many_to_one
-    trait partial
+    # trait partial
 managers: relation[Person, Person] := {} # person manages employees
     trait many_to_one
-    trait partial
+    # trait partial
 machines_available: relation[Gym, Machine] := {} # gyms can have many machines, machines are not unique so they can exist in multiple gyms
 baseline_reps_per_minute: relation[Machine, int] := {} # lowest number of reps needed to qualify for leaderboards on a specific machine
     trait many_to_one
@@ -33,8 +33,8 @@ record FitnessMachineRecord:
     member: Person # person who did the exercise
     machine: Machine # exercise machine type
     gym: Gym # gym the exercise was done at
-    start_time: Timestamp # time we started using the machine
-    end_time: Timestamp # time we ended using the machine
+    start_time: float # time we started using the machine
+    end_time: float # time we ended using the machine
     # Effort data
     reps: int # reps per set * number of sets
     weight: int # weight in lbs
@@ -47,7 +47,7 @@ record FitnessMachineDaily:
     member: Person # person who did the exercise
     machine: Machine # exercise machine type
     gym: Gym # gym the exercise was done at
-    day: Timestamp
+    day: float
     # Effort data
     time_spent: int # seconds
     total_reps: int
@@ -59,7 +59,7 @@ record BlendedFitnessRankDaily:
     # Record identifiers
     member: Person # person who did the exercise
     gym: Gym # gym the exercise was done at
-    day: Timestamp
+    day: float
     # Effort data
     time_spent: int # seconds
     total_reps: int
@@ -71,7 +71,7 @@ record BlendedFitnessRankWeekly:
     # Record identifiers
     member: Person # person who did the exercise
     gym: Gym # gym the exercise was done at
-    week_start: Timestamp
+    week_start: float
     # Effort data
     time_spent: int # seconds
     total_reps: int

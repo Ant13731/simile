@@ -300,8 +300,8 @@ OPERATOR_TOKEN_TABLE = {
 
 KEYWORD_TABLE = {
     # Primitive objects
-    "True": TokenType.TRUE,
-    "False": TokenType.FALSE,
+    "true": TokenType.TRUE,
+    "false": TokenType.FALSE,
     # "None": TokenType.NONE,
     # Programming constructs
     "if": TokenType.IF,

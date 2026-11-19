@@ -125,8 +125,15 @@ class TypeSynthesizer:
 
         ast_type = self.synthesize_type(ast.record)
         if isinstance(ast_type, types.RecordType):
-            assert not isinstance(ast.field_name, ast_.Identifier)
+            assert isinstance(ast.field_name, ast_.Symbol)
             return ast_type.access(ast.field_name.symbol_table_entry.name)
+        if isinstance(ast_type, types.TupleType):
+            if not isinstance(ast.field_name, ast_.Int):
+                raise types.SimileTypeError(f"Tuple access expects an integer index, got {type(ast.field_name)}", ast)
+            index = int(ast.field_name.value)
+            if index < 0 or index >= len(ast_type.items):
+                raise types.SimileTypeError(f"Tuple access index {index} out of bounds for tuple of length {len(ast_type.items)}", ast)
+            return ast_type.items[index]
         raise types.SimileTypeError(f"Cannot access field of non-record type {type_to_source(ast_type)} in record access", ast)
 
     @typing_rule("Command - Procedure Call", "Relation Operations - Function Call")
@@ -152,11 +159,11 @@ class TypeSynthesizer:
         ast_index = ast.indices[0]
         target_type = self.synthesize_type(ast.target)
         index_type = self.synthesize_type(ast_index)
-        if isinstance(target_type, types.BagType):
-            return target_type.image(index_type)
-        if isinstance(target_type, types.RelationType):
-            return target_type.image(index_type)
-        raise types.SimileTypeError(f"Cannot take image of non-relation type {type_to_source(target_type)}", ast)
+        if not isinstance(target_type, types.RelationType):
+            raise types.SimileTypeError(f"Cannot take image of non-relation type {type_to_source(target_type)}", ast)
+        if isinstance(index_type, types.BagType):
+            return target_type.bag_image(index_type)
+        return target_type.image(index_type)
 
     # There should be no types or typed names
     # @resolve_type.register
@@ -474,9 +481,13 @@ class TypeSynthesizer:
     def create_relation_type(self, ast: ast_.RelationOp, relation_operator: ast_.RelationOperator) -> types.BaseType:
         left_type = self.synthesize_type(ast.left)
         right_type = self.synthesize_type(ast.right)
-        relation_type = types.RelationType(left_type, right_type)
+        if not isinstance(left_type, types.SetType) or not isinstance(right_type, types.SetType):
+            raise types.SimileTypeError("Relation operands must be sets", ast)
+        relation_type = types.RelationType(left_type.element_type, right_type.element_type)
         relation_type.apply_traits_from_relation_operator(relation_operator)
-        return relation_type
+        # These are for relation generators, not relation type annotations (which instead use the type annotation synthesizer)
+        # TODO update spec
+        return types.SetType(relation_type)
 
     @typing_rule()
     @_synthesize_type.register
@@ -648,12 +659,12 @@ class TypeSynthesizer:
             raise types.SimileTypeError(f"Generator set must be of type SetType. Got {type_to_source(set_type)}", ast.set_)
 
         element_type = set_type.element_type
-        # Deliberate choice: sequences and sets iterate over elements, relations and bags iterate over mapping pairs
-        # TODO update spec with this
-        # FIXME should we allow iteration over sequences without their indexes at all?
-        # Standard library iterates over tuples, but examples use straight iteration
-        if isinstance(set_type, types.SequenceType):
-            element_type = set_type.right
+        # # Deliberate choice: sequences and sets iterate over elements, relations and bags iterate over mapping pairs
+        # # TODO update spec with this
+        # # FIXME should we allow iteration over sequences without their indexes at all?
+        # # Standard library iterates over tuples, but examples use straight iteration
+        # if isinstance(set_type, types.SequenceType):
+        #     element_type = set_type.right
 
         assert isinstance(ast.identifiers, ast_.SymbolListTypes), "No identifiers allowed at this stage"
         self._structural_match(ast.identifiers, element_type)

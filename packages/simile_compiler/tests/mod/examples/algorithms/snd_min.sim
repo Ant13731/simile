@@ -1,4 +1,4 @@
 T: type := generic
 
 procedure snd_min(S: set[T]) -> T:
-    return min(S - {min(S)})
+    return min(S \ {min(S)})

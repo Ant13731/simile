@@ -100,6 +100,11 @@ def _(type_: types.EnumType) -> str:
 
 
 @type_to_source.register
+def _(type_: types.EnumItemType) -> str:
+    return type_.enum_type_name  # for debug only
+
+
+@type_to_source.register
 def _(type_: types.TupleType) -> str:
     parameterized_types = ", ".join(type_to_source(item) for item in type_.items)
     if len(type_.items) == 1:

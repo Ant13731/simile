@@ -715,7 +715,7 @@ class Parser:
             body = self.quantification_body()
             return ast_.Quantifier3(body, op_type)
         except ParseException as e:
-            logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier")
+            logger.debug(f"Failed to parse quantification IDENTIFIER as a quantification returning a plain identifier: {self.errors}")
             # TEMP: testing parsing without considering identifiers
             self.backtrack_from_error(*backtrack_ctx)
             if self.peek(1).type_ == TokenType.L_PAREN:
@@ -988,8 +988,11 @@ class Parser:
                 case TokenType.DOT:
                     self.advance()
                     t = self.peek()
-                    self.consume(TokenType.IDENTIFIER, "Access only allowed through an identifier")
-                    atom = ast_.RecordAccess(atom, ast_.Identifier(t.value))
+                    if self.match(TokenType.INTEGER):
+                        atom = ast_.RecordAccess(atom, ast_.Int(t.value))
+                    else:
+                        self.consume(TokenType.IDENTIFIER, "Access only allowed through an identifier")
+                        atom = ast_.RecordAccess(atom, ast_.Identifier(t.value))
                 case TokenType.L_PAREN:
                     set_whitespace_back_to = self.ignore_whitespace(True)
                     self.advance()

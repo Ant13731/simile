@@ -137,12 +137,14 @@ class ProcedureType(BaseType):
         return args_are_supertype and self.return_type.is_subtype(other.return_type)
 
     def call(self, arg_types: list[BaseType]) -> BaseType:
+        from src.mod.pipeline.printers.type_ import type_to_source
+
         if len(arg_types) != len(self.arg_types.items):
             raise SimileTypeError(f"Procedure called with incorrect number of arguments. Expected {len(self.arg_types.items)}, got {len(arg_types)}")
 
         for i, (provided_type, expected_type) in enumerate(zip(arg_types, self.arg_types.items)):
             if not provided_type.is_subtype(expected_type):
-                raise SimileTypeError(f"Procedure argument {i} expected type {expected_type}, got {provided_type}")
+                raise SimileTypeError(f"Procedure argument {i} expected type {type_to_source(expected_type)}, got {type_to_source(provided_type)}")
 
         generic_to_concrete_types = self.match_generic_types(ProcedureType(TupleType(arg_types), NoneType_()))
         concrete_procedure_type = self.replace_generic_types(generic_to_concrete_types)
