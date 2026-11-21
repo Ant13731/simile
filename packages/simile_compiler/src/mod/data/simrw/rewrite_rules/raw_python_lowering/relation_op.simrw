@@ -1,0 +1,99 @@
+# TODO guard conditions to make sure this doesnt match type annotations
+rule relation_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l <-> r
+        ~>
+        simile_python_raw.relation_generator(l,r)
+
+rule total_relation_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l <<-> r
+        ~>
+        simile_python_raw.total_relation_generator(l,r)
+
+rule surjective_relation_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l <->> r
+        ~>
+        simile_python_raw.surjective_relation_generator(l,r)
+
+rule total_surjective_relation_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l <<->> r
+        ~>
+        simile_python_raw.total_surjective_relation_generator(l,r)
+
+rule partial_function_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l +-> r
+        ~>
+        simile_python_raw.partial_function_generator(l,r)
+
+rule total_function_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l --> r
+        ~>
+        simile_python_raw.total_function_generator(l,r)
+
+rule partial_injection_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l >+> r
+        ~>
+        simile_python_raw.partial_injection_generator(l,r)
+
+rule total_injection_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l >-> r
+        ~>
+        simile_python_raw.total_injection_generator(l,r)
+
+rule partial_surjection_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l +->> r
+        ~>
+        simile_python_raw.partial_surjection_generator(l,r)
+
+rule total_surjection_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l -->> r
+        ~>
+        simile_python_raw.total_surjection_generator(l,r)
+
+rule bijection_op_to_generator:
+    vars:
+        l: set[T1]
+        r: set[T2]
+    rewrite:
+        l >->> r
+        ~>
+        simile_python_raw.bijection_generator(l,r)

@@ -6,7 +6,7 @@ from loguru import logger
 import pytest
 
 from src.mod.data.ast_ import ASTNode
-from src.mod.data.rewrite_rules import SIMRW_FILES
+from src.mod.data.simrw import SIMRW_FILES
 from src.mod.data.helpers import flatten
 from src.mod.pipeline.printers import simrw_ast_to_source, simrw_to_source
 from src.mod.pipeline.optimizer.v2 import parse_simrw_file, convert_simrw_to_rewrite_rules, parse_simrw

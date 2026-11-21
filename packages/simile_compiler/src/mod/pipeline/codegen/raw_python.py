@@ -6,7 +6,8 @@ from src.mod.data import ast_, types, traits
 from src.mod.data.symbol_table import SymbolTable
 from src.mod.pipeline.analysis import SemanticAnalysis
 
-SIMILE_LIBRARY_NAME = "simile_python_raw"
+from src.mod.data.simrw import RAW_PYTHON_SIMILE_LIBRARY_NAME
+
 SIMILE_LIBRARY_PATH = "simile_compiler.src.mod.pipeline.codegen.simile_python_raw_library"
 
 
@@ -77,191 +78,81 @@ class BuiltinOperations:
     @classmethod
     def lookup(cls, op_type: ast_.Operators) -> str:
         if op_type in cls.lib_lookup:
-            return f"{SIMILE_LIBRARY_NAME}.{cls.lib_lookup[op_type]}"
+            return f"{RAW_PYTHON_SIMILE_LIBRARY_NAME}.{cls.lib_lookup[op_type]}"
         raise NotImplementedError(f"Builtin function not implemented for {op_type}")
 
 
-@dataclass
-class ASTLowering:
-    symbol_table: SymbolTable
+# @dataclass
+# class ASTLowering:
+#     symbol_table: SymbolTable
 
-    quantification_op_lookup = {
-        ast_.QuantifierOperator.FORALL: "forall",
-        ast_.QuantifierOperator.EXISTS: "exists",
-        ast_.QuantifierOperator.UNION_ALL: "union",
-        ast_.QuantifierOperator.INTERSECTION_ALL: "intersection",
-        ast_.QuantifierOperator.SUM: "sum",
-        ast_.QuantifierOperator.PRODUCT: "product",
-        ast_.QuantifierOperator.MAX: "max",
-        ast_.QuantifierOperator.MIN: "min",
-    }
+#     @singledispatchmethod
+#     def lower_ast(self, ast: ast_.ASTNode) -> ast_.ASTNode:
+#         # For lowering simile-only concepts into python-like concepts,
+#         # simile types into python types, simile operators into python operators, etc.
+#         #
+#         # Concepts that dont translate directly will be simplified here, matching semantics as close as possible to simile
+#         return ast
 
-    @singledispatchmethod
-    def lower_ast(self, ast: ast_.ASTNode) -> ast_.ASTNode:
-        # For lowering simile-only concepts into python-like concepts,
-        # simile types into python types, simile operators into python operators, etc.
-        #
-        # Concepts that dont translate directly will be simplified here, matching semantics as close as possible to simile
-        return ast
+#     @lower_ast.register
+#     def _(self, ast: ast_.Fold) -> ast_.ASTNode:
+#         target = ast.accumulator_init.target
+#         if isinstance(ast.quantifier_body.end_or_branch, list):
+#             statements = []
+#             for iter_body in ast.quantifier_body.end_or_branch:
+#                 statements.append(self.lower_ast(iter_body))
+#             body: ast_.ASTNode = ast_.Statements(statements)
+#         else:
+#             body = ast_.Assignment(target, ast.quantifier_body.end_or_branch, False)
 
-    @lower_ast.register
-    def _(self, ast: ast_.Quantifier3) -> ast_.ASTNode:
-        if not ast.op_type.is_collection_operator():
-            return ast_.Call(
-                ast_.Symbol(
-                    self.symbol_table.lookup_identifier(self.quantification_op_lookup[ast.op_type]),
-                ),
-                [ast_.SetComprehension(ast.body)],
-            )
-        end = ast.body.end_or_branch
-        if isinstance(end, list):
-            union_op_type = ast_.CollectionOperator.from_quantifier_operator(ast.op_type)
-            if union_op_type is None:
-                raise CodegenError(f"Failed to convert {ast.op_type} to a collection operator")
-            union_components = ast_.Enumeration(
-                list(map(lambda x: self.lower_ast(ast_.SetComprehension(x)), end)),
-                union_op_type,
-            )
-            end = ast_.Call(
-                ast_.Symbol(
-                    self.symbol_table.lookup_identifier(self.quantification_op_lookup[ast_.QuantifierOperator.UNION_ALL]),
-                ),
-                [union_components],
-            )
-        assert isinstance(end, ast_.ASTNode)
-        return ast_.Quantifier3(ast_.QuantifierBody(ast.body.generators, end), ast.op_type)
+#         for generator in reversed(ast.quantifier_body.generators):
+#             body = self.create_fold_loop(generator, body)
+#         return ast_.Statements([ast.accumulator_init, body])
 
-    @lower_ast.register
-    def _(self, ast: ast_.Fold) -> ast_.ASTNode:
-        target = ast.accumulator_init.target
-        if isinstance(ast.quantifier_body.end_or_branch, list):
-            statements = []
-            for iter_body in ast.quantifier_body.end_or_branch:
-                statements.append(self.lower_ast(iter_body))
-            body: ast_.ASTNode = ast_.Statements(statements)
-        else:
-            body = ast_.Assignment(target, ast.quantifier_body.end_or_branch, False)
+#     def create_fold_loop(self, generator: ast_.Generator, body: ast_.ASTNode) -> ast_.ASTNode:
+#         return ast_.For(
+#             generator.identifiers,
+#             generator.set_,
+#             ast_.If(generator.predicate, body),
+#         )
 
-        for generator in reversed(ast.quantifier_body.generators):
-            body = self.create_fold_loop(generator, body)
-        return ast_.Statements([ast.accumulator_init, body])
+#     @lower_ast.register
+#     def _(self, ast: ast_.Iter) -> ast_.ASTNode:
+#         return self.lower_ast(ast.body)
 
-    def create_fold_loop(self, generator: ast_.Generator, body: ast_.ASTNode) -> ast_.ASTNode:
-        return ast_.For(
-            generator.identifiers,
-            generator.set_,
-            ast_.If(generator.predicate, body),
-        )
+#     @lower_ast.register
+#     def _(self, ast: ast_.IterBody) -> ast_.ASTNode:
+#         if isinstance(ast.end_or_branch, list):
+#             statements = []
+#             for iter_body in ast.end_or_branch:
+#                 statements.append(self.lower_ast(iter_body))
+#             body: ast_.ASTNode = ast_.Statements(statements)
+#         else:
+#             body = ast.end_or_branch.body
 
-    @lower_ast.register
-    def _(self, ast: ast_.Iter) -> ast_.ASTNode:
-        return self.lower_ast(ast.body)
+#         for generator in reversed(ast.generators):
+#             body = self.create_iter_loop(generator, body)
+#         return body
 
-    @lower_ast.register
-    def _(self, ast: ast_.IterBody) -> ast_.ASTNode:
-        if isinstance(ast.end_or_branch, list):
-            statements = []
-            for iter_body in ast.end_or_branch:
-                statements.append(self.lower_ast(iter_body))
-            body: ast_.ASTNode = ast_.Statements(statements)
-        else:
-            body = ast.end_or_branch.body
-
-        for generator in reversed(ast.generators):
-            body = self.create_iter_loop(generator, body)
-        return body
-
-    def create_iter_loop(self, generator: ast_.IterGenerator, body: ast_.ASTNode) -> ast_.ASTNode:
-        statements: list[ast_.ASTNode] = []
-        statements.append(
-            ast_.Assignment(
-                generator.generator.identifiers,
-                generator.generator.set_,
-                choice_assignment=True,
-            )
-        )
-        for assignment in generator.assignments:
-            statements.append(assignment)
-        statements.append(
-            ast_.For(
-                generator.generator.identifiers,
-                ast_.Difference(generator.generator.set_, ast_.SetEnumeration([generator.generator.identifiers])),
-                ast_.If(generator.generator.predicate, body),
-            )
-        )
-        return ast_.Statements(statements)
-
-    @lower_ast.register
-    def _(self, ast: ast_.Assignment) -> ast_.ASTNode:
-        if ast.choice_assignment:
-            return ast_.Assignment(
-                ast.target,
-                ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("choice")),
-                    [ast.value],
-                ),
-                choice_assignment=False,
-            )
-        return ast
-
-    @lower_ast.register
-    def _(self, ast: ast_.RelationOp) -> ast_.ASTNode:
-        match ast.op_type:
-            case ast_.RelationOperator.RELATION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("relation_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.TOTAL_RELATION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("total_relation_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.SURJECTIVE_RELATION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("surjective_relation_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.TOTAL_SURJECTIVE_RELATION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("total_surjective_relation_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.PARTIAL_FUNCTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("partial_function_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.TOTAL_FUNCTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("total_function_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.PARTIAL_INJECTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("partial_injection_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.TOTAL_INJECTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("total_injection_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.PARTIAL_SURJECTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("partial_surjection_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.TOTAL_SURJECTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("total_surjection_generator")),
-                    [ast.left, ast.right],
-                )
-            case ast_.RelationOperator.BIJECTION:
-                return ast_.Call(
-                    ast_.Symbol(self.symbol_table.lookup_identifier("bijection_generator")),
-                    [ast.left, ast.right],
-                )
+#     def create_iter_loop(self, generator: ast_.IterGenerator, body: ast_.ASTNode) -> ast_.ASTNode:
+#         statements: list[ast_.ASTNode] = []
+#         statements.append(
+#             ast_.Assignment(
+#                 generator.generator.identifiers,
+#                 generator.generator.set_,
+#                 choice_assignment=True,
+#             )
+#         )
+#         for assignment in generator.assignments:
+#             statements.append(assignment)
+#         statements.append(
+#             ast_.For(
+#                 generator.generator.identifiers,
+#                 ast_.Difference(generator.generator.set_, ast_.SetEnumeration([generator.generator.identifiers])),
+#                 ast_.If(generator.generator.predicate, body),
+#             )
+#         )
+#         return ast_.Statements(statements)
 
 
 @dataclass
@@ -302,7 +193,7 @@ class Printer:
 
     @lower_type.register
     def _(self, typ: types.RelationType) -> str:
-        return f"{SIMILE_LIBRARY_NAME}.Relation[{self.lower_type(typ.left)}, {self.lower_type(typ.right)}]"
+        return f"{RAW_PYTHON_SIMILE_LIBRARY_NAME}.Relation[{self.lower_type(typ.left)}, {self.lower_type(typ.right)}]"
 
     @lower_type.register
     def _(self, typ: types.BagType) -> str:
@@ -426,14 +317,14 @@ class Printer:
             case ast_.CollectionOperator.BAG:
                 return "Counter([", "])"
             case ast_.CollectionOperator.RELATION:
-                return f"{SIMILE_LIBRARY_NAME}.Relation.from_set_tuple({{", "})"
+                return f"{RAW_PYTHON_SIMILE_LIBRARY_NAME}.Relation.from_set_tuple({{", "})"
 
     @_print.register
     def _(self, ast: ast_.Quantifier3, i: int) -> str:
         py_generators = ""
         conditions = "True"
         for generator in ast.body.generators:
-            py_generators += f" for {self._print(generator.identifiers, i)} in {SIMILE_LIBRARY_NAME}.iter({self._print(generator.set_, i)})"
+            py_generators += f" for {self._print(generator.identifiers, i)} in {RAW_PYTHON_SIMILE_LIBRARY_NAME}.iter({self._print(generator.set_, i)})"
             conditions += f" and {self._print(generator.predicate, i)}"
         op_type = ast_.CollectionOperator.from_quantifier_operator(ast.op_type)
         if op_type is None:
@@ -471,7 +362,7 @@ class Printer:
     def _(self, ast: ast_.Image, i: int) -> str:
         indices = self._print(ast.indices, i)
         target = self._print(ast.target, i)
-        return f"{SIMILE_LIBRARY_NAME}.image({target}, {indices})"
+        return f"{RAW_PYTHON_SIMILE_LIBRARY_NAME}.image({target}, {indices})"
 
     @_print.register
     def _(self, ast: ast_.Assignment, i: int) -> str:
@@ -508,7 +399,7 @@ class Printer:
     @_print.register
     def _(self, ast: ast_.For, i: int) -> str:
         iterable = self._print(ast.iterable, i)
-        return f"{self.i(i)}for {self._print(ast.iterable_names, i)} in {SIMILE_LIBRARY_NAME}.iter({iterable}):\n{self._print(ast.body, i + 1)}"
+        return f"{self.i(i)}for {self._print(ast.iterable_names, i)} in {RAW_PYTHON_SIMILE_LIBRARY_NAME}.iter({iterable}):\n{self._print(ast.body, i + 1)}"
 
     @_print.register
     def _(self, ast: ast_.While, i: int) -> str:
@@ -527,7 +418,7 @@ from typing import Any
 
 from dataclasses import dataclass
 from collections import Counter
-import {SIMILE_LIBRARY_PATH} as {SIMILE_LIBRARY_NAME}
+import {SIMILE_LIBRARY_PATH} as {RAW_PYTHON_SIMILE_LIBRARY_NAME}
 
 def main():
 {main_body}

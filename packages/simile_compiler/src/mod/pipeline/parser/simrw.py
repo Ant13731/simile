@@ -1,24 +1,12 @@
 from __future__ import annotations
-from typing import Any, Callable, Sequence
-from dataclasses import dataclass, field
-from copy import deepcopy
+from typing import Any
 import pathlib
 
 from loguru import logger
 from lark import Lark, Transformer, Token
 from lark.indenter import PythonIndenter
 
-from src.mod.data import ast_
-from src.mod.pipeline.parser import parse
-
-
-@dataclass
-class SimrwAST:
-    name: str
-    vars_: str
-    rewrite_left: str
-    rewrite_right: str
-    when: list[str]
+from src.mod.data.simrw.ast_ import SimrwAST
 
 
 class RewriteTransformer(Transformer):

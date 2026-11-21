@@ -1,0 +1,17 @@
+rule choice_assignment_with_type:
+    vars:
+        t: T1
+        v: set[T1]
+    rewrite:
+        t: T1 :: v
+        ~>
+        t: T1 := choice(v)
+
+rule choice_assignment:
+    vars:
+        t: T1
+        v: set[T1]
+    rewrite:
+        t :: v
+        ~>
+        t := choice(v)

@@ -1,73 +1,20 @@
 from __future__ import annotations
-from typing import Any, Callable, Sequence, ClassVar
-from dataclasses import dataclass, field
-from copy import deepcopy
+from typing import Any
 
 from loguru import logger
 
 from src.mod.data import ast_, traits, types
 from src.mod.data.helpers.dataclass import dataclass_traverse
+from src.mod.data.simrw import SimrwAST, SimrwRewriteRule
+
 from src.mod.pipeline.analysis import TypeAnnotationResolver, make_symbol_table, normalize_ast
 from src.mod.pipeline.analysis.trait_resolver import TraitResolver
-from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
 from src.mod.pipeline.parser import parse
-from src.mod.pipeline.optimizer.v2.simrw_parser import SimrwAST
-from src.mod.pipeline.optimizer.v2.structure_matcher import StructureMatcher
-from src.mod.pipeline.optimizer.v2.guard_condition import PatternMatchVars, GuardCondition, GUARD_CONDITIONS
-from src.mod.pipeline.printers.ast_ import ast_to_source
+from src.mod.data.simrw.guard_condition import GuardCondition, GUARD_CONDITIONS
 
 
-@dataclass
-class RewriteRule:
-    name: str
-    vars_: PatternMatchVars
-    rewrite_left: ast_.ASTNode
-    rewrite_right: ast_.ASTNode
-    # These should be guarding functions that accept vars_
-    when: list[GuardCondition]
-
-
-def apply_rewrite_rule(rule: RewriteRule, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode | None:
-    logger.debug(f"Applying rewrite rule {rule.name} to AST: {ast_to_source(ast)}")
-    result = ast.find_and_replace_with_func(lambda node: _apply_rewrite_rule(rule, node, type_synthesizer))
-    logger.debug(f"Rewrite rule result: {ast_to_source(result)}")
-    return result
-
-
-def _apply_rewrite_rule(rule: RewriteRule, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode | None:
-    # Attempt to structurally pattern match with the LH side
-    # Collect the substituted vars in a dict for reversal later - assign a str to part of the AST
-    structure_matcher = StructureMatcher(set(rule.vars_.keys()))
-    substitutions = structure_matcher.match(ast, rule.rewrite_left)
-    if not substitutions:
-        logger.debug("Failed to match: couldn't find substitutions")
-        return None
-
-    # Check against typed vars (ast types should be a subset of the rewrite types)
-    for name, matched_ast in substitutions.items():
-        matched_ast_type = type_synthesizer.synthesize_type(matched_ast)
-        expected_var_type = rule.vars_[name]
-        if not matched_ast_type.is_subtype(expected_var_type):
-            logger.debug("Failed to match: matched AST type is not a subtype of expected var type")
-            return None
-
-    # Check guard conditions
-    for guard_condition in rule.when:
-        if not guard_condition.guard(ast, rule.vars_):
-            logger.debug(f"Failed to match: guard condition {guard_condition.name}")
-            return None
-
-    # Apply the right hand structural match
-    # Substitute vars
-    replacement_ast = deepcopy(rule.rewrite_right)
-    for name, matched_ast in substitutions.items():
-        replacement_ast = replacement_ast.find_and_replace(ast_.Identifier(name), matched_ast)
-    logger.debug(f"Rewrite rule {rule.name} applied successfully")
-    return replacement_ast
-
-
-def convert_simrw_to_rewrite_rules(rewrite_rule_asts: list[SimrwAST]) -> list[RewriteRule]:
-    rewrite_rules: list[RewriteRule] = []
+def convert_simrw_to_rewrite_rules(rewrite_rule_asts: list[SimrwAST]) -> list[SimrwRewriteRule]:
+    rewrite_rules: list[SimrwRewriteRule] = []
     for rewrite_rule_ast in rewrite_rule_asts:
         logger.debug(
             f"Converting simrw rule {rewrite_rule_ast.name} to rewrite rule (with vars {rewrite_rule_ast.vars_}): {rewrite_rule_ast.rewrite_left} ~> {rewrite_rule_ast.rewrite_right}"
@@ -80,8 +27,8 @@ def convert_simrw_to_rewrite_rules(rewrite_rule_asts: list[SimrwAST]) -> list[Re
         rewrite_right_ast = parse(rewrite_rule_ast.rewrite_right)
         guard_conditions = list(map(collect_guard_condition, rewrite_rule_ast.when))
 
-        rewrite_rule = RewriteRule(
-            name=rewrite_rule_ast.name,
+        rewrite_rule = SimrwRewriteRule(
+            _name=rewrite_rule_ast.name,
             vars_=typed_vars,
             rewrite_left=rewrite_left_ast,
             rewrite_right=rewrite_right_ast,
