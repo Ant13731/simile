@@ -235,7 +235,7 @@ bool is_subset_of(const std::unordered_set<T>& a, const std::unordered_set<T>& b
     # def _(self, ast: ast_.LambdaDef) -> str: ...
     @_generate_code.register
     def _(self, ast: ast_.RecordAccess) -> str:
-        return f"{self._generate_code(ast.record)}.{ast.field_name}"
+        return f"{self._generate_code(ast.record)}.{ast.field}"
 
     @_generate_code.register
     def _(self, ast: ast_.Call) -> str:
@@ -292,7 +292,7 @@ bool is_subset_of(const std::unordered_set<T>& a, const std::unordered_set<T>& b
 
     @_generate_code.register
     def _(self, ast: ast_.ProcedureDefIdentifier) -> str:
-        args = ", ".join(f"{self._generate_code(arg.type_)} {arg.name}" for arg in ast.args)
+        args = ", ".join(f"{self._generate_code(arg.type_)} {arg.name}" for arg in ast.params)
         return f"{self._generate_code(ast.return_type)} {ast.name}({args}) {{\n{self._generate_code(ast.body)};\n}}"
 
     @_generate_code.register

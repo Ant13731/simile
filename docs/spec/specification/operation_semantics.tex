@@ -1494,17 +1494,17 @@ Integers follow unbounded precision arithmetic, while floats follow IEEE-754. Ad
     \hypo{s = \Set{(x_1, ..., x_n) \in S_1 \times ... \times S_n}{P}{E}}
     \infer1{\Set{\texttt{x_1 in S_1, ..., x_n in S_n}}{\texttt{P}}{\texttt{E}} \to s}
   \end{prooftree}
-  \\
-  \tag{Joined}
-  \begin{prooftree}
-    \hypo{s = \Set{x_1 \in S_1}{P_1}{E_1} \cup ... \cup \Set{x_n \in S_n}{P_n}{E_n}}
-    \infer1{\Set{\Comprehension{}{}{\texttt{x_1 in S_1}}{\texttt{P_1}}{\texttt{E_1}} \texttt{` ... `} \Comprehension{}{}{\texttt{x_n in S_n}}{\texttt{P_n}}{\texttt{E_n}}} \to s}
-  \end{prooftree}
+  % \\
+  % \tag{Joined}
+  % \begin{prooftree}
+  %   \hypo{s = \Set{x_1 \in S_1}{P_1}{E_1} \cup ... \cup \Set{x_n \in S_n}{P_n}{E_n}}
+  %   \infer1{\Set{\Comprehension{}{}{\texttt{x_1 in S_1}}{\texttt{P_1}}{\texttt{E_1}} \texttt{` ... `} \Comprehension{}{}{\texttt{x_n in S_n}}{\texttt{P_n}}{\texttt{E_n}}} \to s}
+  % \end{prooftree}
 \end{gather}
 \paragraph{Lambda}
 \paragraph{Iter}
 \begin{gather}
-  \tag{Fold}
+  \tag{Iter}
   \begin{prooftree}
     \hypo{t = \Tuple{i \in 0..n}{a_i}}
     \hypo{S \neq \Set{}}

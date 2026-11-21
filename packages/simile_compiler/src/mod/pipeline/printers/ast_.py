@@ -115,51 +115,28 @@ def _(ast: ast_.Generator, indent: int) -> str:
 @_ast_to_source.register(ast_.QuantifierBody)
 def _(ast: ast_.QuantifierBody, indent: int) -> str:
     generators = ", ".join(_ast_to_source(gen, indent) for gen in ast.generators)
-    if isinstance(ast.end_or_branch, list):
-        # To account for no initial generators, we conditionally add a comma between generators and branches
-        if generators:
-            generators += ", "
-        branches = ") ` (".join(_ast_to_source(branch, indent) for branch in ast.end_or_branch)
-        return f"{generators}({branches})"
-    return f"{generators} | {_ast_to_source(ast.end_or_branch, indent)}"
-
-
-@_ast_to_source.register(ast_.IterBody)
-def _(ast: ast_.IterBody, indent: int) -> str:
-    generators = ", ".join(_ast_to_source(gen, indent) for gen in ast.generators)
-    if isinstance(ast.end_or_branch, list):
-        # To account for no initial generators, we conditionally add a comma between generators and branches
-        if generators:
-            generators += ", "
-        branches = ") ` (".join(_ast_to_source(branch, indent) for branch in ast.end_or_branch)
-        return f"{generators}({branches})"
-    # Iter end branch supplies its own VBAR
-    return f"{generators} {_ast_to_source(ast.end_or_branch, indent)}"
+    return f"{generators} | {_ast_to_source(ast.expr, indent)}"
 
 
 @_ast_to_source.register(ast_.Fold)
 def _(ast: ast_.Fold, indent: int) -> str:
     init_accumulator = _ast_to_source(ast.accumulator_init, indent)
-    body = _ast_to_source(ast.quantifier_body, indent)
+    body = _ast_to_source(ast.body, indent)
     return f"fold {init_accumulator} : {body}"
+
+
+@_ast_to_source.register(ast_.Iter)
+def _(ast: ast_.Iter, indent: int) -> str:
+    generators = ", ".join(_ast_to_source(gen, indent) for gen in ast.generators)
+    body = _ast_to_source(ast.body, indent)
+    return_value = _ast_to_source(ast.return_value, indent)
+    return f"iter {generators} → {return_value} | {body}"
 
 
 @_ast_to_source.register(ast_.IterGenerator)
 def _(ast: ast_.IterGenerator, indent: int) -> str:
     assignments = "; ".join(_ast_to_source(assignment, indent) for assignment in ast.assignments)
     return f"{_ast_to_source(ast.generator, indent)} : {assignments}"
-
-
-@_ast_to_source.register(ast_.IterBodyEnd)
-def _(ast: ast_.IterBodyEnd, indent: int) -> str:
-    body = _ast_to_source(ast.body, indent)
-    return_value = _ast_to_source(ast.return_value, indent)
-    return f"→ {return_value} | {body}"
-
-
-@_ast_to_source.register(ast_.Iter)
-def _(ast: ast_.Iter, indent: int) -> str:
-    return f"iter {_ast_to_source(ast.body, indent)}"
 
 
 @_ast_to_source.register(ast_.Enumeration)
@@ -193,7 +170,7 @@ def _(ast: ast_.LambdaDef, indent: int) -> str:
 
 @_ast_to_source.register(ast_.RecordAccess)
 def _(ast: ast_.RecordAccess, indent: int) -> str:
-    return f"{_ast_to_source(ast.record, indent)}.{_ast_to_source(ast.field_name, indent)}"
+    return f"{_ast_to_source(ast.record, indent)}.{_ast_to_source(ast.field, indent)}"
 
 
 @_ast_to_source.register(ast_.Call)
@@ -309,7 +286,7 @@ def _(ast: ast_.RecordDefSymbol, indent: int) -> str:
 def _(ast: ast_.ProcedureDefIdentifier, indent: int) -> str:
     # TODO: add back in when whitespace becomes available (and only do it when the other string variation would exceed 120 chars)
     # args_str = "\n" + f",\n{T*(indent + 1)}".join(_ast_to_source(arg, indent + 1) for arg in ast.args) + "\n"
-    args_str = f", ".join(_ast_to_source(arg, indent + 1) for arg in ast.args)
+    args_str = f", ".join(_ast_to_source(arg, indent + 1) for arg in ast.params)
     body_str = _ast_to_source(ast.body, indent + 1)
     return_type_str = _ast_to_source(ast.return_type, indent)
     return f"procedure {_ast_to_source(ast.name, indent)}({args_str}) -> {return_type_str}:\n{T * (indent + 1)}{body_str}\n"

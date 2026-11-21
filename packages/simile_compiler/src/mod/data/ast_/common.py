@@ -218,7 +218,7 @@ class ListOp(InheritedEqMixin, ASTNode):
 
 
 # TODO move to parser_only file (once typing/semantic analysis is sorted out)
-@deprecated("use v3")
+@deprecated("use v4")
 @dataclass(eq=False)
 class Quantifier(ASTNode):
     predicate: ListOp  # includes generators
@@ -314,7 +314,7 @@ class Quantifier(ASTNode):
         return identifiers
 
 
-@deprecated("use v3")
+@deprecated("use v4")
 @dataclass(eq=False)
 class QualifiedQuantifier(ASTNode):
     bound_identifiers: TupleIdentifier | TupleSymbol
@@ -361,47 +361,37 @@ class Quantifier3(ASTNode):
     op_type: QuantifierOperator
 
 
-# TODO make an identifier and a symbol version?
 @dataclass
-class Generator(ASTNode):
-    identifiers: TupleIdentifier | Identifier | TupleSymbol | Symbol
-    set_: ASTNode
-    predicate: ASTNode | True_
+class Fold(ASTNode):
+    accumulator_init: Assignment
+    body: QuantifierBody
 
 
 @dataclass
 class QuantifierBody(ASTNode):
     generators: list[Generator]
-    end_or_branch: ASTNode | list[QuantifierBody]
+    expr: ASTNode
+
+
+# TODO make an identifier and a symbol version?
+@dataclass
+class Generator(ASTNode):
+    identifiers: TupleIdentifier | Identifier | TupleSymbol | Symbol
+    set_: ASTNode
+    predicate: ASTNode | True_ = field(default_factory=True_)
 
 
 @dataclass
-class Fold(ASTNode):
-    accumulator_init: Assignment
-    quantifier_body: QuantifierBody
+class Iter(ASTNode):
+    generators: list[IterGenerator]
+    body: ASTNode
+    return_value: TupleIdentifier | Identifier | TupleSymbol | Symbol
 
 
 @dataclass
 class IterGenerator(ASTNode):
     generator: Generator
     assignments: list[Assignment]
-
-
-@dataclass
-class IterBodyEnd(ASTNode):
-    body: ASTNode
-    return_value: TupleIdentifier | Identifier | TupleSymbol | Symbol
-
-
-@dataclass
-class IterBody(ASTNode):
-    generators: list[IterGenerator]
-    end_or_branch: IterBodyEnd | list[IterBody]
-
-
-@dataclass
-class Iter(ASTNode):
-    body: IterBody
 
 
 @dataclass(eq=False)
@@ -482,7 +472,7 @@ class LambdaDef(ASTNode):
 @dataclass
 class RecordAccess(ASTNode):
     record: ASTNode
-    field_name: Identifier | Symbol | Int
+    field: Identifier | Symbol | Int
 
 
 @dataclass

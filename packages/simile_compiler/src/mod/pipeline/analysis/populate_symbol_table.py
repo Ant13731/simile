@@ -1,6 +1,8 @@
 from dataclasses import dataclass, fields
 from pathlib import Path
 from typing_extensions import OrderedDict
+from functools import singledispatchmethod
+from contextlib import contextmanager
 
 from loguru import logger
 
@@ -95,7 +97,7 @@ class PopulateSymbolTable:
     def populate(self, ast: ast_.ASTNode) -> ast_.ASTNode:
         assert isinstance(ast, ast_.ASTNode), f"Gotcha: {ast}"
 
-        new_ast_node, continue_populating = self._populate_aux(ast)
+        new_ast_node, continue_populating = self._populate_aux_2(ast)
         if new_ast_node is not None:
             ast = new_ast_node
 
@@ -116,435 +118,432 @@ class PopulateSymbolTable:
                 setattr(ast, f.name, self.populate(field_value))
         return ast
 
-    def _populate_aux(self, ast: ast_.ASTNode) -> tuple[ast_.ASTNode | None, bool]:
+    @contextmanager
+    def scope(self, ctx: ScopeContext):
+        scope_table_entry = self.symbol_table.add_scope(ctx)
+        try:
+            yield scope_table_entry
+        finally:
+            self.symbol_table.pop_scope_level()
+
+    @singledispatchmethod
+    def _populate_aux_2(self, ast: ast_.ASTNode) -> tuple[ast_.ASTNode | None, bool]:
         """Returns: (Node to replace if not None, whether to continue populating children)"""
-        match ast:
-            # Scopes
-            case ast_.If(condition, body, else_body):
-                self.symbol_table.add_scope(ScopeContext.CONDITIONAL)
-                _condition = self.populate(condition)
-                _body = self.populate(body)
-                _else_body = self.populate(else_body)
-                self.symbol_table.pop_scope_level()
-
-                assert isinstance(_else_body, ast_.Else | ast_.ElseIf | ast_.None_)
-                return ast_.If(_condition, _body, _else_body), False
-
-            case ast_.ElseIf(condition, body, else_body):
-                self.symbol_table.add_scope(ScopeContext.CONDITIONAL)
-                _condition = self.populate(condition)
-                _body = self.populate(body)
-                _else_body = self.populate(else_body)
-                self.symbol_table.pop_scope_level()
-
-                assert isinstance(_else_body, ast_.Else | ast_.ElseIf | ast_.None_)
-                return ast_.ElseIf(_condition, _body, _else_body), False
-
-            case ast_.Else(body):
-                self.symbol_table.add_scope(ScopeContext.CONDITIONAL)
-                _body = self.populate(body)
-                self.symbol_table.pop_scope_level()
-
-                return ast_.Else(_body), False
-
-            case ast_.While(condition, body):
-                self.symbol_table.add_scope(ScopeContext.LOOP)
-                _condition = self.populate(condition)
-                _body = self.populate(body)
-                self.symbol_table.pop_scope_level()
-
-                return ast_.While(_condition, _body), False
-
-            case ast_.For(iterable_names, iterable, body):
-                assert isinstance(iterable_names, ast_.IdentifierListTypes)
-
-                self.symbol_table.add_scope(ScopeContext.LOOP)
-                _iterable = self.populate(iterable)
-                temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
-                _iterable_type = temporary_type_synthesizer.synthesize_type(iterable)
-                self._populate_loop_parameters(iterable_names, _iterable_type)
-                _iterable_symbols = self._convert_identifier_to_symbol(iterable_names)
-                _body = self.populate(body)
-                self.symbol_table.pop_scope_level()
-
-                assert isinstance(_iterable_symbols, ast_.TupleSymbol)
-                return ast_.For(_iterable_symbols, _iterable, _body), False
-
-            case body if isinstance(body, ast_.QuantifierBody):
-                _body = self._populate_loop_parameters_from_generators(body)
-                return _body, False
-
-            case ast_.Fold(accumulator_init, body):
-                self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-                _accumulator_init = self.populate(accumulator_init)
-                _body = self.populate(body)
-                self.symbol_table.pop_scope_level()
-
-                assert isinstance(_accumulator_init, ast_.Assignment)
-                assert isinstance(_body, ast_.QuantifierBody)
-                return ast_.Fold(_accumulator_init, _body), False
-
-            case ast_.IterBody(_, _) as iter_:
-                return self._populate_iter(iter_), False
-
-            case ast_.ProcedureDefIdentifier(name, params, body, return_type):
-                # NOTE: param_types is populated *after* the procedure type definition since symbols must be added within the scope of the procedure
-                param_types: list[BaseType] = []
-                return_type_ = TypeAnnotationResolver.resolve_type_annotation(return_type, self.symbol_table)
-                assert isinstance(return_type_, BaseType), "Procedure return type must have a valid type annotation"
-                self.symbol_table.add_symbol(
-                    name.name,
-                    IdentifierContext.PROCEDURE,
-                    ProcedureType(TupleType(param_types), return_type_),
-                )
-                _name_symbol = self._convert_identifier_to_symbol(name)
-
-                self.symbol_table.add_scope(ScopeContext.PROCEDURE)
-
-                _params_symbols: list[ast_.Symbol] = []
-                for param in params:
-                    if not isinstance(param.name, ast_.Identifier):
-                        raise SimileTypeError(f"Invalid procedure parameter name (must be an identifier): {param.name}", param)
-                    param_type = TypeAnnotationResolver.resolve_type_annotation(param.type_, self.symbol_table)
-
-                    self.symbol_table.add_symbol(
-                        param.name.name,
-                        IdentifierContext.PROCEDURE_PARAMETER,
-                        param_type,
-                    )
-                    param_symbol = self._convert_identifier_to_symbol(param.name)
-                    assert isinstance(param_symbol, ast_.Symbol)
-                    param_types.append(param_type)
-                    _params_symbols.append(param_symbol)
-
-                _body = self.populate(body)
-
-                self.symbol_table.pop_scope_level()
-                assert isinstance(_name_symbol, ast_.Symbol)
-                return ast_.ProcedureDefSymbol(_name_symbol, _params_symbols, _body), False
-            case ast_.RecordDefIdentifier(ast_.Identifier(name), items):
-                fields: dict[str, BaseType] = OrderedDict()
-                record_def_type = RecordType(name=name, fields=fields)
-                self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.RECORD,
-                    record_def_type,
-                )
-                record_scope_table_entry = self.symbol_table.add_scope(ScopeContext.RECORD)
-                record_def_type.add_scope_entry(record_scope_table_entry)
-
-                for item in items:
-                    if not isinstance(item.name, ast_.Identifier):
-                        raise SimileTypeError(f"Invalid struct field name (must be an identifier): {item.name}", item)
-                    field_type = TypeAnnotationResolver.resolve_type_annotation(item.type_, self.symbol_table)
-                    assert isinstance(field_type, BaseType)
-                    fields[item.name.name] = field_type
-                    self.symbol_table.add_symbol(
-                        item.name.name,
-                        IdentifierContext.RECORD_FIELD,
-                        field_type,
-                    )
-
-                _symbol = self._convert_identifier_to_symbol(ast_.Identifier(name))
-                assert isinstance(_symbol, ast_.Symbol)
-                self.symbol_table.pop_scope_level()
-                return ast_.RecordDefSymbol(_symbol, fields), False
-            case ast_.LambdaDef(params, predicate, expression):
-                assert isinstance(params, ast_.IdentifierListTypes)
-
-                self.symbol_table.add_scope(ScopeContext.LAMBDA)
-                _predicate = self.populate(predicate)
-                _expression = self.populate(expression)
-
-                # FIXME types are not known at this point
-                self._populate_loop_parameters(params, NoneType_())
-                _param_symbols = self._convert_identifier_to_symbol(params)
-
-                self.symbol_table.pop_scope_level()
-
-                assert isinstance(_param_symbols, ast_.TupleSymbol)
-                return ast_.LambdaDef(_param_symbols, _predicate, _expression), False
-
-            case ast_.TraitApplication(ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("enum"), [])), value, is_choice), trait_asts):
-                if is_choice:
-                    raise SimileTypeError(f"Choice assignment cannot be used with enum definitions", ast)
-                if not isinstance(value, ast_.Enumeration):
-                    raise SimileTypeError(f"Enum type annotation can only be applied to enumeration definitions, got {type(value)}", value)
-
-                members: set[str] = set()
-                for _item in value.items:
-                    if not isinstance(_item, ast_.Identifier):
-                        raise SimileTypeError(f"Invalid enum item name (must be an identifier): {_item}", _item)
-                    if self.symbol_table.symbol_exists_in_current_scope(_item.name):
-                        raise SimileTypeError(f"Enum item name {_item.name} already exists in current scope, cannot be used as enum item name", _item)
-                    members.add(_item.name)
-
-                _trait_asts = [self.populate(trait) for trait in trait_asts]
-                traits = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
-                enum_type = EnumType(members=members, traits=traits)
-                _name = self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.ENUM,
-                    enum_type,
-                )
-                for member in members:
-                    self.symbol_table.add_symbol(
-                        member,
-                        IdentifierContext.ENUM_ITEM,
-                        EnumItemType(enum_type, name),
-                    )
-                _value = self.populate(value)
-                return (
-                    ast_.TraitApplication(
-                        ast_.Assignment(
-                            ast_.TypedName(
-                                ast_.Symbol(_name),
-                                ast_.Type_(ast_.Identifier("enum"), []),
-                            ),
-                            _value,
-                            is_choice,
-                        ),
-                        _trait_asts,
-                    ),
-                    False,
-                )
-            case ast_.TraitApplication(ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("type"), [])), value, is_choice), trait_asts):
-                if is_choice:
-                    raise SimileTypeError(f"Choice assignment cannot be used with type definitions", ast)
-                if not isinstance(value, ast_.Type_):
-                    raise SimileTypeError(f"Type definitions must have a valid type annotation (this should have been promoted by normalize_ast), got {value}", value)
-
-                _trait_asts = [self.populate(trait) for trait in trait_asts]
-                traits = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
-                type_value = TypeAnnotationResolver.resolve_type_annotation(value, self.symbol_table)
-                if type_value is None:
-                    raise SimileTypeError(f"Type definitions must have a valid type annotation, got None", value)
-                # Promote the type to a typeOfType only if it doesnt already represent a type (like generic types do represent a type value)
-                # typeOfType should not wrap such objects
-                type_value.traits = type_value.traits.merge_copy(traits, MergeTraitBehaviour.PREFER_LEFT)
-                if not isinstance(type_value, GenericType | AnyType_ | TypeOfType):
-                    type_value = TypeOfType(type_value)
-
-                _name = self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.TYPE_NAME,
-                    type_value,
-                )
-                if isinstance(type_value, GenericType):
-                    type_value.add_symbol_info(_name)
-                _value = self.populate(value)
-                _type_symbol = self._convert_identifier_to_symbol(ast_.Identifier("type"))
-                return (
-                    ast_.TraitApplication(
-                        ast_.Assignment(
-                            ast_.TypedName(ast_.Symbol(_name), ast_.Type_(_type_symbol, [])),
-                            _value,
-                            is_choice,
-                        ),
-                        _trait_asts,
-                    ),
-                    False,
-                )
-            case ast_.TraitApplication(ast_.Assignment(ast_.TypedName(ast_.Identifier(name), declared_type), value, is_choice), trait_asts):
-                _trait_asts = [self.populate(trait) for trait in trait_asts]
-                traits = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
-                _declared_type = TypeAnnotationResolver.resolve_type_annotation(declared_type, self.symbol_table)
-                if _declared_type is None:
-                    raise SimileTypeError(f"Variable definitions must have a valid type annotation, got None", declared_type)
-                if isinstance(_declared_type, TypeOfType):
-                    # Type is actually used - unwrap the TypeOfType
-                    _declared_type = _declared_type.type_of
-                _declared_type.traits = _declared_type.traits.merge_copy(traits, MergeTraitBehaviour.PREFER_LEFT)
-                _name = self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.VARIABLE,
-                    _declared_type,
-                )
-                _value = self.populate(value)
-                _declared_type_ast = self.populate(declared_type)
-                assert isinstance(_declared_type_ast, ast_.Type_)
-                return (
-                    ast_.TraitApplication(
-                        ast_.Assignment(
-                            ast_.TypedName(ast_.Symbol(_name), _declared_type_ast),
-                            _value,
-                            is_choice,
-                        ),
-                        _trait_asts,
-                    ),
-                    False,
-                )
-
-            case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("enum"), [])), value, is_choice_assignment):
-                if is_choice_assignment:
-                    raise SimileTypeError(f"Choice assignment cannot be used with enum definitions", ast)
-                if not isinstance(value, ast_.Enumeration):
-                    raise SimileTypeError(f"Enum type annotation can only be applied to enumeration definitions, got {type(value)}", value)
-
-                members = set()
-                for _item in value.items:
-                    if not isinstance(_item, ast_.Identifier):
-                        raise SimileTypeError(f"Invalid enum item name (must be an identifier): {_item}", _item)
-                    if self.symbol_table.symbol_exists_in_current_scope(_item.name):
-                        raise SimileTypeError(f"Enum item name {_item.name} already exists in current scope, cannot be used as enum item name", _item)
-                    members.add(_item.name)
-
-                enum_type = EnumType(members=members)
-                self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.ENUM,
-                    enum_type,
-                )
-                for member in members:
-                    self.symbol_table.add_symbol(
-                        member,
-                        IdentifierContext.ENUM_ITEM,
-                        EnumItemType(enum_type, name),
-                    )
-
-            case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), ast_.Type_(ast_.Identifier("type"), [])), value, is_choice_assignment):
-                if is_choice_assignment:
-                    raise SimileTypeError(f"Choice assignment cannot be used with type definitions", ast)
-                if not isinstance(value, ast_.Type_):
-                    raise SimileTypeError(f"Type definitions must have a valid type annotation (this should have been promoted by normalize_ast), got {value}", value)
-
-                type_value = TypeAnnotationResolver.resolve_type_annotation(value, self.symbol_table)
-                if type_value is None:
-                    raise SimileTypeError(f"Type definitions must have a valid type annotation, got None", value)
-                if not isinstance(type_value, GenericType | AnyType_ | TypeOfType):
-                    type_value = TypeOfType(type_value)
-
-                _name = self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.TYPE_NAME,
-                    type_value,
-                )
-                if isinstance(type_value, GenericType):
-                    type_value.add_symbol_info(_name)
-                _value = self.populate(value)
-                _type_symbol = self._convert_identifier_to_symbol(ast_.Identifier("type"))
-                return (
-                    ast_.Assignment(
-                        ast_.TypedName(ast_.Symbol(_name), ast_.Type_(_type_symbol, [])),
-                        _value,
-                        is_choice_assignment,
-                    ),
-                    False,
-                )
-            case ast_.Assignment(ast_.TypedName(ast_.Identifier(name), declared_type), value, is_choice_assignment):
-                _declared_type = TypeAnnotationResolver.resolve_type_annotation(declared_type, self.symbol_table)
-                if _declared_type is None:
-                    raise SimileTypeError(f"Variable definitions must have a valid type annotation, got None", declared_type)
-                if isinstance(_declared_type, TypeOfType):
-                    # Type is actually used - unwrap the TypeOfType
-                    _declared_type = _declared_type.type_of
-
-                _name = self.symbol_table.add_symbol(
-                    name,
-                    IdentifierContext.VARIABLE,
-                    _declared_type,
-                )
-                _value = self.populate(value)
-                _declared_type_ast = self.populate(declared_type)
-                assert isinstance(_declared_type_ast, ast_.Type_)
-                return (
-                    ast_.Assignment(
-                        ast_.TypedName(ast_.Symbol(_name), _declared_type_ast),
-                        _value,
-                        is_choice_assignment,
-                    ),
-                    False,
-                )
-            case ast_.Import(module_file_path, names_to_import, import_operator):
-                # TODO fix this to allow for modules with different names (import ... as <name>)
-                module_file_path = module_file_path.with_suffix(".sim")
-                module_name, module_ast = _read_from_path_and_parse(module_file_path)
-                module_scope = self.symbol_table.add_scope(ScopeContext.IMPORT)
-                self.populate(module_ast)
-                self.symbol_table.pop_scope_level()
-
-                match import_operator:
-                    case ast_.ImportOperator.SPECIFIC_NAMES:
-                        for symbol_id in module_scope.declared_symbols:
-                            symbol = self.symbol_table.lookup_symbol(symbol_id, module_scope.id_)
-                            if symbol.name not in names_to_import:
-                                continue
-                            # Skip duplicate imports from the same source (instead of throwing an error when we attempt to add duplicate symbols)
-                            if self._duplicate_import(
-                                IdentifierContext.MODULE_IMPORT_SYMBOL,
-                                ImportedSymbol,
-                                symbol.name,
-                                module_file_path,
-                            ):
-                                continue
-                            self.symbol_table.add_symbol(
-                                symbol.name,
-                                IdentifierContext.MODULE_IMPORT_SYMBOL,
-                                ImportedSymbol(symbol, module_file_path),
-                            )
-                    case ast_.ImportOperator.ALL_NAMES:
-                        for symbol_id in module_scope.declared_symbols:
-                            symbol = self.symbol_table.lookup_symbol(symbol_id, module_scope.id_)
-                            if self._duplicate_import(
-                                IdentifierContext.MODULE_IMPORT_SYMBOL,
-                                ImportedSymbol,
-                                symbol.name,
-                                module_file_path,
-                            ):
-                                continue
-                            self.symbol_table.add_symbol(
-                                symbol.name,
-                                IdentifierContext.MODULE_IMPORT_SYMBOL,
-                                ImportedSymbol(symbol, module_file_path),
-                            )
-                    case ast_.ImportOperator.MODULE_NAME:
-                        if not self._duplicate_import(
-                            IdentifierContext.MODULE_IMPORT,
-                            ModuleImports,
-                            module_name,
-                            module_file_path,
-                        ):
-
-                            self.symbol_table.add_symbol(
-                                module_name,
-                                IdentifierContext.MODULE_IMPORT,
-                                ModuleImports(module_scope, module_file_path),
-                            )
-                return None, False
-
-            # By this point, all identifiers should have been added to the symbol table
-            # Replace them with symbol ids corresponding to the symbol table entry
-            case ast_.Identifier(_) | ast_.MapletIdentifier(_) | ast_.TupleIdentifier(_):
-                return self._convert_identifier_to_symbol(ast), False
-            case ast_.RecordAccess(record, field):
-                if not isinstance(field, ast_.Identifier):
-                    return None, True
-                populated_record = self.populate(record)
-                temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
-                record_type = temporary_type_synthesizer.synthesize_type(populated_record)
-                if not isinstance(record_type, RecordType):
-                    return None, True
-                field_symbol_entry = self.symbol_table.lookup_identifier(
-                    field.name,
-                    include_scope=record_type.lookup_scope_entry,
-                )
-                return ast_.RecordAccess(populated_record, ast_.Symbol(field_symbol_entry)), False
-
+        logger.debug(f"Symbol table population not implemented for {type(ast)}")
         return None, True
 
-    def _convert_identifier_to_symbol(self, ast: ast_.IdentifierListTypes) -> ast_.SymbolListTypes:
-        match ast:
-            case ast_.Identifier(name):
-                symbol_table_entry = self.symbol_table.lookup_identifier(name)
-                return ast_.Symbol(symbol_table_entry)
-            case ast_.MapletIdentifier((left, right)):
-                _left = self._convert_identifier_to_symbol(left)
-                _right = self._convert_identifier_to_symbol(right)
-                return ast_.MapletSymbol(_left, _right)
-            case ast_.TupleIdentifier(identifiers):
-                _identifiers = [self._convert_identifier_to_symbol(ident) for ident in identifiers]
-                return ast_.TupleSymbol(tuple(_identifiers))
-        raise ValueError(f"Unsupported identifier type: {type(ast)}. This should not happen")
+    @_populate_aux_2.register
+    def _(self, ast: ast_.If) -> tuple[ast_.ASTNode | None, bool]:
+        with self.scope(ScopeContext.CONDITIONAL) as scp:
+            _condition = self.populate(ast.condition)
+            _body = self.populate(ast.body)
+            _else_body = self.populate(ast.else_body)
+
+        assert isinstance(_else_body, ast_.Else | ast_.ElseIf | ast_.None_)
+        return ast_.If(_condition, _body, _else_body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.ElseIf) -> tuple[ast_.ASTNode | None, bool]:
+        with self.scope(ScopeContext.CONDITIONAL) as scp:
+            _condition = self.populate(ast.condition)
+            _body = self.populate(ast.body)
+            _else_body = self.populate(ast.else_body)
+
+        assert isinstance(_else_body, ast_.Else | ast_.ElseIf | ast_.None_)
+        return ast_.ElseIf(_condition, _body, _else_body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.ElseIf) -> tuple[ast_.ASTNode | None, bool]:
+        with self.scope(ScopeContext.CONDITIONAL) as scp:
+            _body = self.populate(ast.body)
+
+        return ast_.Else(_body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.While) -> tuple[ast_.ASTNode | None, bool]:
+        with self.scope(ScopeContext.LOOP) as scp:
+            _condition = self.populate(ast.condition)
+            _body = self.populate(ast.body)
+
+        return ast_.While(_condition, _body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.For) -> tuple[ast_.ASTNode | None, bool]:
+        assert isinstance(ast.iterable_names, ast_.IdentifierListTypes)
+        with self.scope(ScopeContext.LOOP) as scp:
+            _iterable = self.populate(ast.iterable)
+            temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
+            _iterable_type = temporary_type_synthesizer.synthesize_type(ast.iterable)
+            self._populate_loop_parameters(ast.iterable_names, _iterable_type)
+            _iterable_symbols = self.populate(ast.iterable_names)
+            _body = self.populate(ast.body)
+
+        assert isinstance(_iterable_symbols, ast_.TupleSymbol)
+        return ast_.For(_iterable_symbols, _iterable, _body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.QuantifierBody) -> tuple[ast_.ASTNode | None, bool]:
+        _generators = []
+        for generator in ast.generators:
+            _generator = self.populate(generator)
+            assert isinstance(_generator, ast_.Generator)
+            _generators.append(_generator)
+        _expr = self.populate(ast.expr)
+        # Need to pop scope levels added from populate generators
+        for _ in _generators:
+            self.symbol_table.pop_scope_level()
+        return ast_.QuantifierBody(_generators, _expr), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.Generator) -> tuple[ast_.ASTNode | None, bool]:
+        """Populates a generator with the appropriate symbol table entries.
+        ONLY ADDS SCOPE, SCOPE SHOULD BE POPPED AFTER THIS TO ALLOW FOR THE EXPR TO USE INSCOPE VARS
+        """
+        self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
+
+        assert isinstance(ast.identifiers, ast_.IdentifierListTypes)
+        _iterable = self.populate(ast.set_)
+        temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
+        _iterable_type = temporary_type_synthesizer.synthesize_type(_iterable)
+        self._populate_loop_parameters(ast.identifiers, _iterable_type)
+        _identifier_symbols = self.populate(ast.identifiers)
+
+        _predicate = self.populate(ast.predicate)
+        assert isinstance(_identifier_symbols, ast_.SymbolListTypes)
+        return ast_.Generator(_identifier_symbols, _iterable, _predicate), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.Fold) -> tuple[ast_.ASTNode | None, bool]:
+        with self.scope(ScopeContext.QUANTIFICATION) as scp:
+            _accumulator_init = self.populate(ast.accumulator_init)
+            _body = self.populate(ast.body)
+
+        assert isinstance(_accumulator_init, ast_.Assignment)
+        assert isinstance(_body, ast_.QuantifierBody)
+        return ast_.Fold(_accumulator_init, _body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.Iter) -> tuple[ast_.ASTNode | None, bool]:
+        _generators = []
+        for generator in ast.generators:
+            _generator = self.populate(generator)
+            assert isinstance(_generator, ast_.IterGenerator)
+            _generators.append(_generator)
+        _iter_body_return_body = self.populate(ast.body)
+        _iter_body_return_value = self.populate(ast.return_value)
+        # Need to pop scope levels added from populate generators
+        for _ in _generators:
+            self.symbol_table.pop_scope_level()
+        assert isinstance(_iter_body_return_value, ast_.SymbolListTypes)
+        return ast_.Iter(_generators, _iter_body_return_body, _iter_body_return_value), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.IterGenerator) -> tuple[ast_.ASTNode | None, bool]:
+        """Populates a generator with the appropriate symbol table entries.
+        ONLY ADDS SCOPE, SCOPE SHOULD BE POPPED AFTER THIS TO ALLOW FOR THE BODY TO USE INSCOPE VARS
+        """
+        self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
+
+        assert isinstance(ast.generator.identifiers, ast_.IdentifierListTypes)
+        temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
+        _iterable = self.populate(ast.generator.set_)
+        _iterable_type = temporary_type_synthesizer.synthesize_type(_iterable)
+        self._populate_loop_parameters(ast.generator.identifiers, _iterable_type)
+        _identifier_symbols = self.populate(ast.generator.identifiers)
+
+        _assignments: list[ast_.Assignment] = []
+        for assignment in ast.assignments:
+            _assignment = self.populate(assignment)
+            assert isinstance(_assignment, ast_.Assignment)
+            _assignments.append(_assignment)
+
+        # Need to explicitly write out the Generator population above so that iter assignments can come before the predicate
+        _predicate = self.populate(ast.generator.predicate)
+        assert isinstance(_identifier_symbols, ast_.SymbolListTypes)
+        return ast_.IterGenerator(ast_.Generator(_identifier_symbols, _iterable, _predicate), _assignments), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.ProcedureDefIdentifier) -> tuple[ast_.ASTNode | None, bool]:
+        # NOTE: param_types is populated *after* the procedure type definition since symbols must be added within the scope of the procedure
+        param_types: list[BaseType] = []
+        return_type_ = TypeAnnotationResolver.resolve_type_annotation(ast.return_type, self.symbol_table)
+        assert isinstance(return_type_, BaseType), "Procedure return type must have a valid type annotation"
+        self.symbol_table.add_symbol(
+            ast.name.name,
+            IdentifierContext.PROCEDURE,
+            ProcedureType(TupleType(param_types), return_type_),
+        )
+        _name_symbol = self.populate(ast.name)
+
+        with self.scope(ScopeContext.PROCEDURE) as scp:
+            _params_symbols: list[ast_.Symbol] = []
+            for param in ast.params:
+                if not isinstance(param.name, ast_.Identifier):
+                    raise SimileTypeError(f"Invalid procedure parameter name (must be an identifier): {param.name}", param)
+                param_type = TypeAnnotationResolver.resolve_type_annotation(param.type_, self.symbol_table)
+
+                self.symbol_table.add_symbol(
+                    param.name.name,
+                    IdentifierContext.PROCEDURE_PARAMETER,
+                    param_type,
+                )
+                param_symbol = self.populate(param.name)
+                assert isinstance(param_symbol, ast_.Symbol)
+                param_types.append(param_type)
+                _params_symbols.append(param_symbol)
+
+            _body = self.populate(ast.body)
+
+        assert isinstance(_name_symbol, ast_.Symbol)
+        return ast_.ProcedureDefSymbol(_name_symbol, _params_symbols, _body), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.RecordDefIdentifier) -> tuple[ast_.ASTNode | None, bool]:
+        fields: dict[str, BaseType] = OrderedDict()
+        record_def_type = RecordType(name=ast.name.name, fields=fields)
+        self.symbol_table.add_symbol(
+            ast.name.name,
+            IdentifierContext.RECORD,
+            record_def_type,
+        )
+
+        with self.scope(ScopeContext.RECORD) as scp:
+            record_def_type.add_scope_entry(scp)
+            for item in ast.items:
+                if not isinstance(item.name, ast_.Identifier):
+                    raise SimileTypeError(f"Invalid struct field name (must be an identifier): {item.name}", item)
+                field_type = TypeAnnotationResolver.resolve_type_annotation(item.type_, self.symbol_table)
+                assert isinstance(field_type, BaseType)
+                fields[item.name.name] = field_type
+                self.symbol_table.add_symbol(
+                    item.name.name,
+                    IdentifierContext.RECORD_FIELD,
+                    field_type,
+                )
+            _symbol = self.populate(ast_.Identifier(ast.name.name))
+
+        assert isinstance(_symbol, ast_.Symbol)
+        return ast_.RecordDefSymbol(_symbol, fields), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.LambdaDef) -> tuple[ast_.ASTNode | None, bool]:
+        assert isinstance(ast.params, ast_.IdentifierListTypes)
+        with self.scope(ScopeContext.LAMBDA) as scp:
+            _predicate = self.populate(ast.predicate)
+            _expression = self.populate(ast.expression)
+
+            # FIXME types are not known at this point
+            self._populate_loop_parameters(ast.params, NoneType_())
+            _param_symbols = self.populate(ast.params)
+
+        assert isinstance(_param_symbols, ast_.TupleSymbol)
+        return ast_.LambdaDef(_param_symbols, _predicate, _expression), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.TraitApplication) -> tuple[ast_.ASTNode | None, bool]:
+        _trait_asts = [self.populate(trait) for trait in ast.traits]
+        traits = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
+
+        _target = self.populate(ast.target)
+
+        match _target:
+            case ast_.Assignment(ast_.TypedName(ast_.Symbol(symb), _), _, _):
+                # Traits dont really apply to the actual type in a typedef
+                # They apply more to the underlying type and then are wrapped in a typeOfType
+                if isinstance(symb.declared_type, TypeOfType):
+                    symb.declared_type.type_of.traits.merge_copy(traits)
+                symb.declared_type.traits.merge_copy(traits)
+            case ast_.ProcedureDefSymbol(ast_.Symbol(symb), _, _):
+                symb.declared_type.traits.merge_copy(traits)
+            case _:
+                raise SimileTypeError(f"Trait application can only be applied to assignments or procedure definitions, got {_target}", ast)
+
+        return ast_.TraitApplication(_target, _trait_asts), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.Assignment) -> tuple[ast_.ASTNode | None, bool]:
+        if not isinstance(ast.target, ast_.TypedName) or not isinstance(ast.target.name, ast_.Identifier):
+            return None, True
+
+        target_name = ast.target.name.name
+        declared_type_ast = ast.target.type_
+        value = ast.value
+        is_choice_assignment = ast.choice_assignment
+
+        # Enum definition - closer to a record definition than an assignment
+        if declared_type_ast == ast_.Type_(ast_.Identifier("enum"), []):
+            if is_choice_assignment:
+                raise SimileTypeError(f"Choice assignment cannot be used with enum definitions", ast)
+            if not isinstance(value, ast_.Enumeration):
+                raise SimileTypeError(f"Enum type annotation can only be applied to enumeration definitions, got {type(value)}", value)
+            members = set()
+            for _item in value.items:
+                if not isinstance(_item, ast_.Identifier):
+                    raise SimileTypeError(f"Invalid enum item name (must be an identifier): {_item}", _item)
+                if self.symbol_table.symbol_exists_in_current_scope(_item.name):
+                    raise SimileTypeError(f"Enum item name {_item.name} already exists in current scope, cannot be used as enum item name", _item)
+                members.add(_item.name)
+
+            enum_type = EnumType(members=members)
+            self.symbol_table.add_symbol(
+                target_name,
+                IdentifierContext.ENUM,
+                enum_type,
+            )
+            for member in members:
+                self.symbol_table.add_symbol(
+                    member,
+                    IdentifierContext.ENUM_ITEM,
+                    EnumItemType(enum_type, target_name),
+                )
+            return None, True
+
+        # Type definition
+        if declared_type_ast == ast_.Type_(ast_.Identifier("type"), []):
+            if is_choice_assignment:
+                raise SimileTypeError(f"Choice assignment cannot be used with type definitions", ast)
+            if not isinstance(value, ast_.Type_):
+                raise SimileTypeError(f"Type definitions must have a valid type annotation (this should have been promoted by normalize_ast), got {value}", value)
+
+            type_value = TypeAnnotationResolver.resolve_type_annotation(value, self.symbol_table)
+            if type_value is None:
+                raise SimileTypeError(f"Type definitions must have a valid type annotation, got None", value)
+            if not isinstance(type_value, GenericType | AnyType_ | TypeOfType):
+                type_value = TypeOfType(type_value)
+
+            _name = self.symbol_table.add_symbol(
+                target_name,
+                IdentifierContext.TYPE_NAME,
+                type_value,
+            )
+            if isinstance(type_value, GenericType):
+                type_value.add_symbol_info(_name)
+            _value = self.populate(value)
+            _type_symbol = self.populate(ast_.Identifier("type"))
+            return (
+                ast_.Assignment(
+                    ast_.TypedName(ast_.Symbol(_name), ast_.Type_(_type_symbol, [])),
+                    _value,
+                    is_choice_assignment,
+                ),
+                False,
+            )
+
+        # Regular assignment
+        _declared_type = TypeAnnotationResolver.resolve_type_annotation(declared_type_ast, self.symbol_table)
+        if _declared_type is None:
+            raise SimileTypeError(f"Variable definitions must have a valid type annotation, got None", declared_type_ast)
+        if isinstance(_declared_type, TypeOfType):
+            # TypeOfType is unwrapped when used as a type annotation for a variable
+            # TODO check if this extra logic is needed in records and procedure defs (or any type annotation instance)
+            # Need to keep this distinct from the actual type within the symbol table so we distinguish the type itself from an instance of the type
+            _declared_type = _declared_type.type_of
+
+        _name = self.symbol_table.add_symbol(
+            target_name,
+            IdentifierContext.VARIABLE,
+            _declared_type,
+        )
+        _value = self.populate(value)
+        _declared_type_ast = self.populate(declared_type_ast)
+        assert isinstance(_declared_type_ast, ast_.Type_)
+        return (
+            ast_.Assignment(
+                ast_.TypedName(ast_.Symbol(_name), _declared_type_ast),
+                _value,
+                is_choice_assignment,
+            ),
+            False,
+        )
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.Import) -> tuple[ast_.ASTNode | None, bool]:
+        # TODO fix this to allow for modules with different names (import ... as <name>)
+        module_file_path = ast.module_file_path.with_suffix(".sim")
+        module_name, module_ast = _read_from_path_and_parse(module_file_path)
+        module_scope = self.symbol_table.add_scope(ScopeContext.IMPORT)
+        self.populate(module_ast)
+        self.symbol_table.pop_scope_level()
+
+        match ast.operator:
+            case ast_.ImportOperator.SPECIFIC_NAMES:
+                for symbol_id in module_scope.declared_symbols:
+                    symbol = self.symbol_table.lookup_symbol(symbol_id, module_scope.id_)
+                    if symbol.name not in ast.import_objects:
+                        continue
+                    # Skip duplicate imports from the same source (instead of throwing an error when we attempt to add duplicate symbols)
+                    if self._duplicate_import(
+                        IdentifierContext.MODULE_IMPORT_SYMBOL,
+                        ImportedSymbol,
+                        symbol.name,
+                        module_file_path,
+                    ):
+                        continue
+                    self.symbol_table.add_symbol(
+                        symbol.name,
+                        IdentifierContext.MODULE_IMPORT_SYMBOL,
+                        ImportedSymbol(symbol, module_file_path),
+                    )
+            case ast_.ImportOperator.ALL_NAMES:
+                for symbol_id in module_scope.declared_symbols:
+                    symbol = self.symbol_table.lookup_symbol(symbol_id, module_scope.id_)
+                    if self._duplicate_import(
+                        IdentifierContext.MODULE_IMPORT_SYMBOL,
+                        ImportedSymbol,
+                        symbol.name,
+                        module_file_path,
+                    ):
+                        continue
+                    self.symbol_table.add_symbol(
+                        symbol.name,
+                        IdentifierContext.MODULE_IMPORT_SYMBOL,
+                        ImportedSymbol(symbol, module_file_path),
+                    )
+            case ast_.ImportOperator.MODULE_NAME:
+                if not self._duplicate_import(
+                    IdentifierContext.MODULE_IMPORT,
+                    ModuleImports,
+                    module_name,
+                    module_file_path,
+                ):
+
+                    self.symbol_table.add_symbol(
+                        module_name,
+                        IdentifierContext.MODULE_IMPORT,
+                        ModuleImports(module_scope, module_file_path),
+                    )
+        return None, False
+
+    # By this point, all identifiers should have been added to the symbol table
+    # Replace them with symbol ids corresponding to the symbol table entry
+    @_populate_aux_2.register
+    def _(self, ast: ast_.Identifier) -> tuple[ast_.ASTNode | None, bool]:
+        symbol_table_entry = self.symbol_table.lookup_identifier(ast.name)
+        return ast_.Symbol(symbol_table_entry), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.TupleIdentifier) -> tuple[ast_.ASTNode | None, bool]:
+        _items = []
+        for item in ast.items:
+            _item = self.populate(item)
+            assert isinstance(_item, ast_.SymbolListTypes)
+            _items.append(_item)
+        return ast_.TupleSymbol(tuple(_items)), False
+
+    @_populate_aux_2.register
+    def _(self, ast: ast_.RecordAccess) -> tuple[ast_.ASTNode | None, bool]:
+        if not isinstance(ast.field, ast_.Identifier):
+            return None, True
+        populated_record = self.populate(ast.record)
+        temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
+        record_type = temporary_type_synthesizer.synthesize_type(populated_record)
+        if not isinstance(record_type, RecordType):
+            return None, True
+        field_symbol_entry = self.symbol_table.lookup_identifier(
+            ast.field.name,
+            include_scope=record_type.lookup_scope_entry,
+        )
+        return ast_.RecordAccess(populated_record, ast_.Symbol(field_symbol_entry)), False
 
     def _duplicate_import(
         self,
@@ -596,115 +595,6 @@ class PopulateSymbolTable:
                 self._populate_loop_parameters(ident, SetType(type_))
             return
         raise SimileTypeError(f"Invalid for loop variable name (must be an identifier, maplet identifier, or tuple identifier): {iterable_names}", iterable_names)
-
-    def _populate_loop_parameters_from_generators(self, quantifier: ast_.QuantifierBody) -> ast_.QuantifierBody:
-        match quantifier:
-            case ast_.QuantifierBody([], branches) if isinstance(branches, list):
-                _branches = []
-                for branch in branches:
-                    self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-                    _branches.append(self._populate_loop_parameters_from_generators(branch))
-                    self.symbol_table.pop_scope_level()
-                return ast_.QuantifierBody([], _branches)
-            case ast_.QuantifierBody([], expr):
-                raise SimileTypeError(f"Invalid quantification - expr case {expr} must be accompanied by a generator", quantifier)
-            case ast_.QuantifierBody(generators, branches) if isinstance(branches, list):
-                _generators = []
-                for generator in generators:
-                    _generators.append(self._populate_generator(generator))
-                _branches = []
-                for branch in branches:
-                    self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-                    _branches.append(self._populate_loop_parameters_from_generators(branch))
-                    self.symbol_table.pop_scope_level()
-                # Need to pop scope levels added from populate generators
-                for _ in _generators:
-                    self.symbol_table.pop_scope_level()
-                return ast_.QuantifierBody(_generators, _branches)
-            case ast_.QuantifierBody(generators, expr):
-                assert isinstance(expr, ast_.ASTNode), "Other case caught by earlier match case"
-                _generators = []
-                for generator in generators:
-                    _generators.append(self._populate_generator(generator))
-                _expr = self.populate(expr)
-                # Need to pop scope levels added from populate generators
-                for _ in _generators:
-                    self.symbol_table.pop_scope_level()
-                return ast_.QuantifierBody(_generators, _expr)
-            case _:
-                raise SimileTypeError(f"Invalid quantification - must be a list of branches or a single expression", quantifier)
-
-    def _populate_iter(self, iter_: ast_.IterBody) -> ast_.IterBody:
-        match iter_:
-            case ast_.IterBody([], branches) if isinstance(branches, list):
-                _branches = []
-                for branch in branches:
-                    self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-                    _branches.append(self._populate_iter(branch))
-                    self.symbol_table.pop_scope_level()
-                return ast_.IterBody([], _branches)
-            case ast_.IterBody([], iter_body):
-                raise SimileTypeError(f"Invalid iter - iter_body case {iter_body} must be accompanied by a generator", iter_)
-            case ast_.IterBody(generators, branches) if isinstance(branches, list):
-                _generators = []
-                for generator in generators:
-                    _generators.append(self._populate_iter_generator(generator))
-                _branches = []
-                for branch in branches:
-                    self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-                    _branches.append(self._populate_iter(branch))
-                    self.symbol_table.pop_scope_level()
-                # Need to pop scope levels added from populate generators
-                for _ in _generators:
-                    self.symbol_table.pop_scope_level()
-                return ast_.IterBody(_generators, _branches)
-            case ast_.IterBody(generators, iter_body):
-                assert isinstance(iter_body, ast_.ASTNode), "Other case caught by earlier match case"
-                _generators = []
-                for generator in generators:
-                    _generators.append(self._populate_iter_generator(generator))
-                _iter_body_return_body = self.populate(iter_body.body)
-                _iter_body_return_value = self.populate(iter_body.return_value)
-                # Need to pop scope levels added from populate generators
-                for _ in _generators:
-                    self.symbol_table.pop_scope_level()
-                assert isinstance(_iter_body_return_value, ast_.SymbolListTypes)
-                return ast_.IterBody(_generators, ast_.IterBodyEnd(_iter_body_return_body, _iter_body_return_value))
-            case _:
-                raise SimileTypeError(f"Invalid iter - must be a list of branches or a single expression", iter_)
-
-    def _populate_generator(self, generator: ast_.Generator) -> ast_.Generator:
-        """Populates a generator with the appropriate symbol table entries.
-        ONLY ADDS SCOPE, SCOPE SHOULD BE POPPED AFTER THIS TO ACCOUNT FOR BRANCHING
-        """
-        self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-        assert isinstance(generator.identifiers, ast_.IdentifierListTypes)
-        _iterable = self.populate(generator.set_)
-        temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
-        _iterable_type = temporary_type_synthesizer.synthesize_type(_iterable)
-        self._populate_loop_parameters(generator.identifiers, _iterable_type)
-        _identifier_symbols = self._convert_identifier_to_symbol(generator.identifiers)
-        _predicate = self.populate(generator.predicate)
-        return ast_.Generator(_identifier_symbols, _iterable, _predicate)
-
-    def _populate_iter_generator(self, iter_generator: ast_.IterGenerator) -> ast_.IterGenerator:
-        """Populates a generator with the appropriate symbol table entries.
-        ONLY ADDS SCOPE, SCOPE SHOULD BE POPPED AFTER THIS TO ACCOUNT FOR BRANCHING
-        """
-        self.symbol_table.add_scope(ScopeContext.QUANTIFICATION)
-        assert isinstance(iter_generator.generator.identifiers, ast_.IdentifierListTypes)
-        temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
-        _iterable = self.populate(iter_generator.generator.set_)
-        _iterable_type = temporary_type_synthesizer.synthesize_type(_iterable)
-        self._populate_loop_parameters(iter_generator.generator.identifiers, _iterable_type)
-        _identifier_symbols = self._convert_identifier_to_symbol(iter_generator.generator.identifiers)
-        _assignments: list[ast_.Assignment] = []
-        for assignment in iter_generator.assignments:
-            _assignment = self.populate(assignment)
-            assert isinstance(_assignment, ast_.Assignment)
-            _assignments.append(_assignment)
-        _predicate = self.populate(iter_generator.generator.predicate)
-        return ast_.IterGenerator(ast_.Generator(_identifier_symbols, _iterable, _predicate), _assignments)
 
 
 def _read_from_path_and_parse(module_file_path: Path) -> tuple[str, ast_.ASTNode]:

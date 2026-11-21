@@ -105,6 +105,9 @@ class Traits:
             for trait in traits:
                 self.add(trait)
 
+    def as_set(self) -> set[BaseTrait]:
+        return set(self.items.values())
+
     def find(self, trait_type: type[T]) -> T | None:
         return self.items.get(trait_type)  # type: ignore
 

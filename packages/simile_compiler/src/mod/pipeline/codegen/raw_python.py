@@ -330,7 +330,10 @@ class Printer:
         if op_type is None:
             raise CodegenError(f"Failed to convert quantifier operator {ast.op_type} to collection operator (expected python-compatible ASTs at this point)")
         l, r = self.collection_brackets(op_type)
-        return f"{l}{self._print(ast.body.end_or_branch, i)}{py_generators} if {conditions}{r}"
+        return f"{l}{self._print(ast.body.expr, i)}{py_generators} if {conditions}{r}"
+
+    # TODO instead of trying to handle folds and iter statements mechanically above, just pass them into a python-sim library function
+    # ex: def fold(init_state, iterable, fold_function):
 
     @_print.register
     def _(self, ast: ast_.Type_, i: int) -> str:
@@ -345,7 +348,7 @@ class Printer:
     # def _(self, ast: ast_.LambdaDef, i: int) -> str: ...
     @_print.register
     def _(self, ast: ast_.RecordAccess, i: int) -> str:
-        return f"{self._print(ast.record, i)}.{self._print(ast.field_name, i)}"
+        return f"{self._print(ast.record, i)}.{self._print(ast.field, i)}"
 
     @_print.register
     def _(self, ast: ast_.Call, i: int) -> str:
@@ -426,3 +429,42 @@ def main():
 if __name__ == "__main__":
     main()
 """
+
+    # fold
+    # We cant make temp functions since these can be used in place of expressions
+    # We cant make global functions and call them instead since scope rules mean quantifications must be allowed to see the surrounding scope
+    # fold a := i : generators | expr
+    # ~>
+    # expr must be able to see these. we need to find a way to get it into this form: fold a := i : b in S | f(a,b)
+    # So we can do:
+    # generators = a in S .: P, b in S .: Q, ... = {(a,b,...) for a in S for b in S for ... if P and Q and ...}
+    # expr holds outer scope vars and a,b. Should be able to rewrite as (lambda a,b: expr)(x,y), so only the lambda contains the names from simile
+    # then:
+    # fold(start_value, generator_set, expr_lambda)
+    # where:
+    # def fold(start_value, generator_set, expr_lambda):
+    #    p_accumulator_variable = start_value
+    #    for p_idents in generator_set:
+    #        p_accumulator_variable = expr_lambda(p_accumulator_variable, p_idents)
+    #    return p_accumulator_variable
+    @_print.register
+    def _(self, ast: ast_.Fold, i: int) -> str:
+        starting_identifier = self._print(ast.accumulator_init.target, i)
+        starting_value = self._print(ast.accumulator_init.value, i)
+        generator_set = self._print(ast_.SetComprehension(ast.body))
+        iterator_identifiers = self._print(self.extract_iterators(ast.body.generators), i)
+        expr_lambda = f"lambda {starting_identifier}, {iterator_identifiers}: {self._print(ast.body.expr, i)}"
+        return f"{RAW_PYTHON_SIMILE_LIBRARY_NAME}.fold({starting_value}, {generator_set}, {expr_lambda})"
+
+    def extract_iterators(self, generators: list[ast_.Generator]) -> ast_.SymbolListTypes:
+        iterators = []
+        for generator in generators:
+            assert isinstance(generator.identifiers, ast_.SymbolListTypes)
+            iterators.append(generator.identifiers)
+        if len(iterators) == 1:
+            return iterators[0]
+        return ast_.TupleSymbol(tuple(iterators))
+
+
+# TODO iter
+# iter is an expression, but how will we translate it into a python expr...

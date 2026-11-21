@@ -1,5 +1,5 @@
 from src.mod.data.simrw.ast_ import SimrwAST
-from src.mod.data.simrw.rewrite_rule import RewriteRule, SimrwRewriteRule, RewriteRuleError
+from src.mod.data.simrw.rewrite_rule import RewriteRule, SimrwRule, RewriteRuleError
 
 from src.mod.data.simrw.guard_condition import GuardCondition, PatternMatchVars, GUARD_CONDITIONS
 

@@ -2,7 +2,7 @@ import pytest
 import pathlib
 
 from src.mod.data import ast_, types
-from src.mod.data.simrw import SimrwRewriteRule, GENERIC_REWRITE_RULE_PATHS, RAW_PYTHON_REWRITE_RULE_PATHS, RAW_PYTHON_QUANTIFICATION_RULES
+from src.mod.data.simrw import SimrwRule, GENERIC_REWRITE_RULE_PATHS, RAW_PYTHON_REWRITE_RULE_PATHS, RAW_PYTHON_QUANTIFICATION_RULES
 from src.mod.data.symbol_table.table import SymbolTable
 
 from src.mod.pipeline.optimizer.v2 import convert_simrw_to_rewrite_rules
@@ -53,7 +53,7 @@ class TestOptimizerHappyPath:
                 ),
             ),
         )
-        double_addition_rule = SimrwRewriteRule(
+        double_addition_rule = SimrwRule(
             "double_addition",
             {"x": types.IntType()},
             ast_.Add(

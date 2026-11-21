@@ -136,11 +136,17 @@ class Parser:
             TokenType.ITER,
         },
         "lambda_def": {TokenType.LAMBDA},
-        "quantification_body": {"branch_quantification_body", "generator"},
-        "branch_quantification_body": {TokenType.L_PAREN},
+        "quantification_body": {
+            "generator",
+            # "branch_quantification_body",
+        },
+        # "branch_quantification_body": {TokenType.L_PAREN},
         "generator": {"ident_list"},
-        "iter_quantification_body": {"branch_iter_quantification_body", "generator_with_assignments"},
-        "branch_iter_quantification_body": {TokenType.L_PAREN},
+        "iter_quantification_body": {
+            "generator_with_assignments",
+            # "branch_iter_quantification_body",
+        },
+        # "branch_iter_quantification_body": {TokenType.L_PAREN},
         "generator_with_assignments": {"generator"},
         "assignment": {"expr"},
         "iter_block": {"simple_stmt", TokenType.NEWLINE},
@@ -682,7 +688,7 @@ class Parser:
     @store_derivation
     def quantification(self) -> ast_.ASTNode:
         if self.match(TokenType.ITER):
-            return ast_.Iter(self.iter_quantification_body())
+            return self.iter_quantification_body()
 
         backtrack_ctx = self.prep_backtrack()
         if self.peek().type_ == TokenType.FOLD:
@@ -729,82 +735,24 @@ class Parser:
 
     @store_derivation
     def quantification_body(self) -> ast_.QuantifierBody:
-        backtrack_ctx = self.prep_backtrack()
-        try:
-            generators = [self.generator()]
-        except ParseException as e:
-            logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body")
-            # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
-            # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
-            parse_errs = self.backtrack_from_error(*backtrack_ctx, add_errs_to_alt=False)
-            if self.peek().type_ in self.get_first_set("branch_quantification_body"):
-                return ast_.QuantifierBody([], self.branch_quantification_body())
-            # Add back in the original generator errors if the quantification body also failed
-            self.errors.extend(parse_errs)
-            raise e
-
+        generators = [self.generator()]
         while self.match(TokenType.COMMA):
-            try:
-                generators.append(self.generator())
-            except ParseException as e:
-                logger.debug(f"Failed to parse quantification body as a generator - attempting to parse as a branch quantification body")
-                # Generators and branch quantifications start with a L_PAREN. Try the simpler generator->identlist parsing first
-                # And if that fails (ex. we see an "in" within the parens), then backtrack and try the branch quantification body
-                parse_errs = self.backtrack_from_error(*backtrack_ctx, add_errs_to_alt=False)
-                if self.peek().type_ in self.get_first_set("branch_quantification_body"):
-                    return ast_.QuantifierBody(generators, self.branch_quantification_body())
-                # Add back in the original generator errors if the quantification body also failed
-                self.errors.extend(parse_errs)
-                raise e
+            generators.append(self.generator())
 
         self.consume(TokenType.VBAR, "Expected pipe symbol after generators in quantification body")
         expr = self.expr()
         return ast_.QuantifierBody(generators, expr)
 
     @store_derivation
-    def branch_quantification_body(self) -> list[ast_.QuantifierBody]:
-        self.consume(TokenType.L_PAREN, "Expected opening parenthesis for branch_quantification_body")
-        set_whitespace_back_to = self.ignore_whitespace(True)
-        quantifier_bodies: list[ast_.QuantifierBody] = [self.quantification_body()]
-        self.consume(TokenType.R_PAREN, "Expected closing parenthesis for branch_quantification_body")
-        self.ignore_whitespace(set_whitespace_back_to)
-        while self.match(TokenType.BACKTICK):
-            self.consume(TokenType.L_PAREN, "Expected opening parenthesis for branch_quantification_body")
-            set_whitespace_back_to = self.ignore_whitespace(True)
-            quantifier_bodies.append(self.quantification_body())
-            self.consume(TokenType.R_PAREN, "Expected closing parenthesis for branch_quantification_body")
-            self.ignore_whitespace(set_whitespace_back_to)
-        return quantifier_bodies
-
-    @store_derivation
-    def iter_quantification_body(self) -> ast_.IterBody:
-        if self.peek().type_ in self.get_first_set("branch_iter_quantification_body"):
-            return ast_.IterBody([], self.branch_iter_quantification_body())
+    def iter_quantification_body(self) -> ast_.Iter:
         generators = [self.generator_with_assignments()]
         while self.match(TokenType.COMMA):
-            if self.peek().type_ in self.get_first_set("branch_iter_quantification_body"):
-                return ast_.IterBody(generators, self.branch_iter_quantification_body())
             generators.append(self.generator_with_assignments())
         self.consume(TokenType.RIGHTARROW, "Expected right arrow with return values after iter quantification generators")
         return_list = self.ident_list()
         self.consume(TokenType.VBAR, "Expected pipe symbol after return values in iter quantification")
         body = self.iter_block()
-        return ast_.IterBody(generators, ast_.IterBodyEnd(body, return_list))
-
-    @store_derivation
-    def branch_iter_quantification_body(self):
-        self.consume(TokenType.L_PAREN, "Expected opening parenthesis for branch_iter_quantification_body")
-        set_whitespace_back_to = self.ignore_whitespace(True)
-        quantifier_bodies: list[ast_.IterBody] = [self.iter_quantification_body()]
-        self.consume(TokenType.R_PAREN, "Expected closing parenthesis for branch_iter_quantification_body")
-        self.ignore_whitespace(set_whitespace_back_to)
-        while self.match(TokenType.BACKTICK):
-            self.consume(TokenType.L_PAREN, "Expected opening parenthesis for branch_iter_quantification_body")
-            set_whitespace_back_to = self.ignore_whitespace(True)
-            quantifier_bodies.append(self.iter_quantification_body())
-            self.consume(TokenType.R_PAREN, "Expected closing parenthesis for branch_iter_quantification_body")
-            self.ignore_whitespace(set_whitespace_back_to)
-        return quantifier_bodies
+        return ast_.Iter(generators, body, return_list)
 
     @store_derivation
     def generator_with_assignments(self):

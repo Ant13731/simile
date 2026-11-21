@@ -1,4 +1,4 @@
-from src.mod.data.simrw.helpers import get_rewrite_rule_file_paths
+from src.mod.data.simrw.rewrite_rules.helpers import get_rewrite_rule_file_paths
 
 _FILE_NAMES = [
     "bag_sugar",

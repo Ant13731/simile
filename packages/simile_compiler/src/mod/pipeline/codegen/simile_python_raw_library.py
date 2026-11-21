@@ -1,6 +1,7 @@
 from typing import Iterator, Iterable
 from copy import copy
 from itertools import chain, combinations
+from typing import Callable
 
 
 class SimileRuntimeException(Exception):
@@ -347,3 +348,10 @@ def ran(r: Relation):
 
 def concat(v1, v2):
     return v1 + v2
+
+
+def fold[T1, T2](starting_value: T1, generator_set: Iterable[T2], expr_lambda: Callable[[T1, T2], T1]) -> T1:
+    accumulator = starting_value
+    for idents in generator_set:
+        accumulator = expr_lambda(accumulator, idents)
+    return accumulator

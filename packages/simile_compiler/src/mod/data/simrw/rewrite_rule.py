@@ -41,10 +41,10 @@ class RewriteRule:
 
 
 @dataclass
-class SimrwRewriteRule(RewriteRule):
+class SimrwRule(RewriteRule):
     # Class name is for rewrite rules with overriding apply statements (basically hardcoded)
     # here we use normal name since rewrites will be instances of this class
-    class_name: ClassVar[str] = "SimrwRewriteRule"
+    class_name: ClassVar[str] = "SimrwRule"
 
     _name: str
     vars_: PatternMatchVars

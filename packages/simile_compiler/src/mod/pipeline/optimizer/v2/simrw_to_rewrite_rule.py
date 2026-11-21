@@ -5,7 +5,7 @@ from loguru import logger
 
 from src.mod.data import ast_, traits, types
 from src.mod.data.helpers.dataclass import dataclass_traverse
-from src.mod.data.simrw import SimrwAST, SimrwRewriteRule
+from src.mod.data.simrw import SimrwAST, SimrwRule
 
 from src.mod.pipeline.analysis import TypeAnnotationResolver, make_symbol_table, normalize_ast
 from src.mod.pipeline.analysis.trait_resolver import TraitResolver
@@ -13,8 +13,8 @@ from src.mod.pipeline.parser import parse
 from src.mod.data.simrw.guard_condition import GuardCondition, GUARD_CONDITIONS
 
 
-def convert_simrw_to_rewrite_rules(rewrite_rule_asts: list[SimrwAST]) -> list[SimrwRewriteRule]:
-    rewrite_rules: list[SimrwRewriteRule] = []
+def convert_simrw_to_rewrite_rules(rewrite_rule_asts: list[SimrwAST]) -> list[SimrwRule]:
+    rewrite_rules: list[SimrwRule] = []
     for rewrite_rule_ast in rewrite_rule_asts:
         logger.debug(
             f"Converting simrw rule {rewrite_rule_ast.name} to rewrite rule (with vars {rewrite_rule_ast.vars_}): {rewrite_rule_ast.rewrite_left} ~> {rewrite_rule_ast.rewrite_right}"
@@ -27,7 +27,7 @@ def convert_simrw_to_rewrite_rules(rewrite_rule_asts: list[SimrwAST]) -> list[Si
         rewrite_right_ast = parse(rewrite_rule_ast.rewrite_right)
         guard_conditions = list(map(collect_guard_condition, rewrite_rule_ast.when))
 
-        rewrite_rule = SimrwRewriteRule(
+        rewrite_rule = SimrwRule(
             _name=rewrite_rule_ast.name,
             vars_=typed_vars,
             rewrite_left=rewrite_left_ast,

@@ -287,7 +287,7 @@ class RustCodeGenerator(CodeGenerator):
     # def _(self, ast: ast_.LambdaDef) -> str: ...
     @_generate_code.register
     def _(self, ast: ast_.RecordAccess) -> str:
-        return f"{self._generate_code(ast.record)}.{ast.field_name}"
+        return f"{self._generate_code(ast.record)}.{ast.field}"
 
     @_generate_code.register
     def _(self, ast: ast_.Call) -> str:
@@ -382,7 +382,7 @@ class RustCodeGenerator(CodeGenerator):
     def _(self, ast: ast_.ProcedureDefIdentifier) -> str:
         self.new_symbol_table.put(self._generate_code(ast.name), "function_definition")
 
-        args = ", ".join(f"{arg.name}: {self._generate_code(arg.type_)}" for arg in ast.args)
+        args = ", ".join(f"{arg.name}: {self._generate_code(arg.type_)}" for arg in ast.params)
         return f"fn {self._generate_code(ast.name)}({args}) -> {self._generate_code(ast.return_type)} {{{self._generate_code(ast.body)}}}"
 
     @_generate_code.register

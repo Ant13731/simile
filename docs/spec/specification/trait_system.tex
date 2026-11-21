@@ -2164,18 +2164,18 @@ Relations have 4 tightly-coupled flag-like trait refinements that influence one 
     \hypo{e: T \rightarrow E}
     \infer2{(g \mid e): Quantifier[E, literal=e(g)]} % Apply the expression to the generator
   \end{prooftree}
-  \\
-  \tag{Literal}
-  \begin{prooftree}
-    \hypo{q_i: Quantifier[T, literal=l_i]}
-    \infer1{(g_1` ...` g_n): Generator[T, literal=l_1 \cup ... \cup l_n]}
-  \end{prooftree}
-  \\
-  \tag{Domain}
-  \begin{prooftree}
-    \hypo{q_i: Quantifier[T, domain=d_i]}
-    \infer1{(q_1` ...` q_n): Generator[T, domain=d_1 \cup ... \cup d_n]}
-  \end{prooftree}
+  % \\
+  % \tag{Literal}
+  % \begin{prooftree}
+  %   \hypo{q_i: Quantifier[T, literal=l_i]}
+  %   \infer1{(g_1` ...` g_n): Generator[T, literal=l_1 \cup ... \cup l_n]}
+  % \end{prooftree}
+  % \\
+  % \tag{Domain}
+  % \begin{prooftree}
+  %   \hypo{q_i: Quantifier[T, domain=d_i]}
+  %   \infer1{(q_1` ...` q_n): Generator[T, domain=d_1 \cup ... \cup d_n]}
+  % \end{prooftree}
 \end{gather}
 % \subparagraph{Min}
 % \subparagraph{Max}

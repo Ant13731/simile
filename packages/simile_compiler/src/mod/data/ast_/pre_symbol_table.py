@@ -142,6 +142,6 @@ class RecordDefIdentifier(ASTNode):
 @dataclass
 class ProcedureDefIdentifier(ASTNode):
     name: Identifier
-    args: list[TypedName]
+    params: list[TypedName]
     body: ASTNode | Statements
     return_type: Type_

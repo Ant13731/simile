@@ -385,12 +385,6 @@ Type refinements may be applicable to types with certain traits (ex., min/max va
 \infer2{\Gamma \vdash (G \mid E) : Quantifier[A]}
 \end{prooftree}
 \\
-\tag{Branching Quantifier}
-\begin{prooftree}
-\hypo{\Gamma \vdash Q_i : Quantifier[A]}
-\infer1{\Gamma \vdash (Q_1 ` ... ` Q_n): Quantifier[A]}
-\end{prooftree}
-\\
 \tag{Generator nest}
 \begin{prooftree}
 \hypo{\Gamma \vdash G_i: Generator[T_i]}
