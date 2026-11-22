@@ -470,7 +470,7 @@ class LambdaDef(ASTNode):
 
 
 @dataclass
-class RecordAccess(ASTNode):
+class Access(ASTNode):
     record: ASTNode
     field: Identifier | Symbol | Int
 
@@ -577,7 +577,7 @@ class Start(ASTNode):
 
 Primitive = Int | Float | String | True_ | False_ | None_
 Collection = Enumeration | TupleLiteral | Quantifier3
-Primary = RecordAccess | Call | Image | Collection | Primitive | Identifier
+Primary = Access | Call | Image | Collection | Primitive | Identifier
 Predicate = BinaryOp | UnaryOp | ListOp | Primary
 Quantification = Quantifier3 | Fold | Iter | LambdaDef
 Expr = Quantification | Predicate

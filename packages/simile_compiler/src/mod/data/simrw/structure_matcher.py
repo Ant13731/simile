@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from loguru import logger
 
 from src.mod.data import ast_
-from src.mod.pipeline.printers.ast_ import ast_to_source
 
 
 @dataclass
@@ -24,6 +23,8 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: ast_.Identifier, ast: ast_.ASTFieldChildren) -> bool:
+        from src.mod.pipeline.printers.ast_ import ast_to_source
+
         if not isinstance(ast, ast_.ASTNode):
             return False
         logger.debug(f"Matching against identifier: {against.name} with AST: {ast_to_source(ast)}")
@@ -37,6 +38,8 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: ast_.ASTNode, ast: ast_.ASTFieldChildren) -> bool:
+        from src.mod.pipeline.printers.ast_ import ast_to_source
+
         if not isinstance(ast, ast_.ASTNode):
             return False
         logger.debug(f"Matching against ASTNode: {ast_to_source(against)} with AST: {ast_to_source(ast)}")
@@ -50,6 +53,8 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: list, ast: ast_.ASTFieldChildren) -> bool:
+        from src.mod.pipeline.printers.ast_ import ast_to_source
+
         if not isinstance(ast, list):
             return False
         logger.debug(f"Matching against list: {against} with AST: {list(map(ast_to_source, ast))}")

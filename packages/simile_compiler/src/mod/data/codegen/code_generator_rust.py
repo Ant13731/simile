@@ -286,7 +286,7 @@ class RustCodeGenerator(CodeGenerator):
     # @_generate_code.register
     # def _(self, ast: ast_.LambdaDef) -> str: ...
     @_generate_code.register
-    def _(self, ast: ast_.RecordAccess) -> str:
+    def _(self, ast: ast_.Access) -> str:
         return f"{self._generate_code(ast.record)}.{ast.field}"
 
     @_generate_code.register

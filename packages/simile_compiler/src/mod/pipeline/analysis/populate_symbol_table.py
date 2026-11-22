@@ -97,7 +97,7 @@ class PopulateSymbolTable:
     def populate(self, ast: ast_.ASTNode) -> ast_.ASTNode:
         assert isinstance(ast, ast_.ASTNode), f"Gotcha: {ast}"
 
-        new_ast_node, continue_populating = self._populate_aux_2(ast)
+        new_ast_node, continue_populating = self._populate_aux(ast)
         if new_ast_node is not None:
             ast = new_ast_node
 
@@ -127,12 +127,12 @@ class PopulateSymbolTable:
             self.symbol_table.pop_scope_level()
 
     @singledispatchmethod
-    def _populate_aux_2(self, ast: ast_.ASTNode) -> tuple[ast_.ASTNode | None, bool]:
+    def _populate_aux(self, ast: ast_.ASTNode) -> tuple[ast_.ASTNode | None, bool]:
         """Returns: (Node to replace if not None, whether to continue populating children)"""
         logger.debug(f"Symbol table population not implemented for {type(ast)}")
         return None, True
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.If) -> tuple[ast_.ASTNode | None, bool]:
         with self.scope(ScopeContext.CONDITIONAL) as scp:
             _condition = self.populate(ast.condition)
@@ -142,7 +142,7 @@ class PopulateSymbolTable:
         assert isinstance(_else_body, ast_.Else | ast_.ElseIf | ast_.None_)
         return ast_.If(_condition, _body, _else_body), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.ElseIf) -> tuple[ast_.ASTNode | None, bool]:
         with self.scope(ScopeContext.CONDITIONAL) as scp:
             _condition = self.populate(ast.condition)
@@ -152,14 +152,14 @@ class PopulateSymbolTable:
         assert isinstance(_else_body, ast_.Else | ast_.ElseIf | ast_.None_)
         return ast_.ElseIf(_condition, _body, _else_body), False
 
-    @_populate_aux_2.register
-    def _(self, ast: ast_.ElseIf) -> tuple[ast_.ASTNode | None, bool]:
+    @_populate_aux.register
+    def _(self, ast: ast_.Else) -> tuple[ast_.ASTNode | None, bool]:
         with self.scope(ScopeContext.CONDITIONAL) as scp:
             _body = self.populate(ast.body)
 
         return ast_.Else(_body), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.While) -> tuple[ast_.ASTNode | None, bool]:
         with self.scope(ScopeContext.LOOP) as scp:
             _condition = self.populate(ast.condition)
@@ -167,7 +167,7 @@ class PopulateSymbolTable:
 
         return ast_.While(_condition, _body), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.For) -> tuple[ast_.ASTNode | None, bool]:
         assert isinstance(ast.iterable_names, ast_.IdentifierListTypes)
         with self.scope(ScopeContext.LOOP) as scp:
@@ -181,7 +181,7 @@ class PopulateSymbolTable:
         assert isinstance(_iterable_symbols, ast_.TupleSymbol)
         return ast_.For(_iterable_symbols, _iterable, _body), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.QuantifierBody) -> tuple[ast_.ASTNode | None, bool]:
         _generators = []
         for generator in ast.generators:
@@ -194,7 +194,7 @@ class PopulateSymbolTable:
             self.symbol_table.pop_scope_level()
         return ast_.QuantifierBody(_generators, _expr), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.Generator) -> tuple[ast_.ASTNode | None, bool]:
         """Populates a generator with the appropriate symbol table entries.
         ONLY ADDS SCOPE, SCOPE SHOULD BE POPPED AFTER THIS TO ALLOW FOR THE EXPR TO USE INSCOPE VARS
@@ -212,7 +212,7 @@ class PopulateSymbolTable:
         assert isinstance(_identifier_symbols, ast_.SymbolListTypes)
         return ast_.Generator(_identifier_symbols, _iterable, _predicate), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.Fold) -> tuple[ast_.ASTNode | None, bool]:
         with self.scope(ScopeContext.QUANTIFICATION) as scp:
             _accumulator_init = self.populate(ast.accumulator_init)
@@ -222,7 +222,7 @@ class PopulateSymbolTable:
         assert isinstance(_body, ast_.QuantifierBody)
         return ast_.Fold(_accumulator_init, _body), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.Iter) -> tuple[ast_.ASTNode | None, bool]:
         _generators = []
         for generator in ast.generators:
@@ -237,7 +237,7 @@ class PopulateSymbolTable:
         assert isinstance(_iter_body_return_value, ast_.SymbolListTypes)
         return ast_.Iter(_generators, _iter_body_return_body, _iter_body_return_value), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.IterGenerator) -> tuple[ast_.ASTNode | None, bool]:
         """Populates a generator with the appropriate symbol table entries.
         ONLY ADDS SCOPE, SCOPE SHOULD BE POPPED AFTER THIS TO ALLOW FOR THE BODY TO USE INSCOPE VARS
@@ -262,7 +262,7 @@ class PopulateSymbolTable:
         assert isinstance(_identifier_symbols, ast_.SymbolListTypes)
         return ast_.IterGenerator(ast_.Generator(_identifier_symbols, _iterable, _predicate), _assignments), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.ProcedureDefIdentifier) -> tuple[ast_.ASTNode | None, bool]:
         # NOTE: param_types is populated *after* the procedure type definition since symbols must be added within the scope of the procedure
         param_types: list[BaseType] = []
@@ -297,7 +297,7 @@ class PopulateSymbolTable:
         assert isinstance(_name_symbol, ast_.Symbol)
         return ast_.ProcedureDefSymbol(_name_symbol, _params_symbols, _body), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.RecordDefIdentifier) -> tuple[ast_.ASTNode | None, bool]:
         fields: dict[str, BaseType] = OrderedDict()
         record_def_type = RecordType(name=ast.name.name, fields=fields)
@@ -325,7 +325,7 @@ class PopulateSymbolTable:
         assert isinstance(_symbol, ast_.Symbol)
         return ast_.RecordDefSymbol(_symbol, fields), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.LambdaDef) -> tuple[ast_.ASTNode | None, bool]:
         assert isinstance(ast.params, ast_.IdentifierListTypes)
         with self.scope(ScopeContext.LAMBDA) as scp:
@@ -339,7 +339,7 @@ class PopulateSymbolTable:
         assert isinstance(_param_symbols, ast_.TupleSymbol)
         return ast_.LambdaDef(_param_symbols, _predicate, _expression), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.TraitApplication) -> tuple[ast_.ASTNode | None, bool]:
         _trait_asts = [self.populate(trait) for trait in ast.traits]
         traits = TraitResolver.resolve_traits(_trait_asts, self.symbol_table)
@@ -351,16 +351,17 @@ class PopulateSymbolTable:
                 # Traits dont really apply to the actual type in a typedef
                 # They apply more to the underlying type and then are wrapped in a typeOfType
                 if isinstance(symb.declared_type, TypeOfType):
-                    symb.declared_type.type_of.traits.merge_copy(traits)
-                symb.declared_type.traits.merge_copy(traits)
+                    symb.declared_type.type_of.traits = symb.declared_type.type_of.traits.merge_copy(traits)
+                else:
+                    symb.declared_type.traits = symb.declared_type.traits.merge_copy(traits)
             case ast_.ProcedureDefSymbol(ast_.Symbol(symb), _, _):
-                symb.declared_type.traits.merge_copy(traits)
+                symb.declared_type.traits = symb.declared_type.traits.merge_copy(traits)
             case _:
                 raise SimileTypeError(f"Trait application can only be applied to assignments or procedure definitions, got {_target}", ast)
 
         return ast_.TraitApplication(_target, _trait_asts), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.Assignment) -> tuple[ast_.ASTNode | None, bool]:
         if not isinstance(ast.target, ast_.TypedName) or not isinstance(ast.target.name, ast_.Identifier):
             return None, True
@@ -456,7 +457,7 @@ class PopulateSymbolTable:
             False,
         )
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.Import) -> tuple[ast_.ASTNode | None, bool]:
         # TODO fix this to allow for modules with different names (import ... as <name>)
         module_file_path = ast.module_file_path.with_suffix(".sim")
@@ -516,12 +517,12 @@ class PopulateSymbolTable:
 
     # By this point, all identifiers should have been added to the symbol table
     # Replace them with symbol ids corresponding to the symbol table entry
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.Identifier) -> tuple[ast_.ASTNode | None, bool]:
         symbol_table_entry = self.symbol_table.lookup_identifier(ast.name)
         return ast_.Symbol(symbol_table_entry), False
 
-    @_populate_aux_2.register
+    @_populate_aux.register
     def _(self, ast: ast_.TupleIdentifier) -> tuple[ast_.ASTNode | None, bool]:
         _items = []
         for item in ast.items:
@@ -530,20 +531,23 @@ class PopulateSymbolTable:
             _items.append(_item)
         return ast_.TupleSymbol(tuple(_items)), False
 
-    @_populate_aux_2.register
-    def _(self, ast: ast_.RecordAccess) -> tuple[ast_.ASTNode | None, bool]:
+    @_populate_aux.register
+    def _(self, ast: ast_.Access) -> tuple[ast_.ASTNode | None, bool]:
         if not isinstance(ast.field, ast_.Identifier):
             return None, True
         populated_record = self.populate(ast.record)
         temporary_type_synthesizer = TypeSynthesizer(self.symbol_table)
-        record_type = temporary_type_synthesizer.synthesize_type(populated_record)
-        if not isinstance(record_type, RecordType):
-            return None, True
-        field_symbol_entry = self.symbol_table.lookup_identifier(
-            ast.field.name,
-            include_scope=record_type.lookup_scope_entry,
-        )
-        return ast_.RecordAccess(populated_record, ast_.Symbol(field_symbol_entry)), False
+        target_type = temporary_type_synthesizer.synthesize_type(populated_record)
+
+        # We have a few different uses for the Access notation: modules, records, and tuples.
+        # Only records need special handling of symbols since they are defined in their own scope
+        if isinstance(target_type, RecordType):
+            field_symbol_entry = self.symbol_table.lookup_identifier(
+                ast.field.name,
+                include_scope=target_type.lookup_scope_entry,
+            )
+            return ast_.Access(populated_record, ast_.Symbol(field_symbol_entry)), False
+        return None, True
 
     def _duplicate_import(
         self,

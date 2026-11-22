@@ -114,7 +114,8 @@ class Scanner:
 
     def peek(self, offset: int = 0) -> str | None:
         """Peek at the next character without consuming it. Offset is used as a lookahead."""
-        if self.at_end_of_text:
+        # if self.at_end_of_text plus we need to account for the offset
+        if self.current_index + offset >= len(self.text):
             return None
         return self.text[self.current_index + offset]
 

@@ -128,7 +128,7 @@ We follow the standard EBNF notation for describing the language structure. Note
 <Primary> ::= <Atom> \{<AtomFollow>\}
 
 <AtomFollow> ::= `.' IDENTIFIER
-    \alt `(' <Expr> \{`,' <Expr>\} `)'
+    \alt `(' [<Expr> \{`,' <Expr>\}] `)'
     % comma within this image operation is to allow for parameterized generics similar to python's typing. Maybe we should extract into a different object?
     \alt `[' <Expr> \{`,' <Expr> \} `]' % Python like list slcing but with commas? or should we allow multiple things to be queried... Primary use of commas is for type exprs
 

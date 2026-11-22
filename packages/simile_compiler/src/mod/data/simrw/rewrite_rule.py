@@ -2,15 +2,17 @@ from __future__ import annotations
 from typing import Any, Callable, Sequence, ClassVar
 from dataclasses import dataclass, field
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from loguru import logger
 
 from src.mod.data import ast_
 
-from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
-from src.mod.pipeline.optimizer.v2.structure_matcher import StructureMatcher
+from src.mod.data.simrw.structure_matcher import StructureMatcher
 from src.mod.data.simrw.guard_condition import PatternMatchVars, GuardCondition, GUARD_CONDITIONS
-from src.mod.pipeline.printers.ast_ import ast_to_source
+
+if TYPE_CHECKING:
+    from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
 
 
 class RewriteRuleError(Exception):
@@ -23,6 +25,8 @@ class RewriteRule:
     rewrite_var_counter: ClassVar[int] = 0
 
     def apply(self, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode:
+        from src.mod.pipeline.printers.ast_ import ast_to_source
+
         logger.debug(f"Applying rewrite rule {self.name()} to AST: {ast_to_source(ast)}")
         result = ast.find_and_replace_with_func(lambda ast__: self._apply(ast__, type_synthesizer))
         logger.debug(f"Rewrite rule result: {ast_to_source(result)}")

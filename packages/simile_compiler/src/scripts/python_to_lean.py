@@ -66,7 +66,7 @@ def AST_to_lean():
         ast_.Enumeration,
         ast_.Type_,
         ast_.LambdaDef,
-        ast_.RecordAccess,
+        ast_.Access,
         ast_.Call,
         ast_.TypedName,
         ast_.Image,

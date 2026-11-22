@@ -112,14 +112,13 @@ class Traits:
         return self.items.get(trait_type)  # type: ignore
 
     def add(self, item: BaseTrait, clobber_existing: bool = True) -> None:
-        if type(item) == GenericBoundTrait:
-            existing_generic_bound_trait = self.find(GenericBoundTrait)
-            assert existing_generic_bound_trait is not None
-            combined_bound_trait = existing_generic_bound_trait.merge_copy(item)
-            self.items[GenericBoundTrait] = combined_bound_trait
-            return
         if clobber_existing or type(item) not in self.items:
             self.items[type(item)] = item
+            return
+        # Even if clobbering is disabled, we can still merge generic bounds traits
+        if type(item) == GenericBoundTrait and (existing_generic_bound_trait := self.find(GenericBoundTrait)) is not None:
+            combined_bound_trait = existing_generic_bound_trait.merge_copy(item)
+            self.items[GenericBoundTrait] = combined_bound_trait
             return
         raise SimileTraitError(f"Trait of type {type(item)} already exists in the collection.")
 
@@ -236,6 +235,9 @@ class Traits:
         # What is the responsibility of normalization, and what is the responsibility of merging? Maybe we shouldnt even
         # have a merge function, but let callers resolve their own behaviour. Or rather, we should define two methods here:
         # cast_with_trait and trait_application, corresponding to the methods that the actual types have
+        #
+        # TODO: should this make a copy or just modify the traits of self? need to analyze where/how it is used.
+        # for now we just reassign as needed: caller_object = caller_object.merge_copy(other_object)
 
         traits = Traits()
         traits_to_add = Traits()
@@ -249,31 +251,32 @@ class Traits:
 
         # Narrowing merges:
         # - Two equal literals remain the same literal, else widen to a domain with both literals
-        if base_literal_trait := self.find(LiteralTrait):
-            if addon_literal_trait := other.find(LiteralTrait):
+        if base_literal_trait := traits.find(LiteralTrait):
+            if addon_literal_trait := traits_to_add.find(LiteralTrait):
                 if base_literal_trait.value == addon_literal_trait.value:
                     traits.add(base_literal_trait)
                 else:
                     traits.add(DomainTrait(values=frozenset([base_literal_trait.value, addon_literal_trait.value])))
 
         # - MinTrait takes the min of both
-        if base_min_trait := self.find(MinTrait):
-            if addon_min_trait := other.find(MinTrait):
+        if base_min_trait := traits.find(MinTrait):
+            if addon_min_trait := traits_to_add.find(MinTrait):
                 new_min_value = min(base_min_trait.value, addon_min_trait.value)
                 traits.add(MinTrait(value=new_min_value))
 
         # - MaxTrait takes the max of both
-        if base_max_trait := self.find(MaxTrait):
-            if addon_max_trait := other.find(MaxTrait):
+        if base_max_trait := traits.find(MaxTrait):
+            if addon_max_trait := traits_to_add.find(MaxTrait):
                 new_max_value = max(base_max_trait.value, addon_max_trait.value)
                 traits.add(MaxTrait(value=new_max_value))
 
         # - DomainTrait unions with DomainTrait
-        if base_domain_trait := self.find(DomainTrait):
-            if addon_domain_trait := other.find(DomainTrait):
+        if base_domain_trait := traits.find(DomainTrait):
+            if addon_domain_trait := traits_to_add.find(DomainTrait):
                 new_domain_values = frozenset(base_domain_trait.values) | frozenset(addon_domain_trait.values)
                 traits.add(DomainTrait(values=new_domain_values))
         # - ...
+        # FIXME TODO MUST ADD LOGIC TO MERGE OTHER TRAITS. MAY NEED TO WRITE THIS IN THE SPEC.
         traits.normalize()
         return traits
 

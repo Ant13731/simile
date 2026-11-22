@@ -1,4 +1,4 @@
-from src.mod.pipeline.optimizer.v2 import GuardCondition, RewriteRule, SimrwAST
+from src.mod.data.simrw import GuardCondition, SimrwRule, SimrwAST
 from src.mod.pipeline.printers.type_ import type_to_source
 from src.mod.pipeline.printers.ast_ import ast_to_source, T
 
@@ -24,7 +24,7 @@ def add_prefix_whitespace(text: str) -> str:
     return "\n".join(T * 2 + line for line in text.splitlines())
 
 
-def simrw_to_source(rewrite_rule: RewriteRule) -> str:
+def simrw_to_source(rewrite_rule: SimrwRule) -> str:
     ret = f"rule {rewrite_rule.name}:\n"
     ret += T + "vars:\n"
     if rewrite_rule.vars_:

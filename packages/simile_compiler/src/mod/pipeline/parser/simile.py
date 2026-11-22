@@ -471,7 +471,7 @@ class Parser:
                 t = self.advance()
                 if t.type_ not in {TokenType.IDENTIFIER, *TOKENS_THAT_CAN_ACT_AS_TYPE_IDENTIFIERS}:
                     self.error("Expected identifier after '.' in type expression")
-                base = ast_.RecordAccess(base, ast_.Identifier(t.value))
+                base = ast_.Access(base, ast_.Identifier(t.value))
 
             if not self.match(TokenType.L_BRACKET):
                 return ast_.Type_(base)
@@ -937,15 +937,15 @@ class Parser:
                     self.advance()
                     t = self.peek()
                     if self.match(TokenType.INTEGER):
-                        atom = ast_.RecordAccess(atom, ast_.Int(t.value))
+                        atom = ast_.Access(atom, ast_.Int(t.value))
                     else:
                         self.consume(TokenType.IDENTIFIER, "Access only allowed through an identifier")
-                        atom = ast_.RecordAccess(atom, ast_.Identifier(t.value))
+                        atom = ast_.Access(atom, ast_.Identifier(t.value))
                 case TokenType.L_PAREN:
                     set_whitespace_back_to = self.ignore_whitespace(True)
                     self.advance()
                     args = []
-                    if self.peek() != TokenType.R_PAREN:
+                    if self.peek().type_ != TokenType.R_PAREN:
                         args.append(self.expr())
                         while self.match(TokenType.COMMA):
                             args.append(self.expr())

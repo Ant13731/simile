@@ -168,8 +168,8 @@ def _(ast: ast_.LambdaDef, indent: int) -> str:
     return f"λ {args_str} · {predicate_str} | {expression_str}"
 
 
-@_ast_to_source.register(ast_.RecordAccess)
-def _(ast: ast_.RecordAccess, indent: int) -> str:
+@_ast_to_source.register(ast_.Access)
+def _(ast: ast_.Access, indent: int) -> str:
     return f"{_ast_to_source(ast.record, indent)}.{_ast_to_source(ast.field, indent)}"
 
 

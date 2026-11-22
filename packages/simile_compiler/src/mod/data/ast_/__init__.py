@@ -59,7 +59,7 @@ from src.mod.data.ast_.common import (
     Enumeration,
     Type_,
     LambdaDef,
-    RecordAccess,
+    Access,
     Call,
     TypedName,
     Image,

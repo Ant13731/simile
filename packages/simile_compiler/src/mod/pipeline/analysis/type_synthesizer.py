@@ -120,7 +120,7 @@ class TypeSynthesizer:
 
     @typing_rule("Records - Access")
     @_synthesize_type.register
-    def _(self, ast: ast_.RecordAccess) -> types.BaseType:
+    def _(self, ast: ast_.Access) -> types.BaseType:
         from src.mod.pipeline.printers import type_to_source
 
         ast_type = self.synthesize_type(ast.record)
@@ -128,12 +128,15 @@ class TypeSynthesizer:
             assert isinstance(ast.field, ast_.Symbol)
             return ast_type.access(ast.field.symbol_table_entry.name)
         if isinstance(ast_type, types.TupleType):
+            # For now we force static integer literals since we need to know the type of the result,
+            # but in the future we should be able to do this dynamically
             if not isinstance(ast.field, ast_.Int):
                 raise types.SimileTypeError(f"Tuple access expects an integer index, got {type(ast.field)}", ast)
             index = int(ast.field.value)
             if index < 0 or index >= len(ast_type.items):
                 raise types.SimileTypeError(f"Tuple access index {index} out of bounds for tuple of length {len(ast_type.items)}", ast)
             return ast_type.items[index]
+        # TODO module types?
         raise types.SimileTypeError(f"Cannot access field of non-record type {type_to_source(ast_type)} in record access", ast)
 
     @typing_rule("Command - Procedure Call", "Relation Operations - Function Call")
@@ -618,7 +621,7 @@ class TypeSynthesizer:
 
     @typing_rule("Generator Nest")
     def _synthesize_type_generator_nest(self, generators: Sequence[ast_.Generator | ast_.IterGenerator]) -> types.BaseType:
-        if len(generators) == []:
+        if not generators:
             return types.NoneType_()
 
         generator_types = []

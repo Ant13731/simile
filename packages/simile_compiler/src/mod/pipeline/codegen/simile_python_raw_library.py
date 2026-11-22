@@ -11,6 +11,9 @@ class SimileRuntimeException(Exception):
 class Relation[K, V]:
     # Bi-hashmap implementation of a relation
     def __init__(self) -> None:
+        # TODO make the right side into a set instead of a list - fast lookups, no dupes.
+        # Only potential problem is hashability of objects -
+        # we would need to use tuples to represent sequences instead of lists, frozen dataclass records, etc
         self._fwd: dict[K, list[V]] = {}
         self._bwd: dict[V, list[K]] = {}
 
@@ -73,8 +76,8 @@ class Relation[K, V]:
 
     def inverse(self) -> Relation[V, K]:
         inverse_bimap = Relation[V, K]()
-        inverse_bimap._bwd = self._fwd
-        inverse_bimap._fwd = self._bwd
+        inverse_bimap._bwd = copy(self._fwd)
+        inverse_bimap._fwd = copy(self._bwd)
         return inverse_bimap
 
     def compose[T](self: Relation[K, V], other: Relation[V, T]) -> Relation[K, T]:

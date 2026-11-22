@@ -258,7 +258,7 @@ class Printer:
             arg_name = self._print(arg, i)
             arg_type = self.lower_type(arg.symbol_table_entry.declared_type)
             args.append(f"{arg_name}: {arg_type}")
-        return f"{self.i(i)}def {ast.name}({', '.join(args)}):\n{self._print(ast.body, i + 1)}"
+        return f"{self.i(i)}def {self._print(ast.name, i)}({', '.join(args)}):\n{self._print(ast.body, i + 1)}"
 
     @_print.register
     def _(self, ast: ast_.Int | ast_.Float | ast_.String, i: int) -> str:
@@ -284,7 +284,8 @@ class Printer:
 
     @_print.register
     def _(self, ast: ast_.UnaryOp, i: int) -> str:
-        return f"{BuiltinOperations.lookup(ast.op_type)}({ast.value})"
+        value = self._print(ast.value, i)
+        return f"{BuiltinOperations.lookup(ast.op_type)}({value})"
 
     @_print.register
     def _(self, ast: ast_.ListOp, i: int) -> str:
@@ -347,7 +348,7 @@ class Printer:
     # @_lower.register
     # def _(self, ast: ast_.LambdaDef, i: int) -> str: ...
     @_print.register
-    def _(self, ast: ast_.RecordAccess, i: int) -> str:
+    def _(self, ast: ast_.Access, i: int) -> str:
         return f"{self._print(ast.record, i)}.{self._print(ast.field, i)}"
 
     @_print.register
@@ -363,7 +364,7 @@ class Printer:
 
     @_print.register
     def _(self, ast: ast_.Image, i: int) -> str:
-        indices = self._print(ast.indices, i)
+        indices = self._print(ast_.SequenceEnumeration(ast.indices), i)
         target = self._print(ast.target, i)
         return f"{RAW_PYTHON_SIMILE_LIBRARY_NAME}.image({target}, {indices})"
 

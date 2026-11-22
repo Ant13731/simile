@@ -381,17 +381,15 @@ class RelationType(SetType):
     def apply_traits_from_relation_operator(self, relation_operator: RelationOperator) -> None:
         self._add_relation_traits_from_tuple(self.__relation_operator_table[relation_operator])
 
-    def _add_relation_traits_from_tuple(self, traits_tuple: tuple[bool, bool, bool, bool]) -> set[BaseTrait]:
-        traits: set[BaseTrait] = set()
+    def _add_relation_traits_from_tuple(self, traits_tuple: tuple[bool, bool, bool, bool]) -> None:
         if traits_tuple[0]:
-            traits.add(TotalOnDomainTrait())
+            self.traits.add(TotalOnDomainTrait())
         if traits_tuple[1]:
-            traits.add(TotalOnRangeTrait())
+            self.traits.add(TotalOnRangeTrait())
         if traits_tuple[2]:
-            traits.add(OneToManyTrait())
+            self.traits.add(OneToManyTrait())
         if traits_tuple[3]:
-            traits.add(ManyToOneTrait())
-        return traits
+            self.traits.add(ManyToOneTrait())
 
     def _relation_traits_to_tuple(self) -> tuple[bool, bool, bool, bool]:
         total_on_domain_trait = self.traits.find(TotalOnDomainTrait)

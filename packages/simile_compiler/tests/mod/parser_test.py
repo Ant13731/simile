@@ -72,6 +72,7 @@ BASIC_EXPRESSION_CASES = [
     ("{1 |-> 2}", RelationEnumeration([Maplet(Int("1"), Int("2"))])),
     ("[1, 2]", SequenceEnumeration([Int("1"), Int("2")])),
     ("[|1, 2|]", BagEnumeration([Int("1"), Int("2")])),
+    ("f()", Call(Identifier("f"), [])),
 ]
 
 TYPE_EXPRESSION_CASES = [
@@ -81,7 +82,7 @@ TYPE_EXPRESSION_CASES = [
         TypedName(
             Identifier("a"),
             Type_(
-                RecordAccess(Identifier("b"), Identifier("c")),
+                Access(Identifier("b"), Identifier("c")),
             ),
         ),
     ),
@@ -380,109 +381,96 @@ COMPREHENSION_CASES = [
         ),
     ),
     (
-        "sum (x in S | x) ` (y in S | y)",
-        Quantifier3(
-            QuantifierBody(
-                [],
-                [
-                    QuantifierBody([Generator(Identifier("x"), Identifier("S"), True_())], Identifier("x")),
-                    QuantifierBody([Generator(Identifier("y"), Identifier("S"), True_())], Identifier("y")),
-                ],
+        "(sum x in S | x) + (sum y in S | y)",
+        Add(
+            Sum(
+                QuantifierBody(
+                    [Generator(Identifier("x"), Identifier("S"), True_())],
+                    Identifier("x"),
+                ),
             ),
-            QuantifierOperator.SUM,
+            Sum(
+                QuantifierBody(
+                    [Generator(Identifier("y"), Identifier("S"), True_())],
+                    Identifier("y"),
+                ),
+            ),
         ),
     ),
     (
         "iter x in S : i := 0; j := 1 -> i,j | i := j + 2",
         Iter(
-            IterBody(
+            [
+                IterGenerator(
+                    Generator(Identifier("x"), Identifier("S"), True_()),
+                    [
+                        Assignment(Identifier("i"), Int("0"), False),
+                        Assignment(Identifier("j"), Int("1"), False),
+                    ],
+                )
+            ],
+            Statements(
                 [
-                    IterGenerator(
-                        Generator(Identifier("x"), Identifier("S"), True_()),
-                        [
-                            Assignment(Identifier("i"), Int("0"), False),
-                            Assignment(Identifier("j"), Int("1"), False),
-                        ],
+                    Assignment(
+                        Identifier("i"),
+                        Add(Identifier("j"), Int("2")),
+                        False,
                     )
-                ],
-                IterBodyEnd(
-                    Statements(
-                        [
-                            Assignment(
-                                Identifier("i"),
-                                Add(Identifier("j"), Int("2")),
-                                False,
-                            )
-                        ]
-                    ),
-                    TupleIdentifier((Identifier("i"), Identifier("j"))),
-                ),
-            )
+                ]
+            ),
+            TupleIdentifier((Identifier("i"), Identifier("j"))),
         ),
     ),
     (
         "iter x in S : i := 0, y in T : j := 1 -> i | i := i + j",
         Iter(
-            IterBody(
-                [
-                    IterGenerator(
-                        Generator(Identifier("x"), Identifier("S"), True_()),
-                        [
-                            Assignment(Identifier("i"), Int("0"), False),
-                        ],
-                    ),
-                    IterGenerator(
-                        Generator(Identifier("y"), Identifier("T"), True_()),
-                        [
-                            Assignment(Identifier("j"), Int("1"), False),
-                        ],
-                    ),
-                ],
-                IterBodyEnd(
-                    Statements(
-                        [
-                            Assignment(
-                                Identifier("i"),
-                                Add(Identifier("i"), Identifier("j")),
-                                False,
-                            )
-                        ]
-                    ),
-                    Identifier("i"),
+            [
+                IterGenerator(
+                    Generator(Identifier("x"), Identifier("S"), True_()),
+                    [
+                        Assignment(Identifier("i"), Int("0"), False),
+                    ],
                 ),
-            )
+                IterGenerator(
+                    Generator(Identifier("y"), Identifier("T"), True_()),
+                    [
+                        Assignment(Identifier("j"), Int("1"), False),
+                    ],
+                ),
+            ],
+            Statements(
+                [
+                    Assignment(
+                        Identifier("i"),
+                        Add(Identifier("i"), Identifier("j")),
+                        False,
+                    )
+                ]
+            ),
+            Identifier("i"),
         ),
     ),
     (
-        "iter (x in S : i := 0 -> i | i := x)",
+        "iter x in S : i := 0 -> i | i := x",
         Iter(
-            IterBody(
-                [],
+            [
+                IterGenerator(
+                    Generator(Identifier("x"), Identifier("S"), True_()),
+                    [
+                        Assignment(Identifier("i"), Int("0"), False),
+                    ],
+                )
+            ],
+            Statements(
                 [
-                    IterBody(
-                        [
-                            IterGenerator(
-                                Generator(Identifier("x"), Identifier("S"), True_()),
-                                [
-                                    Assignment(Identifier("i"), Int("0"), False),
-                                ],
-                            )
-                        ],
-                        IterBodyEnd(
-                            Statements(
-                                [
-                                    Assignment(
-                                        Identifier("i"),
-                                        Identifier("x"),
-                                        False,
-                                    )
-                                ]
-                            ),
-                            Identifier("i"),
-                        ),
-                    ),
-                ],
-            )
+                    Assignment(
+                        Identifier("i"),
+                        Identifier("x"),
+                        False,
+                    )
+                ]
+            ),
+            Identifier("i"),
         ),
     ),
     (
@@ -527,28 +515,24 @@ COMPREHENSION_CASES = [
                 i := x
             """),
         Iter(
-            IterBody(
+            [
+                IterGenerator(
+                    Generator(Identifier("x"), Identifier("S"), True_()),
+                    [
+                        Assignment(Identifier("i"), Int("0"), False),
+                    ],
+                )
+            ],
+            Statements(
                 [
-                    IterGenerator(
-                        Generator(Identifier("x"), Identifier("S"), True_()),
-                        [
-                            Assignment(Identifier("i"), Int("0"), False),
-                        ],
+                    Assignment(
+                        Identifier("i"),
+                        Identifier("x"),
+                        False,
                     )
-                ],
-                IterBodyEnd(
-                    Statements(
-                        [
-                            Assignment(
-                                Identifier("i"),
-                                Identifier("x"),
-                                False,
-                            )
-                        ]
-                    ),
-                    Identifier("i"),
-                ),
-            )
+                ]
+            ),
+            Identifier("i"),
         ),
     ),
     (
@@ -679,15 +663,15 @@ ADVANCED_EXPRESSION_CASES = [
     ("-a", Negative(Identifier("a"))),
     ("a ^ b ^ c", Exponent(Identifier("a"), Exponent(Identifier("b"), Identifier("c")))),
     ("R~", Inverse(Identifier("R"))),
-    ("obj.field", RecordAccess(Identifier("obj"), Identifier("field"))),
+    ("obj.field", Access(Identifier("obj"), Identifier("field"))),
     (
         "obj.field.subfield",
-        RecordAccess(RecordAccess(Identifier("obj"), Identifier("field")), Identifier("subfield")),
+        Access(Access(Identifier("obj"), Identifier("field")), Identifier("subfield")),
     ),
     ("R[x]", Image(Identifier("R"), [Identifier("x")])),
     (
         "R[x].field",
-        RecordAccess(Image(Identifier("R"), [Identifier("x")]), Identifier("field")),
+        Access(Image(Identifier("R"), [Identifier("x")]), Identifier("field")),
     ),
     (
         "{x in S | x + 1}",
@@ -940,6 +924,10 @@ PARSER_ERROR_CASES_STRUCTURED = [
                 skip
             """),
         "Expected right arrow after procedure parameters",
+    ),
+    (
+        "iter (x in S : i := 0 -> i | i := x)",
+        "",
     ),
 ]
 
