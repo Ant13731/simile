@@ -70,7 +70,7 @@ rule composition:
         z1: T2
         z2: T2
         Q: relation[T1, T2]
-        R: set[T2, T3]
+        R: relation[T2, T3]
     rewrite:
         x |-> y in Q <> R
         ~>
@@ -83,7 +83,7 @@ rule composition_generator:
         z1: T2
         z2: T2
         Q: relation[T1, T2]
-        R: set[T2, T3]
+        R: relation[T2, T3]
         P: bool
     rewrite:
         ast_.Generator(x |-> y, Q <> R, P)

@@ -550,6 +550,12 @@ class BagType(RelationType):
             raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
         return cls(element_type=element_type.left, traits=Traits(traits))
 
+    @classmethod
+    def enumeration(cls, element_types: list[BaseType]) -> SetType:
+        return super().enumeration(
+            list(map(lambda elem_typ: PairType(elem_typ, IntType()), element_types)),
+        )
+
     def base_traits(self) -> set[BaseTrait]:
         return {ManyToOneTrait()}
 
@@ -595,6 +601,12 @@ class SequenceType(RelationType):
         if not isinstance(element_type, PairType):
             raise SimileTypeError(f"Cannot cast SetType with non-PairType element type {element_type} to RelationType")
         return cls(element_type=element_type.right, traits=Traits(traits))
+
+    @classmethod
+    def enumeration(cls, element_types: list[BaseType]) -> SetType:
+        return super().enumeration(
+            list(map(lambda elem_typ: PairType(IntType(), elem_typ), element_types)),
+        )
 
     @property
     def element_type_(self) -> BaseType:

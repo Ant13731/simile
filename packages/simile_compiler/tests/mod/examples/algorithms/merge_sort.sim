@@ -1,0 +1,37 @@
+# TODO allow any orderable type to be sorted. for now we need to use different implementations
+procedure merge_i(left: sequence[int], right: sequence[int]) -> sequence[int]:
+    if left = []:
+        return right
+    if right = []:
+        return left
+    if left(0) <= right(0):
+        return [left(0)] ++ merge_i(0 .. 1 <<| left, right)
+    return [right(0)] ++ merge_i(left, 0 .. 1 <<| right)
+
+procedure merge_sort_i(xs: sequence[int]) -> sequence[int]:
+    if len(xs) <= 1:
+        return xs
+    mid: int := len(xs) div 2
+    return merge_i(merge_sort_i(mid .. len(xs) <<| xs), merge_sort_i(0 .. mid <<| xs))
+
+procedure sort_i(S: sequence[int]) -> sequence[int]:
+    return merge_sort_i(S)
+
+
+procedure merge_f(left: sequence[float], right: sequence[float]) -> sequence[float]:
+    if left = []:
+        return right
+    if right = []:
+        return left
+    if left(0) <= right(0):
+        return [left(0)] ++ merge_f(0 .. 1 <<| left, right)
+    return [right(0)] ++ merge_f(left, 0 .. 1 <<| right)
+
+procedure merge_sort_f(xs: sequence[float]) -> sequence[float]:
+    if len(xs) <= 1:
+        return xs
+    mid: int := len(xs) div 2
+    return merge_f(merge_sort_f(mid .. len(xs) <<| xs), merge_sort_f(0 .. mid <<| xs))
+
+procedure sort_f(S: sequence[float]) -> sequence[float]:
+    return merge_sort_f(S)

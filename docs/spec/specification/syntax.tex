@@ -22,7 +22,7 @@ We follow the standard EBNF notation for describing the language structure. Note
 
 <Expr> ::= <Quantification> | <Predicate> | <LambdaDef>
 
-<LambdaDef> ::= \lit{$\lambda$} [<FlatTupleIdentifier>] \lit{$\cdot$} <Predicate> `|' <Expr>
+<LambdaDef> ::= \lit{$\lambda$} [<TypedName> \{`,' <TypedName> \}] [\lit{$\cdot$} <Predicate>] `|' <Expr>
 
 <Quantification> ::= (\lit{$\sum$} | \lit{$\prod$} | \lit{$\bigcup$} | \lit{$\bigcap$} | \lit{$\exists$} | \lit{$\forall$} | \lit{$\uparrow$} | \lit{$\downarrow$}) <QuantificationBody>
     % fold requires a generator, an accumulator assignment with an initial value, and an update expr (no need to explicitly assign to the accumulator var)

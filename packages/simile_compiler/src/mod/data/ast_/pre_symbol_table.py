@@ -7,7 +7,7 @@ from typing import Generic, TypeVar, TYPE_CHECKING
 from src.mod.data.ast_.base import ASTNode
 
 if TYPE_CHECKING:
-    from src.mod.data.ast_.common import Type_, TypedName, Statements
+    from src.mod.data.ast_.common import Type_, TypedName, Statements, True_
 
 
 @dataclass
@@ -145,3 +145,10 @@ class ProcedureDefIdentifier(ASTNode):
     params: list[TypedName]
     body: ASTNode | Statements
     return_type: Type_
+
+
+@dataclass
+class LambdaDefIdentifier(ASTNode):
+    params: list[TypedName]
+    predicate: ASTNode | True_
+    expression: ASTNode

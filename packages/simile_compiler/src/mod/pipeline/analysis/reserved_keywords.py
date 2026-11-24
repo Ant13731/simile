@@ -46,7 +46,7 @@ def _keyword_traversal_function(node: ast_.ASTNode) -> ReservedKeywordErr | None
         case ast_.Assignment(ast_.Identifier(name), _) | ast_.Assignment(ast_.TypedName(ast_.Identifier(name), _), _):
             return check_clash(node, name)
 
-        case ast_.For(iterable_names, _, _) | ast_.Generator(iterable_names, _, _) | ast_.LambdaDef(iterable_names, _, _):
+        case ast_.For(iterable_names, _, _) | ast_.Generator(iterable_names, _, _):
             for ident in iterable_names.flatten():
                 if not isinstance(ident, ast_.Identifier):
                     continue
@@ -59,6 +59,11 @@ def _keyword_traversal_function(node: ast_.ASTNode) -> ReservedKeywordErr | None
             if (ret := check_clash(node, name)) is not None:
                 return ret
 
+            for arg in args:
+                assert isinstance(arg.name, ast_.Identifier)
+                if (ret := check_clash(node, arg.name.name)) is not None:
+                    return ret
+        case ast_.LambdaDefIdentifier(args, _, _):
             for arg in args:
                 assert isinstance(arg.name, ast_.Identifier)
                 if (ret := check_clash(node, arg.name.name)) is not None:

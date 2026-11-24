@@ -55,17 +55,17 @@ def _(ast: ast_.String, indent: int) -> str:
 
 @_ast_to_source.register(ast_.True_)
 def _(ast: ast_.True_, indent: int) -> str:
-    return "True"
+    return "true"
 
 
 @_ast_to_source.register(ast_.False_)
 def _(ast: ast_.False_, indent: int) -> str:
-    return "False"
+    return "false"
 
 
 @_ast_to_source.register(ast_.None_)
 def _(ast: ast_.None_, indent: int) -> str:
-    return "None"
+    return "none"
 
 
 @_ast_to_source.register(ast_.BinaryOp)
@@ -160,12 +160,21 @@ def _(ast: ast_.Type_, indent: int) -> str:
     return f"{_ast_to_source(ast.type_, indent)}[{', '.join(generic_parameters)}]"
 
 
-@_ast_to_source.register(ast_.LambdaDef)
-def _(ast: ast_.LambdaDef, indent: int) -> str:
-    args_str = _ast_to_source(ast.params, indent)
+@_ast_to_source.register(ast_.LambdaDefIdentifier)
+def _(ast: ast_.LambdaDefIdentifier, indent: int) -> str:
+    params_str = ", ".join(map(lambda param: _ast_to_source(param, indent), ast.params))
     predicate_str = _ast_to_source(ast.predicate, indent)
     expression_str = _ast_to_source(ast.expression, indent)
-    return f"λ {args_str} · {predicate_str} | {expression_str}"
+    return f"λ {params_str} · {predicate_str} | {expression_str}"
+
+
+@_ast_to_source.register(ast_.LambdaDefSymbol)
+def _(ast: ast_.LambdaDefSymbol, indent: int) -> str:
+    # TODO same as ProcedureDefSymbol, missing type info (tho we could get it from the derived types?)
+    params_str = ", ".join(map(lambda param: _ast_to_source(param, indent), ast.params))
+    predicate_str = _ast_to_source(ast.predicate, indent)
+    expression_str = _ast_to_source(ast.expression, indent)
+    return f"λ {params_str} · {predicate_str} | {expression_str}"
 
 
 @_ast_to_source.register(ast_.Access)

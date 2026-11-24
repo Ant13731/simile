@@ -19,6 +19,7 @@ from src.mod.data.ast_.post_symbol_table import (
     SymbolListTypes,
     RecordDefSymbol,
     ProcedureDefSymbol,
+    LambdaDefSymbol,
 )
 from src.mod.data.ast_.operators import (
     BinaryOperator,
@@ -441,35 +442,6 @@ class Type_(ASTNode):
 
 
 @dataclass
-class LambdaDef(ASTNode):
-    params: TupleIdentifier | TupleSymbol
-    predicate: ASTNode
-    expression: ASTNode
-
-    @property
-    def bound(self) -> set[Identifier]:
-        return set(self.params.free) | self.predicate.bound | self.expression.bound
-
-    @property
-    def free(self) -> set[Identifier]:
-        return (self.predicate.free | self.expression.free) - set(self.params.free)
-
-    def well_formed(self) -> bool:
-        return all(
-            [
-                all(param.well_formed() for param in self.params.free),
-                self.predicate.well_formed(),
-                self.expression.well_formed(),
-                self.predicate.bound.isdisjoint(self.expression.free),
-                self.expression.bound.isdisjoint(self.predicate.free),
-                self.predicate.bound.isdisjoint(self.expression.bound),
-                self.predicate.bound.isdisjoint(set(self.params.free)),
-                self.expression.bound.isdisjoint(set(self.params.free)),
-            ]
-        )
-
-
-@dataclass
 class Access(ASTNode):
     record: ASTNode
     field: Identifier | Symbol | Int
@@ -579,8 +551,8 @@ Primitive = Int | Float | String | True_ | False_ | None_
 Collection = Enumeration | TupleLiteral | Quantifier3
 Primary = Access | Call | Image | Collection | Primitive | Identifier
 Predicate = BinaryOp | UnaryOp | ListOp | Primary
-Quantification = Quantifier3 | Fold | Iter | LambdaDef
-Expr = Quantification | Predicate
+Quantification = Quantifier3 | Fold | Iter
+Expr = Quantification | Predicate | LambdaDefSymbol
 SimpleStmt = Expr | TraitApplication | Assignment | ControlFlowStmt | Import
 CompoundStmt = If | For | While | RecordDefSymbol | ProcedureDefSymbol
 

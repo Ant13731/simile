@@ -11,7 +11,7 @@ from src.mod.data.symbol_table.entry import SymbolTableIdentifierEntry
 
 if TYPE_CHECKING:
     from src.mod.data.types.base import BaseType
-    from src.mod.data.ast_.common import Statements
+    from src.mod.data.ast_.common import Statements, True_
 
 
 @dataclass
@@ -93,6 +93,13 @@ class ProcedureDefSymbol(ASTNode):
     name: Symbol
     args: list[Symbol]
     body: ASTNode | Statements
+
+
+@dataclass
+class LambdaDefSymbol(ASTNode):
+    params: list[Symbol]
+    predicate: ASTNode | True_
+    expression: ASTNode
 
 
 # Experimenting with a generic-typed version of symbolic tuple. Dont anticipate this becoming that useful tho

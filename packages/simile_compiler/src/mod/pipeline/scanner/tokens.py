@@ -302,7 +302,7 @@ KEYWORD_TABLE = {
     # Primitive objects
     "true": TokenType.TRUE,
     "false": TokenType.FALSE,
-    # "None": TokenType.NONE,
+    # "none": TokenType.NONE,
     # Programming constructs
     "if": TokenType.IF,
     "else": TokenType.ELSE,

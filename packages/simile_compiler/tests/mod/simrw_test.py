@@ -55,13 +55,18 @@ class TestSimRWLibrary:
 
         assert simrw_ast == round_trip_ast
 
-    @pytest.mark.parametrize("source", simrw_rules_within_file(SIMRW_FILES))
-    def test_parse_and_convert_without_exceptions(self, source: str) -> None:
+    @pytest.mark.parametrize("source", simrw_rules_within_file(GENERIC_REWRITE_RULE_PATHS))
+    def test_parse_and_convert_without_exceptions_generic(self, source: str) -> None:
         simrw_asts = parse_simrw(source)
         assert len(convert_simrw_to_rewrite_rules(simrw_asts)) == len(simrw_asts)
 
-    @pytest.mark.parametrize("source", simrw_rules_within_file(SIMRW_FILES))
-    def test_parse_and_convert_to_source_round_trip(self, source: str) -> None:
+    @pytest.mark.parametrize("source", simrw_rules_within_file(RAW_PYTHON_REWRITE_RULE_PATHS))
+    def test_parse_and_convert_without_exceptions_raw_python(self, source: str) -> None:
+        simrw_asts = parse_simrw(source)
+        assert len(convert_simrw_to_rewrite_rules(simrw_asts)) == len(simrw_asts)
+
+    @pytest.mark.parametrize("source", simrw_rules_within_file(GENERIC_REWRITE_RULE_PATHS))
+    def test_parse_and_convert_to_source_round_trip_generic(self, source: str) -> None:
         simrw_asts = parse_simrw(source)
         rewrite_rules = convert_simrw_to_rewrite_rules(simrw_asts)
         assert len(rewrite_rules) == 1
@@ -73,4 +78,23 @@ class TestSimRWLibrary:
         assert len(round_trip_rewrite_rules) == 1
         round_trip_rewrite_rule = round_trip_rewrite_rules[0]
 
+        assert rewrite_rule == round_trip_rewrite_rule
+
+    @pytest.mark.parametrize("source", simrw_rules_within_file(RAW_PYTHON_REWRITE_RULE_PATHS))
+    def test_parse_and_convert_to_source_round_trip_raw_python(self, source: str) -> None:
+        simrw_asts = parse_simrw(source)
+        rewrite_rules = convert_simrw_to_rewrite_rules(simrw_asts)
+        assert len(rewrite_rules) == 1
+        rewrite_rule = rewrite_rules[0]
+
+        source_from_ast = simrw_to_source(rewrite_rule)
+        logger.debug("Original:\n" + source)
+        logger.debug("Round trip:\n" + source_from_ast)
+        round_trip_asts = parse_simrw(source_from_ast)
+        round_trip_rewrite_rules = convert_simrw_to_rewrite_rules(round_trip_asts)
+        assert len(round_trip_rewrite_rules) == 1
+        round_trip_rewrite_rule = round_trip_rewrite_rules[0]
+
+        logger.debug("Original:\n" + source)
+        logger.debug("Round trip:\n" + source_from_ast)
         assert rewrite_rule == round_trip_rewrite_rule

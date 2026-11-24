@@ -1,4 +1,11 @@
+from "merge_sort" import sort_i
+
 T: type := generic
-# TODO need to add sort implementation
-procedure nth_min(n: int, S: set[T]) -> T:
-    return sort(S)[n]
+    trait orderable
+
+# TODO need to add sort implementation for generic types
+# TODO need to fix casting from set -> sequence
+procedure nth_min(n: int, S: sequence[int]) -> int:
+    # if S is a set:
+    # sort_i(cast(S, sequence))[n]
+    return sort_i(S)(n)

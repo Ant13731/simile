@@ -368,7 +368,7 @@ class Parser:
         return ast_.Statements(statements)
 
     @store_derivation
-    def simple_stmt(self) -> ast_.SimpleStmt | ast_.ASTNode:
+    def simple_stmt(self) -> ast_.ASTNode:
         t = self.peek()
         if t.type_ in self.get_first_set("assignment_or_expr"):
             return self.assignment_or_expr()
@@ -646,16 +646,18 @@ class Parser:
     @store_derivation
     def lambda_def(self) -> ast_.ASTNode:
         self.consume(TokenType.LAMBDA, "lambda expression must begin with a LAMBDA token (likely a parser source error)")
-        params = ast_.TupleIdentifier(())
-        if self.peek().type_ not in (TokenType.DOT, TokenType.CDOT):
-            params = self.flat_tuple_identifier()
+        params = []
+        if self.peek().type_ not in {TokenType.CDOT, TokenType.VBAR}:
+            params.append(self.typed_name())
+            while self.match(TokenType.COMMA):
+                params.append(self.typed_name())
 
         predicate: ast_.ASTNode = ast_.True_()
         if self.match(TokenType.CDOT):
             predicate = self.predicate()
 
         self.consume(TokenType.VBAR, "Expected LAMBDA quantification predicate separator")
-        return ast_.LambdaDef(params, predicate, self.expr())
+        return ast_.LambdaDefIdentifier(params, predicate, self.expr())
 
     def try_parse_function_call(self, expected_num_call_args: int) -> ast_.ASTNode | None:
         backtrack_ctx = self.prep_backtrack()
@@ -755,7 +757,7 @@ class Parser:
         return ast_.Iter(generators, body, return_list)
 
     @store_derivation
-    def generator_with_assignments(self):
+    def generator_with_assignments(self) -> ast_.IterGenerator:
         generator = self.generator()
         self.consume(TokenType.COLON, "Expected colon after generator in iter_quantification_body")
         initializing_assignments: list[ast_.Assignment] = [self.assignment()]
@@ -764,7 +766,7 @@ class Parser:
         return ast_.IterGenerator(generator, initializing_assignments)
 
     @store_derivation
-    def iter_block(self):
+    def iter_block(self) -> ast_.Statements:
         if self.peek().type_ != TokenType.NEWLINE:
             simple_stmts = [self.simple_stmt()]
             while self.match(TokenType.SEMICOLON):
@@ -898,6 +900,7 @@ class Parser:
                 TokenType.MULT: ast_.Multiply,
                 TokenType.DIV: ast_.Divide,
                 TokenType.MOD: ast_.Modulo,
+                TokenType.INT_DIV: ast_.IntDivide,
             },
         )
 
@@ -1298,20 +1301,7 @@ class Parser:
         self.consume(TokenType.PROCEDURE, "Expected PROCEDURE keyword in procedure definition (possibly after traits)")
 
         t = self.advance()
-        definable_tokens = [
-            TokenType.IDENTIFIER,
-            TokenType.FORALL,
-            TokenType.EXISTS,
-            TokenType.SUM,
-            TokenType.PRODUCT,
-            TokenType.GENERAL_UNION,
-            TokenType.GENERAL_INTERSECTION,
-            TokenType.FOLD,
-            TokenType.ITER,
-            TokenType.MAX,
-            TokenType.MIN,
-        ]
-        if t.type_ not in definable_tokens:
+        if t.type_ not in {TokenType.IDENTIFIER, *TOKENS_THAT_CAN_ACT_AS_IDENTIFIERS}:
             self.error("Expected identifier after DEF keyword")
         name = ast_.Identifier(t.value)
 

@@ -28,8 +28,8 @@ BASIC_EXPRESSION_CASES = [
     ("1", Int("1")),
     ("1.5", Float("1.5")),
     ('"hello world"', String("hello world")),
-    ("True", True_()),
-    ("False", False_()),
+    ("true", True_()),
+    ("false", False_()),
     ("not a", Not(value=Identifier("a"))),
     ("a is b", Is(Identifier("a"), Identifier("b"))),
     ("a is not b", IsNot(Identifier("a"), Identifier("b"))),
@@ -198,7 +198,7 @@ COMPOUND_STATEMENT_CASES = [
     ),
     (
         normalize_source("""
-					while True:
+					while true:
 						print("Hello")
 					"""),
         While(
@@ -363,9 +363,9 @@ COMPREHENSION_CASES = [
         ),
     ),
     (
-        "lambda x .: x in S | x",
-        LambdaDef(
-            TupleIdentifier((Identifier("x"),)),
+        "lambda x: T1 .: x in S | x",
+        LambdaDefIdentifier(
+            [TypedName(Identifier("x"), Type_(Identifier("T1")))],
             In(Identifier("x"), Identifier("S")),
             Identifier("x"),
         ),
@@ -383,17 +383,19 @@ COMPREHENSION_CASES = [
     (
         "(sum x in S | x) + (sum y in S | y)",
         Add(
-            Sum(
+            Quantifier3(
                 QuantifierBody(
                     [Generator(Identifier("x"), Identifier("S"), True_())],
                     Identifier("x"),
                 ),
+                QuantifierOperator.SUM,
             ),
-            Sum(
+            Quantifier3(
                 QuantifierBody(
                     [Generator(Identifier("y"), Identifier("S"), True_())],
                     Identifier("y"),
                 ),
+                QuantifierOperator.SUM,
             ),
         ),
     ),
@@ -894,7 +896,7 @@ PARSER_ERROR_CASES_QUANTIFICATION_AND_GROUPING = [
     ),
     (
         "lambda x x in S | x",
-        "Expected LAMBDA quantification separator",
+        "Expected LAMBDA quantification predicate separator",
     ),
     (
         "R[x",

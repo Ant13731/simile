@@ -104,6 +104,9 @@ class PopulateSymbolTable:
         if not continue_populating:
             return ast
 
+        # FIXME procedures defined globally should be available for use in any body
+        # Right now procedures are only accessible after they are defined.
+        # Perhaps we need to parse procedure signatures first?
         for f in fields(ast):
             field_value = getattr(ast, f.name)
             if isinstance(field_value, list):
@@ -276,26 +279,34 @@ class PopulateSymbolTable:
         _name_symbol = self.populate(ast.name)
 
         with self.scope(ScopeContext.PROCEDURE) as scp:
-            _params_symbols: list[ast_.Symbol] = []
-            for param in ast.params:
-                if not isinstance(param.name, ast_.Identifier):
-                    raise SimileTypeError(f"Invalid procedure parameter name (must be an identifier): {param.name}", param)
-                param_type = TypeAnnotationResolver.resolve_type_annotation(param.type_, self.symbol_table)
-
-                self.symbol_table.add_symbol(
-                    param.name.name,
-                    IdentifierContext.PROCEDURE_PARAMETER,
-                    param_type,
-                )
-                param_symbol = self.populate(param.name)
-                assert isinstance(param_symbol, ast_.Symbol)
-                param_types.append(param_type)
-                _params_symbols.append(param_symbol)
+            _params, _param_types = self.populate_procedure_parameters(ast.params)
+            # add param types by reference to the procedure def type
+            for _param_type in _param_types:
+                param_types.append(_param_type)
 
             _body = self.populate(ast.body)
 
         assert isinstance(_name_symbol, ast_.Symbol)
-        return ast_.ProcedureDefSymbol(_name_symbol, _params_symbols, _body), False
+        return ast_.ProcedureDefSymbol(_name_symbol, _params, _body), False
+
+    def populate_procedure_parameters(self, params: list[ast_.TypedName]) -> tuple[list[ast_.Symbol], list[BaseType]]:
+        _params: list[ast_.Symbol] = []
+        _param_types: list[BaseType] = []
+        for param in params:
+            if not isinstance(param.name, ast_.Identifier):
+                raise SimileTypeError(f"Invalid procedure parameter name (must be an identifier): {param.name}", param)
+            _param_type = TypeAnnotationResolver.resolve_type_annotation(param.type_, self.symbol_table)
+
+            self.symbol_table.add_symbol(
+                param.name.name,
+                IdentifierContext.PROCEDURE_PARAMETER,
+                _param_type,
+            )
+            _param = self.populate(param.name)
+            assert isinstance(_param, ast_.Symbol)
+            _params.append(_param)
+            _param_types.append(_param_type)
+        return _params, _param_types
 
     @_populate_aux.register
     def _(self, ast: ast_.RecordDefIdentifier) -> tuple[ast_.ASTNode | None, bool]:
@@ -326,18 +337,13 @@ class PopulateSymbolTable:
         return ast_.RecordDefSymbol(_symbol, fields), False
 
     @_populate_aux.register
-    def _(self, ast: ast_.LambdaDef) -> tuple[ast_.ASTNode | None, bool]:
-        assert isinstance(ast.params, ast_.IdentifierListTypes)
+    def _(self, ast: ast_.LambdaDefIdentifier) -> tuple[ast_.ASTNode | None, bool]:
         with self.scope(ScopeContext.LAMBDA) as scp:
+            _params, _ = self.populate_procedure_parameters(ast.params)
             _predicate = self.populate(ast.predicate)
             _expression = self.populate(ast.expression)
 
-            # FIXME types are not known at this point
-            self._populate_loop_parameters(ast.params, NoneType_())
-            _param_symbols = self.populate(ast.params)
-
-        assert isinstance(_param_symbols, ast_.TupleSymbol)
-        return ast_.LambdaDef(_param_symbols, _predicate, _expression), False
+        return ast_.LambdaDefSymbol(_params, _predicate, _expression), False
 
     @_populate_aux.register
     def _(self, ast: ast_.TraitApplication) -> tuple[ast_.ASTNode | None, bool]:

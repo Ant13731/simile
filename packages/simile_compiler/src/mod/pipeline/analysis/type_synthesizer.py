@@ -107,16 +107,16 @@ class TypeSynthesizer:
 
     @typing_rule("Lambda Expression")
     @_synthesize_type.register
-    def _(self, ast: ast_.LambdaDef) -> types.BaseType:
+    def _(self, ast: ast_.LambdaDefSymbol) -> types.BaseType:
         param_types = []
-        for arg in ast.params.items:
-            assert isinstance(arg, ast_.Symbol), "LambdaDef parameters must be Symbols"
-            param_types.append(self.synthesize_type(arg))
+        for param in ast.params:
+            param_types.append(param.symbol_table_entry.declared_type)
 
-        assert isinstance(self.synthesize_type(ast.predicate), types.BoolType), "Predicate of LambdaDef must be of type BoolType"
+        if not isinstance(self.synthesize_type(ast.predicate), types.BoolType):
+            raise types.SimileTypeError("Predicate of LambdaDef must be of type BoolType")
         return_type = self.synthesize_type(ast.expression)
 
-        return types.ProcedureType(types.TupleType(list(param_types)), return_type=return_type)
+        return types.ProcedureType(types.TupleType(param_types), return_type=return_type)
 
     @typing_rule("Records - Access")
     @_synthesize_type.register
@@ -150,7 +150,23 @@ class TypeSynthesizer:
             return ast_type.call([self.synthesize_type(arg) for arg in ast.args])
         if isinstance(ast_type, types.RelationType) and len(ast.args) == 1:
             return ast_type.function_call(self.synthesize_type(ast.args[0]))
-        raise types.SimileTypeError(f"Cannot call type {type_to_source(ast_type)} (expected procedure or relation)", ast)
+        if isinstance(ast_type, types.RecordType):
+            if len(ast.args) != len(ast_type.fields):
+                expected_types_pretty = {field_name: type_to_source(typ) for field_name, typ in ast_type.fields.items()}
+                raise types.SimileTypeError(
+                    f"Record type not fully initialized. Called with {len(ast.args)} params but expected {len(ast_type.fields)}. Called: {ast.args}, expected types: {expected_types_pretty}",
+                    ast,
+                )
+            for arg, (field_name, expected_type) in zip(ast.args, ast_type.fields.items()):
+                actual_field_type = self.synthesize_type(arg)
+                if not actual_field_type.is_subtype(expected_type):
+                    raise types.SimileTypeError(
+                        f"Failed to initialize record. Field {field_name} had a mismatching type. Got {type_to_source(actual_field_type)}, expected {type_to_source(expected_type)}"
+                    )
+
+            # TODO it doesnt seem right that we dont actually make the record type here. maybe we should populate the record type as a TypeOfType?
+            return ast_type
+        raise types.SimileTypeError(f"Cannot call type {type_to_source(ast_type)} (expected procedure, relation, or record initialization)", ast)
 
     @typing_rule("Bag Operations - Image", "Relation Operations - Image")
     @_synthesize_type.register
@@ -284,12 +300,24 @@ class TypeSynthesizer:
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.IntDivide) -> types.BaseType:
-        return self._synthesize_type_binary(ast, types.IntType, types.IntType.int_divide)
+        return self._synthesize_type_multiple_binary_paths(
+            [
+                (ast, types.IntType, types.IntType.int_divide),
+                (ast, types.FloatType, types.FloatType.int_divide),
+            ]
+        )
+        # return self._synthesize_type_binary(ast, types.IntType, types.IntType.int_divide)
 
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.Modulo) -> types.BaseType:
-        return self._synthesize_type_binary(ast, types.IntType, types.IntType.modulo)
+        return self._synthesize_type_multiple_binary_paths(
+            [
+                (ast, types.IntType, types.IntType.modulo),
+                (ast, types.FloatType, types.FloatType.modulo),
+            ]
+        )
+        # return self._synthesize_type_binary(ast, types.IntType, types.IntType.modulo)
 
     @typing_rule()
     @_synthesize_type.register

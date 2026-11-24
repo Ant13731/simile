@@ -15,6 +15,7 @@ from src.mod.data.ast_.pre_symbol_table import (
     IdentifierListTypes,
     RecordDefIdentifier,
     ProcedureDefIdentifier,
+    LambdaDefIdentifier,
 )
 from src.mod.data.ast_.post_symbol_table import (
     Symbol,
@@ -23,6 +24,7 @@ from src.mod.data.ast_.post_symbol_table import (
     SymbolListTypes,
     RecordDefSymbol,
     ProcedureDefSymbol,
+    LambdaDefSymbol,
 )
 from src.mod.data.ast_.operators import (
     Operators,
@@ -58,7 +60,6 @@ from src.mod.data.ast_.common import (
     ControlFlowStmt,
     Enumeration,
     Type_,
-    LambdaDef,
     Access,
     Call,
     TypedName,

@@ -202,3 +202,13 @@ class FloatType(BaseType):
     def power(self, other: BaseType) -> FloatType:
         self._is_subtype_or_error(other, (IntType(), FloatType()))
         return FloatType()
+
+    def int_divide(self, other: BaseType) -> IntType:
+        self._is_subtype_or_error(other, (IntType(), FloatType()))
+
+        return IntType()
+
+    def modulo(self, other: BaseType) -> IntType:
+        self._is_subtype_or_error(other, (IntType(), FloatType()))
+
+        return IntType()

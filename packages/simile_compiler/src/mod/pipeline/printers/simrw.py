@@ -25,10 +25,11 @@ def add_prefix_whitespace(text: str) -> str:
 
 
 def simrw_to_source(rewrite_rule: SimrwRule) -> str:
-    ret = f"rule {rewrite_rule.name}:\n"
+    ret = f"rule {rewrite_rule.name()}:\n"
     ret += T + "vars:\n"
     if rewrite_rule.vars_:
-        ret += f"\n".join(add_prefix_whitespace(f"{var}: {type_to_source(type_)}") for var, type_ in rewrite_rule.vars_.items())
+        # TODO replacing _ with 000 to get around the assumption that types in simrw rules always have the form T[0-9]+ is a bit of a hack
+        ret += f"\n".join(add_prefix_whitespace(f"{var}: {type_to_source(type_).replace("_","000")}") for var, type_ in rewrite_rule.vars_.items())
         ret += "\n"
     ret += T + f"rewrite:\n"
     ret += f"{add_prefix_whitespace(ast_to_source(rewrite_rule.rewrite_left))}\n"

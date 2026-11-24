@@ -1,3 +1,8 @@
+from "../algorithms/merge_sort" import sort_f
+
+K: type := generic
+V: type := generic
+
 # Carrier sets
 Person: enum := {Kevin, Michael, Adrian, Charlie, Ryan, Steven}
 Gym: enum := {Anytime, Goodlife, FitForLess, IronWeight, RockLifter}
@@ -27,14 +32,33 @@ baseline_reps_per_minute: relation[Machine, int] := {} # lowest number of reps n
     trait total
 
 # Record types
-# Basic record as a measure of effort
-record FitnessMachineRecord:
-    # Record identifiers
+# Keys (unique identifiers) for below record types
+record FitnessMachineRecordKey:
     member: Person # person who did the exercise
     machine: Machine # exercise machine type
     gym: Gym # gym the exercise was done at
     start_time: float # time we started using the machine
     end_time: float # time we ended using the machine
+
+record DailyKey:
+    member: Person # person who did the exercise
+    machine: Machine # exercise machine type
+    gym: Gym # gym the exercise was done at
+    day: int # seconds since epoch snapped to the start of the day (UTC)
+
+record BlendedDailyKey:
+    member: Person # person who did the exercise
+    gym: Gym # gym the exercise was done at
+    day: int # seconds since epoch snapped to the start of the day
+
+record BlendedWeeklyKey:
+    member: Person # person who did the exercise
+    gym: Gym # gym the exercise was done at
+    week_start: int # seconds since epoch snapped to the start of the week (Sunday, UTC)
+
+# Basic record as a measure of effort
+record FitnessMachineRecord:
+    key: FitnessMachineRecordKey
     # Effort data
     reps: int # reps per set * number of sets
     weight: int # weight in lbs
@@ -43,11 +67,7 @@ record FitnessMachineRecord:
     # TODO this should be a relation, no explicit concept of None
 
 record FitnessMachineDaily:
-    # Record identifiers
-    member: Person # person who did the exercise
-    machine: Machine # exercise machine type
-    gym: Gym # gym the exercise was done at
-    day: float
+    key: DailyKey
     # Effort data
     time_spent: int # seconds
     total_reps: int
@@ -56,10 +76,7 @@ record FitnessMachineDaily:
     # then we judge skill based on total_reps * total_weight / time_spent
 
 record BlendedFitnessRankDaily:
-    # Record identifiers
-    member: Person # person who did the exercise
-    gym: Gym # gym the exercise was done at
-    day: float
+    key: BlendedDailyKey
     # Effort data
     time_spent: int # seconds
     total_reps: int
@@ -68,10 +85,7 @@ record BlendedFitnessRankDaily:
     blended_skill: float
 
 record BlendedFitnessRankWeekly:
-    # Record identifiers
-    member: Person # person who did the exercise
-    gym: Gym # gym the exercise was done at
-    week_start: float
+    key: BlendedWeeklyKey
     # Effort data
     time_spent: int # seconds
     total_reps: int
@@ -81,72 +95,91 @@ record BlendedFitnessRankWeekly:
 
 
 # Queries
+procedure get_value(r: BlendedFitnessRankWeekly, order_by: RankingEnum) -> float:
+    if order_by = time_spent:
+        return r.time_spent
+    # TODO these paths should fail type checking, but i dont think we go through all return statements...
+    if order_by = total_reps:
+        return r.total_reps
+    if order_by = total_weight:
+        return r.total_weight
+    if order_by = blended_effort:
+        return r.blended_effort
+    if order_by = blended_skill:
+        return r.blended_skill
+    # Not possible to reach this state?
+
 procedure get_leaderboard(records: set[BlendedFitnessRankWeekly], order_by: RankingEnum) -> sequence[Person]:
     # from largest to lowest
-    sorted_records: sequence[BlendedFitnessRankWeekly] := sort(records, lambda r | -get_value(r, order_by))
-    return [r in sorted_records | r.member]
+    # TODO fix workaround while we dont have a sort_by defined. this is very hacky and probably incorrect
+    ranked_values: sequence[float] := sort_f([r in records | -get_value(r, order_by)])
+    sorted_records: sequence[BlendedFitnessRankWeekly] := [(_, v) in ranked_values, r in records .: get_value(r, order_by) = -v | r]
+    # sorted_records: sequence[BlendedFitnessRankWeekly] := sort_f(records, lambda r: BlendedFitnessRankWeekly | -get_value(r, order_by))
+    return [_, r in sorted_records | r.key.member]
 
-procedure get_leaderboard_amount_improved(this_week: set[BlendedFitnessRankWeekly], last_week: set[BlendedFitnessRankWeekly], order_by: RankingEnum) -> sequence[Person]:
-    last_week_by_key: relation[BlendedWeeklyKey, BlendedFitnessRankWeekly] := {r in records | weekly_key(r) |-> r}
-        trait many_to_one
-        trait partial
-    sorted_records: sequence[BlendedFitnessRankWeekly] := sort(this_week, lambda r | -(get_value(last_week_by_key(last_week_by_key(r)), order_by) - get_value(r, order_by)))
-    return [r in sorted_records | r.member]
+# procedure get_leaderboard_amount_improved(this_week: set[BlendedFitnessRankWeekly], last_week: set[BlendedFitnessRankWeekly], order_by: RankingEnum) -> sequence[Person]:
+#     last_week_by_key: relation[BlendedWeeklyKey, BlendedFitnessRankWeekly] := {r in last_week | r.key |-> r}
+#         trait many_to_one
+#         # trait partial
+#     sorted_records: sequence[BlendedFitnessRankWeekly] := sort_f(this_week, lambda r: BlendedFitnessRankWeekly | -(get_value(last_week_by_key(r.key), order_by) - get_value(r, order_by)))
+#     return [_, r in sorted_records | r.key.member]
 
-# Main data processing functions
-# TODO do these use lambdas?
-procedure raw_to_daily(records: set[FitnessMachineRecord]) -> set[FitnessMachineDaily]:
-    # Assume records never cross over day boundaries for the sake of consistency (instead those are already split into two records)
-    records_by_merged_key: relation[DailyKey, FitnessMachineRecord] := {r in records | extract_daily_key_from_raw(r) |-> r}
-    records_grouped_by_merged_key: relation[DailyKey, set[FitnessMachineRecord]] := group_by_fst(records_by_merged_key)
-        trait many_to_one
-    merged_records: set[FitnessMachineDaily] := {d |-> rs in records_grouped_by_day | merge_raw_to_daily(d, rs)}
-    return merged_records
+# Helpers/formatters - see FIXME in populate_symbol_table about allowing unordered func defs
+procedure start_of_day(seconds_since_epoch: float) -> int:
+    return (seconds_since_epoch div 86400) * 86400 # in UTC
+procedure start_of_week(seconds_since_epoch: int) -> int:
+    return seconds_since_epoch - ((seconds_since_epoch - 259200) mod 604800) # subtract 3 days so our week starts on a Sunday, then mod the num of seconds in a week
 
-procedure daily_to_blended_daily(records: set[FitnessMachineDaily]) -> set[BlendedFitnessRankDaily]:
-    records_by_merged_key: relation[BlendedDailyKey, BlendedFitnessRankDaily] := {r in records | extract_blended_key_from_daily(r) |-> r}
-    records_grouped_by_merged_key: relation[BlendedDailyKey, set[BlendedFitnessRankDaily]] := group_by_fst(records_by_merged_key)
-        trait many_to_one
-    merged_records: set[BlendedFitnessRankDaily] := {d |-> rs in records_grouped_by_day | blend_daily(d, rs)}
-    return merged_records
-
-procedure blended_daily_to_blended_weekly(records: set[BlendedFitnessRankDaily]) -> set[BlendedFitnessRankWeekly]:
-    records_by_merged_key: relation[BlendedWeeklyKey, BlendedFitnessRankWeekly] := {r in records | extract_weekly_key_from_daily(r) |-> r}
-    records_grouped_by_merged_key: relation[BlendedWeeklyKey, set[BlendedFitnessRankWeekly]] := group_by_fst(records_by_merged_key)
-        trait many_to_one
-    merged_records: set[BlendedFitnessRankWeekly] := {d |-> rs in records_grouped_by_day | blend_weekly(d, rs)}
-    return merged_records
-
-# Helpers/formatters
 procedure extract_daily_key_from_raw(r: FitnessMachineRecord) -> DailyKey:
-    return DailyKey(r.member, r.machine, r.gym, start_of_day(r.start_time))
+    return DailyKey(r.key.member, r.key.machine, r.key.gym, start_of_day(r.key.start_time))
 procedure extract_blended_key_from_daily(r: FitnessMachineDaily) -> BlendedDailyKey:
-    return BlendedDailyKey(r.member, r.gym, r.day)
+    return BlendedDailyKey(r.key.member, r.key.gym, r.key.day)
 procedure extract_weekly_key_from_daily(r: BlendedFitnessRankDaily) -> BlendedWeeklyKey:
-    return BlendedWeeklyKey(r.member, r.gym, start_of_week(r.day))
+    return BlendedWeeklyKey(r.key.member, r.key.gym, start_of_week(r.key.day))
 
-procedure group_by_fst(records: relation[K, V]) -> procedure[(K,), sequence[V]]:
-    res = defaultdict(list)
-    for k, v in records:
-        res[k].append(v)
-    return res
+procedure group_by_fst(records: relation[K, V]) -> relation[K, set[V]]:
+    return {k in dom(records) | k |-> records[{k}]}
 
 procedure merge_raw_to_daily(daily_key: DailyKey, records: set[FitnessMachineRecord]) -> FitnessMachineDaily:
-    time_spent: int := sum r in records | r.end_time - r.start_time
+    time_spent: int := sum r in records | r.key.end_time - r.key.start_time
     total_reps: int := sum r in records | r.reps
     total_weight: int := sum r in records | r.weight
-    return FitnessMachineDaily(daily_key.member, daily_key.machine, daily_key.gym, daily_key.day, time_spent, total_reps, total_weight)
+    return FitnessMachineDaily(daily_key, time_spent, total_reps, total_weight)
 procedure blend_daily(blended_key: BlendedDailyKey, records: set[FitnessMachineDaily]) -> BlendedFitnessRankDaily:
     time_spent: int := sum r in records | r.time_spent
     total_reps: int := sum r in records | r.total_reps
     total_weight: int := sum r in records | r.total_weight
     blended_effort: float := sum r in records | r.total_reps * r.total_weight * r.time_spent
     blended_skill: float := sum r in records | r.total_reps * r.total_weight / r.time_spent
-    return BlendedFitnessRankDaily(blended_key.member, blended_key.gym, blended_key.day, time_spent, total_reps, total_weight, blended_effort, blended_skill)
-procedure blend_daily(blended_key: BlendedWeeklyKey, records: set[BlendedFitnessRankDaily]) -> BlendedFitnessRankWeekly:
+    return BlendedFitnessRankDaily(blended_key, time_spent, total_reps, total_weight, blended_effort, blended_skill)
+procedure blend_weekly(blended_key: BlendedWeeklyKey, records: set[BlendedFitnessRankDaily]) -> BlendedFitnessRankWeekly:
     time_spent: int := sum r in records | r.time_spent
     total_reps: int := sum r in records | r.total_reps
     total_weight: int := sum r in records | r.total_weight
     blended_effort: float := sum r in records | r.blended_effort
     blended_skill: float := sum r in records | r.blended_skill
-    return BlendedFitnessRankWeekly(blended_key.member, blended_key.gym, blended_key.week_start, time_spent, total_reps, total_weight, blended_effort, blended_skill)
+    return BlendedFitnessRankWeekly(blended_key, time_spent, total_reps, total_weight, blended_effort, blended_skill)
+
+# Main data processing functions
+procedure raw_to_daily(records: set[FitnessMachineRecord]) -> set[FitnessMachineDaily]:
+    # Assume records never cross over day boundaries for the sake of consistency (instead those are already split into two records)
+    records_by_merged_key: relation[DailyKey, FitnessMachineRecord] := {r in records | extract_daily_key_from_raw(r) |-> r}
+    records_grouped_by_merged_key: relation[DailyKey, set[FitnessMachineRecord]] := group_by_fst(records_by_merged_key)
+        trait many_to_one
+    merged_records: set[FitnessMachineDaily] := {d |-> rs in records_grouped_by_merged_key | merge_raw_to_daily(d, rs)}
+    return merged_records
+
+procedure daily_to_blended_daily(records: set[FitnessMachineDaily]) -> set[BlendedFitnessRankDaily]:
+    records_by_merged_key: relation[BlendedDailyKey, FitnessMachineDaily] := {r in records | extract_blended_key_from_daily(r) |-> r}
+    records_grouped_by_merged_key: relation[BlendedDailyKey, set[FitnessMachineDaily]] := group_by_fst(records_by_merged_key)
+        trait many_to_one
+    merged_records: set[BlendedFitnessRankDaily] := {d |-> rs in records_grouped_by_merged_key | blend_daily(d, rs)}
+    return merged_records
+
+procedure blended_daily_to_blended_weekly(records: set[BlendedFitnessRankDaily]) -> set[BlendedFitnessRankWeekly]:
+    records_by_merged_key: relation[BlendedWeeklyKey, BlendedFitnessRankDaily] := {r in records | extract_weekly_key_from_daily(r) |-> r}
+    records_grouped_by_merged_key: relation[BlendedWeeklyKey, set[BlendedFitnessRankDaily]] := group_by_fst(records_by_merged_key)
+        trait many_to_one
+    merged_records: set[BlendedFitnessRankWeekly] := {d |-> rs in records_grouped_by_merged_key | blend_weekly(d, rs)}
+    return merged_records
+
