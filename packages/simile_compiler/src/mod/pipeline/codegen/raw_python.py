@@ -157,7 +157,6 @@ class BuiltinOperations:
 
 @dataclass
 class Printer:
-    symbol_table: SymbolTable
 
     @singledispatchmethod
     def lower_type(self, typ: types.BaseType) -> str:

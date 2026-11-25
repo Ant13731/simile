@@ -23,7 +23,7 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: ast_.Identifier, ast: ast_.ASTFieldChildren) -> bool:
-        from src.mod.pipeline.printers.ast_ import ast_to_source
+        from src.mod.pipeline.printer.ast_ import ast_to_source
 
         if not isinstance(ast, ast_.ASTNode):
             return False
@@ -38,7 +38,7 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: ast_.ASTNode, ast: ast_.ASTFieldChildren) -> bool:
-        from src.mod.pipeline.printers.ast_ import ast_to_source
+        from src.mod.pipeline.printer.ast_ import ast_to_source
 
         if not isinstance(ast, ast_.ASTNode):
             return False
@@ -53,7 +53,7 @@ class StructureMatcher:
 
     @_match.register
     def _(self, against: list, ast: ast_.ASTFieldChildren) -> bool:
-        from src.mod.pipeline.printers.ast_ import ast_to_source
+        from src.mod.pipeline.printer.ast_ import ast_to_source
 
         if not isinstance(ast, list):
             return False

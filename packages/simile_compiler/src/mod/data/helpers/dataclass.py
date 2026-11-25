@@ -125,7 +125,7 @@ def dataclass_find_and_replace(
     """Find and replace dataclass instances using a rewrite function (post-order, root last)."""
     assert is_dataclass(traversal_target), "Traversal techniques only work with the dataclass `fields` function"
 
-    # Bottom up traversal
+    # Bottom up traversal - In order
     for f in fields(traversal_target):
         field_value = getattr(traversal_target, f.name)
         if isinstance(field_value, list):

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import OrderedDict
 from typing import Any
 
 from loguru import logger
@@ -90,10 +91,13 @@ def collect_typed_vars(rewrite_rule_var_str: str) -> dict[str, types.BaseType]:
             raise ValueError(f"Variable names matching T[0-9]* (like '{var_name}') are reserved for (implicit) generic types. Please use a different name (e.g., T_...).")
 
     # Need to keep these loops separate bc we want to dedupe generic type defs
-    generic_type_vars: set[str] = set()
+    generic_type_vars: list[str] = []
     for type_ast in ast_vars.values():
-        generic_type_vars |= set(filter(None, dataclass_traverse(type_ast, _is_implicitly_defined_generic_type)))
-    generic_type_assignments: list[ast_.ASTNode] = list(map(_name_to_generic_type_assignment, generic_type_vars))
+        generic_type_vars.extend(set(filter(None, dataclass_traverse(type_ast, _is_implicitly_defined_generic_type))))
+    # cant use sets here since order matters when we determine symbols in the symbol table.
+    # from_keys keeps order while eliminating duplicates
+    generic_type_vars_deduped = list(OrderedDict.fromkeys(generic_type_vars))
+    generic_type_assignments: list[ast_.ASTNode] = list(map(_name_to_generic_type_assignment, generic_type_vars_deduped))
 
     # Add required generic types to the symbol table (all other types are expected to be builtins)
     generic_symbol_table = make_symbol_table(

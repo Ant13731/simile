@@ -1,6 +1,6 @@
 from src.mod.data.simrw import GuardCondition, SimrwRule, SimrwAST
-from src.mod.pipeline.printers.type_ import type_to_source
-from src.mod.pipeline.printers.ast_ import ast_to_source, T
+from src.mod.pipeline.printer.type_ import type_to_source
+from src.mod.pipeline.printer.ast_ import ast_to_source, T
 
 
 def simrw_ast_to_source(rewrite_rule: SimrwAST) -> str:

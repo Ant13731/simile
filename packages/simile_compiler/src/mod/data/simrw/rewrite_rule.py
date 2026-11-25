@@ -3,6 +3,7 @@ from typing import Any, Callable, Sequence, ClassVar
 from dataclasses import dataclass, field
 from copy import deepcopy
 from typing import TYPE_CHECKING
+from functools import wraps
 
 from loguru import logger
 
@@ -19,17 +20,24 @@ class RewriteRuleError(Exception):
     pass
 
 
-@dataclass
+@dataclass(kw_only=True)
 class RewriteRule:
     class_name: ClassVar[str]
     rewrite_var_counter: ClassVar[int] = 0
 
-    def apply(self, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode:
-        from src.mod.pipeline.printers.ast_ import ast_to_source
+    num_matches_attempted: int = 0
+    num_matches_applied: int = 0
 
+    def apply(self, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode | None:
+        from src.mod.pipeline.printer.ast_ import ast_to_source
+
+        self.num_matches_attempted += 1
         logger.debug(f"Applying rewrite rule {self.name()} to AST: {ast_to_source(ast)}")
-        result = ast.find_and_replace_with_func(lambda ast__: self._apply(ast__, type_synthesizer))
-        logger.debug(f"Rewrite rule result: {ast_to_source(result)}")
+        result = self._apply(ast, type_synthesizer)
+        if result is not None:
+            self.num_matches_applied += 1
+            logger.debug(f"Rewrite rule result: {ast_to_source(result)}")
+
         return result
 
     def _apply(self, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode | None:

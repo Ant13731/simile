@@ -2,7 +2,7 @@ from dataclasses import fields
 from functools import singledispatch
 
 from src.mod.data import ast_
-from src.mod.pipeline.printers.type_ import type_to_source
+from src.mod.pipeline.printer.type_ import type_to_source
 
 T = "    "
 

@@ -8,7 +8,7 @@ from src.mod.data import ast_
 from src.mod.pipeline.parser import parse
 from src.mod.pipeline.analysis import SemanticAnalysis, semantic_analysis, make_symbol_table
 from src.mod.data.standard_library import STANDARD_LIBRARY_FILES
-from src.mod.pipeline.printers import ast_to_source
+from src.mod.pipeline.printer import ast_to_source
 
 from tests.mod.ast_to_source_test import round_trip_parse
 from tests.mod.examples import EXAMPLES_FILES

@@ -9,7 +9,7 @@ import pytest
 from src.mod.data.ast_ import ASTNode
 from src.mod.data.simrw import GENERIC_REWRITE_RULE_PATHS, RAW_PYTHON_REWRITE_RULE_PATHS
 from src.mod.data.helpers import flatten
-from src.mod.pipeline.printers import simrw_ast_to_source, simrw_to_source
+from src.mod.pipeline.printer import simrw_ast_to_source, simrw_to_source
 from src.mod.pipeline.parser import parse_simrw_file, parse_simrw
 from src.mod.pipeline.optimizer.v2 import convert_simrw_to_rewrite_rules
 

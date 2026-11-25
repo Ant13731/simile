@@ -18,7 +18,7 @@ class SimileTypeError(Exception):
 
     def add_ast(self, node: ASTNode):
         """Add an AST node to the error message."""
-        from src.mod.pipeline.printers.ast_ import ast_to_source
+        from src.mod.pipeline.printer.ast_ import ast_to_source
 
         self.node = node
         self.add_note(f"Error at node {node.get_location()}: {ast_to_source(node)}, {node}")

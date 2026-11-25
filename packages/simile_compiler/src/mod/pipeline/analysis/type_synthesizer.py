@@ -121,7 +121,7 @@ class TypeSynthesizer:
     @typing_rule("Records - Access")
     @_synthesize_type.register
     def _(self, ast: ast_.Access) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         ast_type = self.synthesize_type(ast.record)
         if isinstance(ast_type, types.RecordType):
@@ -142,7 +142,7 @@ class TypeSynthesizer:
     @typing_rule("Command - Procedure Call", "Relation Operations - Function Call")
     @_synthesize_type.register
     def _(self, ast: ast_.Call) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         ast_type = self.synthesize_type(ast.target)
         assert not isinstance(ast_type, types.ImportedSymbol), "Why is this an imported symbol?"
@@ -171,7 +171,7 @@ class TypeSynthesizer:
     @typing_rule("Bag Operations - Image", "Relation Operations - Image")
     @_synthesize_type.register
     def _(self, ast: ast_.Image) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         if len(ast.indices) != 1:
             raise types.SimileTypeError(f"Image operation expects exactly one index, got {len(ast.indices)}", ast)
@@ -578,7 +578,7 @@ class TypeSynthesizer:
     @typing_rule("Boolean Operations - Negation")
     @_synthesize_type.register
     def _(self, ast: ast_.Not) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.BoolType):
@@ -588,7 +588,7 @@ class TypeSynthesizer:
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.Negative) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.IntType | types.FloatType):
@@ -607,7 +607,7 @@ class TypeSynthesizer:
     @typing_rule()
     @_synthesize_type.register
     def _(self, ast: ast_.Inverse) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         val_type = self.synthesize_type(ast.value)
         if not isinstance(val_type, types.RelationType):
@@ -617,7 +617,7 @@ class TypeSynthesizer:
     @typing_rule("Binary Boolean Operations")
     @_synthesize_type.register
     def _(self, ast: ast_.And) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         item_types = []
         for item in ast.items:
@@ -630,7 +630,7 @@ class TypeSynthesizer:
     @typing_rule("Binary Boolean Operations")
     @_synthesize_type.register
     def _(self, ast: ast_.Or) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         item_types = []
         for item in ast.items:
@@ -661,7 +661,7 @@ class TypeSynthesizer:
     @typing_rule("Generator")
     @_synthesize_type.register
     def _(self, ast: ast_.Generator) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         set_type = self.synthesize_type(ast.set_)
         if not isinstance(set_type, types.SetType):
@@ -686,7 +686,7 @@ class TypeSynthesizer:
 
     @typing_rule("Structural Match", "Structural Match with Tuple")
     def _structural_match(self, identifiers: ast_.SymbolListTypes, element_type: types.BaseType) -> None:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         match identifiers:
             case ast_.TupleSymbol(symbols):
@@ -886,7 +886,7 @@ class TypeSynthesizer:
         expected_left_type: type[T],
         operation_as_type_func: Callable[[T, types.BaseType], types.BaseType],
     ) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         left_type = self.synthesize_type(ast.left)
         right_type = self.synthesize_type(ast.right)
@@ -902,7 +902,7 @@ class TypeSynthesizer:
         expected_right_type: type[T],
         operation_as_type_func: Callable[[T, types.BaseType], types.BaseType],
     ) -> types.BaseType:
-        from src.mod.pipeline.printers import type_to_source
+        from src.mod.pipeline.printer import type_to_source
 
         left_type = self.synthesize_type(ast.left)
         right_type = self.synthesize_type(ast.right)

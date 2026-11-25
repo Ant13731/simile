@@ -137,7 +137,7 @@ class ProcedureType(BaseType):
         return args_are_supertype and self.return_type.is_subtype(other.return_type)
 
     def call(self, arg_types: list[BaseType]) -> BaseType:
-        from src.mod.pipeline.printers.type_ import type_to_source
+        from src.mod.pipeline.printer.type_ import type_to_source
 
         if len(arg_types) != len(self.arg_types.items):
             raise SimileTypeError(f"Procedure called with incorrect number of arguments. Expected {len(self.arg_types.items)}, got {len(arg_types)}")

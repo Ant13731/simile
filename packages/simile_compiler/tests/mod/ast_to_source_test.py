@@ -6,7 +6,7 @@ import pytest
 
 from src.mod.data.ast_ import ASTNode
 from src.mod.pipeline.parser import parse
-from src.mod.pipeline.printers import ast_to_source
+from src.mod.pipeline.printer import ast_to_source
 
 from tests.mod.parser_test import (
     BASIC_EXPRESSION_CASES,

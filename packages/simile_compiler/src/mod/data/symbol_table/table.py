@@ -112,7 +112,7 @@ class SymbolTable:
         return [self.symbols[symbol_id] for symbol_id in top_level_scope.declared_symbols]
 
     def debug(self) -> str:
-        from src.mod.pipeline.printers import type_to_source, record_type_to_source
+        from src.mod.pipeline.printer import type_to_source, record_type_to_source
 
         scope_table_headers = ["Scope", "Parent", "Context", "Declared Symbols"]
         symbol_table_headers = ["Symb", "Scp", "TypedName", "Context"]
