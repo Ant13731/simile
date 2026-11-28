@@ -1,95 +1,123 @@
 import pytest
-import pathlib
+from pathlib import Path
+from loguru import logger
 
 from src.mod.data import ast_, types
-from src.mod.data.simrw import SimrwRule, GENERIC_REWRITE_RULE_PATHS, RAW_PYTHON_REWRITE_RULE_PATHS, RAW_PYTHON_QUANTIFICATION_RULES
+from src.mod.data.simrw import SimrwRule
 from src.mod.data.symbol_table.table import SymbolTable
+from src.mod.data.standard_library import STANDARD_LIBRARY_FILES
 
-from src.mod.pipeline.optimizer.v2 import convert_simrw_to_rewrite_rules
-from src.mod.pipeline.parser import parse_simrw_file
-from src.mod.pipeline.analysis.populate_symbol_table import PopulateSymbolTable
-from src.mod.pipeline.analysis.type_synthesizer import TypeSynthesizer
+from src.mod.pipeline.optimizer.v2 import (
+    RAW_PYTHON_LOWERING_PHASE,
+    GENERIC_NUMERIC_PHASE,
+    GENERIC_DESUGARING_PHASE,
+    GENERIC_COMPREHENSION_CONSTRUCTION_PHASE,
+    GENERIC_BOOL_NORMALIZATION_PHASE,
+    RewritePhase,
+)
+from src.mod.pipeline.parser import parse
+from src.mod.pipeline.analysis import PopulateSymbolTable, TypeSynthesizer, semantic_analysis
+from src.mod.pipeline.printer import ast_to_source
+
+from tests.mod.examples import EXAMPLES_FILES
+
+TESTING_PHASES = [
+    RAW_PYTHON_LOWERING_PHASE,
+    # GENERIC_NUMERIC_PHASE,
+    # GENERIC_DESUGARING_PHASE,
+    # GENERIC_COMPREHENSION_CONSTRUCTION_PHASE,
+    # GENERIC_BOOL_NORMALIZATION_PHASE,
+]
 
 
-class TestOptimizerHappyPath:
-    @pytest.mark.parametrize("rewrite_rule_path", GENERIC_REWRITE_RULE_PATHS)
-    def test_generic_rewrite_rule_parses(self, rewrite_rule_path: pathlib.Path):
-        parse_simrw_file(rewrite_rule_path)
+test_ast_input = ast_.Add(
+    ast_.Add(
+        ast_.Add(
+            ast_.Int("9"),
+            ast_.Int("9"),
+        ),
+        ast_.Add(
+            ast_.Int("9"),
+            ast_.Int("9"),
+        ),
+    ),
+    ast_.Add(
+        ast_.Add(
+            ast_.Int("9"),
+            ast_.Int("9"),
+        ),
+        ast_.Add(
+            ast_.Float("9.1"),
+            ast_.Float("9.1"),
+        ),
+    ),
+)
+test_ast_expected = ast_.Add(
+    ast_.Multiply(
+        ast_.Int("2"),
+        ast_.Multiply(
+            ast_.Int("2"),
+            ast_.Int("9"),
+        ),
+    ),
+    ast_.Add(
+        ast_.Multiply(
+            ast_.Int("2"),
+            ast_.Int("9"),
+        ),
+        ast_.Add(
+            ast_.Float("9.1"),
+            ast_.Float("9.1"),
+        ),
+    ),
+)
+test_ast_rewrite_rule = SimrwRule(
+    "double_addition",
+    {"x": types.IntType()},
+    ast_.Add(
+        ast_.Identifier("x"),
+        ast_.Identifier("x"),
+    ),
+    ast_.Multiply(
+        ast_.Int("2"),
+        ast_.Identifier("x"),
+    ),
+    [],
+)
+test_ast_rewrite_phase = RewritePhase("test_ast_phase", [test_ast_rewrite_rule])
 
-    @pytest.mark.parametrize("rewrite_rule_path", GENERIC_REWRITE_RULE_PATHS)
-    def test_generic_rewrite_rule_converts(self, rewrite_rule_path: pathlib.Path):
-        rules = parse_simrw_file(rewrite_rule_path)
-        convert_simrw_to_rewrite_rules(rules)
 
-    @pytest.mark.parametrize("rewrite_rule_path", RAW_PYTHON_REWRITE_RULE_PATHS)
-    def test_raw_python_rewrite_rule_parses(self, rewrite_rule_path: pathlib.Path):
-        parse_simrw_file(rewrite_rule_path)
+class TestRewritePhase:
+    @pytest.mark.parametrize("phase", TESTING_PHASES)
+    def test_simile_file_passes_rewrite_phase_without_exceptions_standard_library(self, phase: RewritePhase):
+        analysis = semantic_analysis(ast_.Start(ast_.Statements([]), ""))
+        logger.debug(f"Rewriting file with phase {phase.name}")
+        logger.debug(f"Before:\n{ast_to_source(analysis.ast)}")
+        phase_applied_ast = phase.apply_phase(analysis.ast, analysis.type_synthesizer)
+        logger.debug(f"After:\n{ast_to_source(phase_applied_ast)}")
 
-    @pytest.mark.parametrize("rewrite_rule_path", RAW_PYTHON_REWRITE_RULE_PATHS)
-    def test_raw_python_rewrite_rule_converts(self, rewrite_rule_path: pathlib.Path):
-        rules = parse_simrw_file(rewrite_rule_path)
-        convert_simrw_to_rewrite_rules(rules)
+    @pytest.mark.parametrize("input_file", EXAMPLES_FILES)
+    @pytest.mark.parametrize("phase", TESTING_PHASES)
+    def test_simile_file_passes_rewrite_phase_without_exceptions(self, input_file: Path, phase: RewritePhase):
+        with open(input_file, "r", encoding="utf-8") as f:
+            source = f.read()
+        ast = parse(source, input_file)
+        logger.debug(f"Analyzing file {input_file}")
+        analysis = semantic_analysis(ast)
+        logger.debug(f"Rewriting file with phase {phase.name}")
+        logger.debug(f"Before:\n{ast_to_source(analysis.ast)}")
+        phase_applied_ast = phase.apply_phase(analysis.ast, analysis.type_synthesizer)
+        logger.debug(f"After:\n{ast_to_source(phase_applied_ast)}")
 
-    def test_rule_application(self):
-        ast_to_match = ast_.Add(
-            ast_.Add(
-                ast_.Add(
-                    ast_.Int("9"),
-                    ast_.Int("9"),
-                ),
-                ast_.Add(
-                    ast_.Int("9"),
-                    ast_.Int("9"),
-                ),
-            ),
-            ast_.Add(
-                ast_.Add(
-                    ast_.Int("9"),
-                    ast_.Int("9"),
-                ),
-                ast_.Add(
-                    ast_.Float("9.1"),
-                    ast_.Float("9.1"),
-                ),
-            ),
-        )
-        double_addition_rule = SimrwRule(
-            "double_addition",
-            {"x": types.IntType()},
-            ast_.Add(
-                ast_.Identifier("x"),
-                ast_.Identifier("x"),
-            ),
-            ast_.Multiply(
-                ast_.Int("2"),
-                ast_.Identifier("x"),
-            ),
-            [],
-        )
-        expected_ast = ast_.Add(
-            ast_.Multiply(
-                ast_.Int("2"),
-                ast_.Multiply(
-                    ast_.Int("2"),
-                    ast_.Int("9"),
-                ),
-            ),
-            ast_.Add(
-                ast_.Add(
-                    ast_.Int("9"),
-                    ast_.Int("9"),
-                ),
-                ast_.Add(
-                    ast_.Float("9.1"),
-                    ast_.Float("9.1"),
-                ),
-            ),
-        )
+    def test_phase_application(self):
         symbol_table = SymbolTable()
         symbol_table_populator = PopulateSymbolTable(symbol_table)
         symbol_table_populator.populate_base()
-        symbol_table_populator.populate(ast_to_match)
+        symbol_table_populator.populate(test_ast_input)
         type_synthesizer = TypeSynthesizer(symbol_table)
 
-        ast_after_rewrite = double_addition_rule.apply(ast_to_match, type_synthesizer)
-        assert ast_after_rewrite == expected_ast
+        ast_after_rewrite = test_ast_rewrite_phase.apply_phase(test_ast_input, type_synthesizer)
+        logger.debug(f"Before: {ast_to_source(test_ast_input)}")
+        logger.debug(f"After: {ast_to_source(ast_after_rewrite)}")
+        logger.debug(f"Expected: {ast_to_source(test_ast_expected)}")
+        assert ast_after_rewrite == test_ast_expected

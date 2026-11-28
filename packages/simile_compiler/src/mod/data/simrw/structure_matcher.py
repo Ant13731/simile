@@ -19,7 +19,7 @@ class StructureMatcher:
 
     @singledispatchmethod
     def _match(self, against: ast_.ASTFieldChildren, ast: ast_.ASTFieldChildren) -> bool:
-        raise NotImplementedError(f"Structural match not implemented for {type(ast)}")
+        raise NotImplementedError(f"Structural match not implemented for {type(ast)}. Attempted matching {ast} against {against}. Matched so far: {self._matched_so_far}")
 
     @_match.register
     def _(self, against: ast_.Identifier, ast: ast_.ASTFieldChildren) -> bool:
@@ -43,9 +43,11 @@ class StructureMatcher:
         if not isinstance(ast, ast_.ASTNode):
             return False
         logger.debug(f"Matching against ASTNode: {ast_to_source(against)} with AST: {ast_to_source(ast)}")
-        # Leaving out for now - using a purely structural match
-        # if type(against) != type(ast):
-        # return False
+        # Use a purely structural match, but at least one side must be a subclass or eq to the other
+        if not issubclass(type(against), type(ast)) and not issubclass(type(ast), type(against)):
+            return False
+        if len(list(against.children())) != len(list(ast.children())):
+            return False
         for against_child, ast_child in zip(against.children(), ast.children()):
             if not self._match(against_child, ast_child):
                 return False
@@ -69,4 +71,8 @@ class StructureMatcher:
     def _(self, against: ast_.Operators, ast: ast_.ASTFieldChildren) -> bool:
         if isinstance(ast, ast_.Operators):
             logger.debug(f"Matching against operator: {against} with AST: {ast}")
+        return against == ast
+
+    @_match.register
+    def _(self, against: bool, ast: ast_.ASTFieldChildren) -> bool:
         return against == ast

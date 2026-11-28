@@ -58,6 +58,10 @@ class RewritePhase:
         return ast
 
     def _apply_rule_list_once(self, ast: ast_.ASTNode, type_synthesizer: TypeSynthesizer) -> ast_.ASTNode | None:
+        if not isinstance(ast, ast_.ASTNode):
+            logger.debug(f"Attempted to apply rewrite rule phase to ast, but object is not of ASTNode type. Got {ast}")
+            return None
+
         self.num_rule_list_attempted += 1
         num_all_applied_prev = self.num_rule_list_applied
         for rule in self.rules():

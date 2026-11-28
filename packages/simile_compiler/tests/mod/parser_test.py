@@ -8,6 +8,8 @@ import pytest
 
 from src.mod.data.ast_ import *
 from src.mod.pipeline.parser import parse, ParseError
+from src.mod.data.standard_library import STANDARD_LIBRARY_FILES
+from tests.mod.examples import EXAMPLES_FILES
 
 
 def normalize_source(source: str) -> str:
@@ -1046,3 +1048,11 @@ class TestParserErrorCases:
         with pytest.raises(ParseError) as exc_info:
             p = parse(source, Path("test_source_file_path"))
         assert expected_error_msg in str(exc_info.value)
+
+
+class TestSimileFiles:
+    @pytest.mark.parametrize("source_path", STANDARD_LIBRARY_FILES + EXAMPLES_FILES)
+    def test_parses_without_exception(self, source_path: Path):
+        with open(source_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        parse(source, source_path)

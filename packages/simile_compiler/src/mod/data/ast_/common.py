@@ -557,4 +557,4 @@ SimpleStmt = Expr | TraitApplication | Assignment | ControlFlowStmt | Import
 CompoundStmt = If | For | While | RecordDefSymbol | ProcedureDefSymbol
 
 # TODO Should we consider tuples, sets, and dicts? basically all collection operators?
-ASTFieldChildren = ASTNode | list[ASTNode] | Operators
+ASTFieldChildren = ASTNode | list[ASTNode] | Operators | bool  # boolean needed for assignment with choice operations

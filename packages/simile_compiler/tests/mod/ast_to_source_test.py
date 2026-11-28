@@ -7,6 +7,8 @@ import pytest
 from src.mod.data.ast_ import ASTNode
 from src.mod.pipeline.parser import parse
 from src.mod.pipeline.printer import ast_to_source
+from src.mod.data.standard_library import STANDARD_LIBRARY_FILES
+from tests.mod.examples import EXAMPLES_FILES
 
 from tests.mod.parser_test import (
     BASIC_EXPRESSION_CASES,
@@ -128,3 +130,14 @@ class TestASTToSourceHappyPath:
     )
     def test_parse_quantification_and_typing_forms(self, source: str, expected_body: ASTNode):
         assert round_trip_parse(source) == start_with_body(source, expected_body)
+
+
+class TestSimileFiles:
+    @pytest.mark.parametrize("source_path", STANDARD_LIBRARY_FILES + EXAMPLES_FILES)
+    def test_parses_to_source_without_exceptions(self, source_path: Path):
+        with open(source_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        ast = parse(source, source_path)
+        source_from_ast = ast_to_source(ast)
+        round_trip_ast = parse(source_from_ast, source_path)
+        assert ast == round_trip_ast

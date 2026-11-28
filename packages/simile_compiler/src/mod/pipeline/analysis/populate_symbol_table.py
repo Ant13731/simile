@@ -132,7 +132,7 @@ class PopulateSymbolTable:
     @singledispatchmethod
     def _populate_aux(self, ast: ast_.ASTNode) -> tuple[ast_.ASTNode | None, bool]:
         """Returns: (Node to replace if not None, whether to continue populating children)"""
-        logger.debug(f"Symbol table population not implemented for {type(ast)}")
+        # logger.debug(f"Symbol table population not implemented for {type(ast)}")
         return None, True
 
     @_populate_aux.register

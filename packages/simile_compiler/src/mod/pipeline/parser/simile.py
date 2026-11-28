@@ -413,7 +413,7 @@ class Parser:
             attempted_traits_parse = self.trait_stmt()
             return ast_.TraitApplication(assignment, attempted_traits_parse)
         except ParseException:
-            logger.debug(f"Failed to parse trait statement. Backtracking out of assignment")
+            # logger.debug(f"Failed to parse trait statement. Backtracking out of assignment")
             self.backtrack_from_error(*backtrack_ctx)
         return assignment
 

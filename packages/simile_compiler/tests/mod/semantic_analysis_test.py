@@ -24,53 +24,41 @@ class TestBase:
         assert True
 
 
-class TestStandardLibraryHappyPath:
-    @pytest.mark.parametrize("standard_library_path", STANDARD_LIBRARY_FILES)
-    def test_standard_library_parses(self, standard_library_path: pathlib.Path):
-        with open(standard_library_path, "r", encoding="utf-8") as f:
+class TestSimileFiles:
+    @pytest.mark.parametrize("source_path", STANDARD_LIBRARY_FILES)
+    def test_semantic_analysis_without_exceptions_no_standard_library(self, source_path: pathlib.Path):
+        with open(source_path, "r", encoding="utf-8") as f:
             source = f.read()
-        parse(source, standard_library_path)
-
-    @pytest.mark.parametrize("standard_library_path", STANDARD_LIBRARY_FILES)
-    def test_standard_library_parses_to_source(self, standard_library_path: pathlib.Path):
-        with open(standard_library_path, "r", encoding="utf-8") as f:
-            source = f.read()
-        ast = parse(source, standard_library_path)
-        source_from_ast = ast_to_source(ast)
-        round_trip_ast = parse(source_from_ast, standard_library_path)
-        assert ast == round_trip_ast
-
-    @pytest.mark.parametrize("standard_library_path", STANDARD_LIBRARY_FILES)
-    def test_standard_library_passes_semantic_analysis(self, standard_library_path: pathlib.Path):
-        with open(standard_library_path, "r", encoding="utf-8") as f:
-            source = f.read()
-        ast = parse(source, standard_library_path)
-        logger.debug(f"Analyzing file {standard_library_path}")
+        ast = parse(source, source_path)
+        logger.debug(f"Analyzing file {source_path}")
         analysis = semantic_analysis(ast, True)
         assert analysis is not None
 
-
-class TestExamplesHappyPath:
-    @pytest.mark.parametrize("example_path", EXAMPLES_FILES)
-    def test_example_parses(self, example_path: pathlib.Path):
-        with open(example_path, "r", encoding="utf-8") as f:
+    @pytest.mark.parametrize("source_path", EXAMPLES_FILES)
+    def test_semantic_analysis_without_exceptions(self, source_path: pathlib.Path):
+        with open(source_path, "r", encoding="utf-8") as f:
             source = f.read()
-        parse(source, example_path)
-
-    @pytest.mark.parametrize("example_path", EXAMPLES_FILES)
-    def test_example_parses_to_source(self, example_path: pathlib.Path):
-        with open(example_path, "r", encoding="utf-8") as f:
-            source = f.read()
-        ast = parse(source, example_path)
-        source_from_ast = ast_to_source(ast)
-        round_trip_ast = parse(source_from_ast, example_path)
-        assert ast == round_trip_ast
-
-    @pytest.mark.parametrize("example_path", EXAMPLES_FILES)
-    def test_example_passes_semantic_analysis(self, example_path: pathlib.Path):
-        with open(example_path, "r", encoding="utf-8") as f:
-            source = f.read()
-        ast = parse(source, example_path)
-        logger.debug(f"Analyzing file {example_path}")
+        ast = parse(source, source_path)
+        logger.debug(f"Analyzing file {source_path}")
         analysis = semantic_analysis(ast)
         assert analysis is not None
+
+    @pytest.mark.parametrize("source_path", STANDARD_LIBRARY_FILES)
+    def test_semantic_analysis_to_source_without_exceptions_no_standard_library(self, source_path: pathlib.Path):
+        with open(source_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        ast = parse(source, source_path)
+        logger.debug(f"Analyzing file {source_path}")
+        analysis = semantic_analysis(ast, True)
+        source_from_ast = ast_to_source(analysis.ast)
+        assert source_from_ast is not None
+
+    @pytest.mark.parametrize("source_path", EXAMPLES_FILES)
+    def test_semantic_analysis_to_source_without_exceptions(self, source_path: pathlib.Path):
+        with open(source_path, "r", encoding="utf-8") as f:
+            source = f.read()
+        ast = parse(source, source_path)
+        logger.debug(f"Analyzing file {source_path}")
+        analysis = semantic_analysis(ast)
+        source_from_ast = ast_to_source(analysis.ast)
+        assert source_from_ast is not None

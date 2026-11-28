@@ -31,10 +31,9 @@ def simrw_rules_within_file(paths: list[Path]) -> list[str]:
 SIMRW_FILES = flatten([GENERIC_REWRITE_RULE_PATHS, RAW_PYTHON_REWRITE_RULE_PATHS])
 
 
-class TestSimRWLibrary:
-
+class TestSimRWLibraryParse:
     @pytest.mark.parametrize("source_path", SIMRW_FILES)
-    def test_parse_from_file_without_exceptions_generic(self, source_path: Path) -> None:
+    def test_parse_from_file_without_exceptions(self, source_path: Path) -> None:
         simrw_asts = parse_simrw_file(source_path)
         assert len(simrw_asts) > 0, "Test not set up correctly (did not parse any rules)"
 
@@ -55,6 +54,8 @@ class TestSimRWLibrary:
 
         assert simrw_ast == round_trip_ast
 
+
+class TestSimRWLibraryConvertToRewriteRule:
     @pytest.mark.parametrize("source", simrw_rules_within_file(GENERIC_REWRITE_RULE_PATHS))
     def test_parse_and_convert_without_exceptions_generic(self, source: str) -> None:
         simrw_asts = parse_simrw(source)
